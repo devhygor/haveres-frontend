@@ -8,6 +8,7 @@ import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { formatCurrency, formatPercent, formatQuantity, plClass } from "@/utils/format";
 import { cn } from "@/utils/cn";
 import type { Position } from "@/types/portfolio";
+import { ASSET_TYPE_LABELS } from "@/types/asset";
 
 function toNumber(value: unknown): number {
   if (typeof value === "number") return Number.isFinite(value) ? value : 0;
@@ -43,11 +44,16 @@ const columns: ColumnDef<Position>[] = [
   {
     accessorKey: "asset_type",
     header: "Tipo",
-    cell: ({ getValue }) => (
-      <span className="text-xs px-2 py-0.5 rounded bg-secondary text-muted-foreground font-medium">
-        {getValue() as string}
-      </span>
-    ),
+    cell: ({ getValue }) => {
+      const assetType = getValue() as string;
+      const label = ASSET_TYPE_LABELS[assetType] ?? assetType;
+
+      return (
+        <span className="text-xs px-2 py-0.5 rounded bg-secondary text-muted-foreground font-medium">
+          {label}
+        </span>
+      );
+    },
   },
   {
     accessorKey: "quantity",
