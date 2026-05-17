@@ -2,7 +2,7 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Legend,
 } from "recharts";
-import { format, parseISO } from "date-fns";
+import { addMonths, format, parseISO, startOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { formatCurrency } from "@/utils/format";
 import type { PatrimonyPoint } from "@/types/portfolio";
@@ -11,9 +11,11 @@ interface Props { data: PatrimonyPoint[] }
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
+  const dateLabel = payload[0]?.payload?.tooltip_label || label;
+
   return (
     <div className="bg-haveres-card border border-haveres-border rounded-lg p-3 shadow-xl text-xs space-y-1">
-      <p className="text-muted-foreground font-medium mb-2">{label}</p>
+      <p className="text-muted-foreground font-medium mb-2">{dateLabel}</p>
       {payload.map((entry: any) => (
         <div key={entry.name} className="flex items-center gap-2">
           <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: entry.color }} />
@@ -26,15 +28,31 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 };
 
 export function PatrimonyChart({ data }: Props) {
-  const formatted = data.map((d) => ({
-    ...d,
-    date_label: format(
-      typeof d.date === "string" ? parseISO(d.date) : d.date,
-      "dd MMM",
-      { locale: ptBR }
-    ),
-  }));
-  const tickInterval = Math.max(0, Math.floor(formatted.length / 12) - 1);
+  const formatted = data
+    .map((d) => {
+      const parsedDate = typeof d.date === "string" ? parseISO(d.date) : d.date;
+      return {
+        ...d,
+        timestamp: parsedDate.getTime(),
+        tooltip_label: format(parsedDate, "dd MMM", { locale: ptBR }),
+      };
+    })
+    .sort((a, b) => a.timestamp - b.timestamp);
+
+  const monthTicks = formatted.length > 0
+    ? (() => {
+      const ticks: number[] = [];
+      let current = startOfMonth(new Date(formatted[0].timestamp));
+      const last = startOfMonth(new Date(formatted[formatted.length - 1].timestamp));
+
+      while (current <= last) {
+        ticks.push(current.getTime());
+        current = addMonths(current, 1);
+      }
+
+      return ticks;
+    })()
+    : [];
 
   return (
     <ResponsiveContainer width="100%" height={280}>
@@ -50,7 +68,17 @@ export function PatrimonyChart({ data }: Props) {
           </linearGradient>
         </defs>
         <CartesianGrid strokeDasharray="3 3" stroke="#2d3748" vertical={false} />
-        <XAxis dataKey="date_label" interval={tickInterval} tick={{ fill: "#718096", fontSize: 11 }} axisLine={false} tickLine={false} />
+        <XAxis
+          dataKey="timestamp"
+          type="number"
+          scale="time"
+          domain={["dataMin", "dataMax"]}
+          ticks={monthTicks}
+          tickFormatter={(value) => format(new Date(value), "dd MMM", { locale: ptBR })}
+          tick={{ fill: "#718096", fontSize: 11 }}
+          axisLine={false}
+          tickLine={false}
+        />
         <YAxis tick={{ fill: "#718096", fontSize: 11 }} axisLine={false} tickLine={false}
           tickFormatter={(v) => formatCurrency(v, true)} width={70} />
         <Tooltip content={<CustomTooltip />} />
