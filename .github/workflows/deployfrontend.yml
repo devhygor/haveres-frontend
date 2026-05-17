@@ -26,7 +26,8 @@ jobs:
         port: ${{ secrets.REMOTE_PORT }}
         script: |
           echo "==== 1. Acessar a pasta do frontend no LXC ===="
-          cd /home/deployuser/apps/haveres-frontend
+          # Corrigido para o caminho real que o seu 'ls' mostrou:
+          cd /home/deployuser/apps/haveres/haveres-frontend
           
           echo "==== 2. Atualizar o código da branch main ===="
           git checkout main
