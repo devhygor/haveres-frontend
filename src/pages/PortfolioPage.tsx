@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { portfolioApi } from "@/api/portfolio";
 import { PositionsTable } from "@/components/tables/PositionsTable";
@@ -11,6 +12,9 @@ import { Briefcase, PieChart, BarChart3 } from "lucide-react";
 import { cn } from "@/utils/cn";
 
 export function PortfolioPage() {
+  const [selectedType, setSelectedType] = useState<string | null>(null);
+  const [selectedSector, setSelectedSector] = useState<string | null>(null);
+
   const summary = useQuery({
     queryKey: ["portfolio", "summary"],
     queryFn: () => portfolioApi.getSummary().then((r) => r.data),
@@ -32,6 +36,47 @@ export function PortfolioPage() {
   if (summary.isError) return <ErrorState onRetry={() => summary.refetch()} />;
 
   const data = summary.data!;
+
+  const selectedTypeLabel = useMemo(() => {
+    if (!selectedType || !allocation.data) return null;
+    const item = allocation.data.find((entry) => entry.type === selectedType);
+    return item?.type_display || selectedType;
+  }, [allocation.data, selectedType]);
+
+  const selectedSectorLabel = useMemo(() => {
+    if (!selectedSector || !allocationBySector.data) return null;
+    const item = allocationBySector.data.find((entry) => entry.sector === selectedSector);
+    return item?.sector_display || selectedSector;
+  }, [allocationBySector.data, selectedSector]);
+
+  const filteredPositions = useMemo(() => {
+    return data.positions.filter((position) => {
+      const typeMatches = !selectedType || position.asset_type === selectedType;
+      const sectorMatches = !selectedSector || position.sector === selectedSector;
+      return typeMatches && sectorMatches;
+    });
+  }, [data.positions, selectedSector, selectedType]);
+
+  useEffect(() => {
+    if (!selectedType) return;
+    if (!allocation.data?.some((entry) => entry.type === selectedType)) {
+      setSelectedType(null);
+    }
+  }, [allocation.data, selectedType]);
+
+  useEffect(() => {
+    if (!selectedSector) return;
+    if (!allocationBySector.data?.some((entry) => entry.sector === selectedSector)) {
+      setSelectedSector(null);
+    }
+  }, [allocationBySector.data, selectedSector]);
+
+  const hasActiveFilters = Boolean(selectedType || selectedSector);
+
+  const clearFilters = () => {
+    setSelectedType(null);
+    setSelectedSector(null);
+  };
 
   return (
     <div className="space-y-6">
@@ -80,7 +125,15 @@ export function PortfolioPage() {
             <h2 className="text-sm font-semibold text-white">Alocação por Classe</h2>
           </div>
           {allocation.data?.length
-            ? <AllocationChart data={allocation.data} labelKey="type_display" />
+            ? (
+              <AllocationChart
+                data={allocation.data}
+                labelKey="type_display"
+                valueKey="type"
+                selectedValue={selectedType}
+                onSelectValue={setSelectedType}
+              />
+            )
             : <EmptyState title="Sem dados" />
           }
         </div>
@@ -93,7 +146,13 @@ export function PortfolioPage() {
           {allocationBySector.isLoading ? (
             <LoadingState />
           ) : allocationBySector.data?.length ? (
-            <AllocationChart data={allocationBySector.data} labelKey="sector_display" />
+            <AllocationChart
+              data={allocationBySector.data}
+              labelKey="sector_display"
+              valueKey="sector"
+              selectedValue={selectedSector}
+              onSelectValue={setSelectedSector}
+            />
           ) : (
             <EmptyState title="Sem dados de setor" />
           )}
@@ -102,13 +161,51 @@ export function PortfolioPage() {
 
       {/* Posições */}
       <div className="card-haveres">
-        <div className="flex items-center gap-2 p-4 sm:p-5 border-b border-haveres-border">
+        <div className="flex flex-wrap items-center gap-2 p-4 sm:p-5 border-b border-haveres-border">
           <Briefcase size={18} className="text-haveres-blue" />
-          <h2 className="text-sm font-semibold text-white">Posições ({data.positions.length})</h2>
+          <h2 className="text-sm font-semibold text-white">Posições ({filteredPositions.length})</h2>
+          {hasActiveFilters && (
+            <>
+              <span className="text-xs text-muted-foreground">de {data.positions.length} ativos</span>
+              {selectedTypeLabel && (
+                <span className="text-xs px-2 py-0.5 rounded bg-secondary text-muted-foreground">
+                  Classe: {selectedTypeLabel}
+                </span>
+              )}
+              {selectedSectorLabel && (
+                <span className="text-xs px-2 py-0.5 rounded bg-secondary text-muted-foreground">
+                  Setor: {selectedSectorLabel}
+                </span>
+              )}
+              <button
+                type="button"
+                onClick={clearFilters}
+                className="sm:ml-auto text-xs px-2 py-1 rounded bg-secondary text-muted-foreground hover:text-white transition-colors"
+              >
+                Limpar filtros
+              </button>
+            </>
+          )}
         </div>
-        {data.positions.length === 0
-          ? <EmptyState title="Nenhuma posição" description="Cadastre compras para ver suas posições." />
-          : <PositionsTable positions={data.positions} />
+        {data.positions.length === 0 ? (
+          <EmptyState title="Nenhuma posição" description="Cadastre compras para ver suas posições." />
+        ) : filteredPositions.length === 0 ? (
+          <EmptyState
+            title="Nenhuma posição para este filtro"
+            description="Tente selecionar outra fatia do gráfico ou limpar os filtros aplicados."
+            action={(
+              <button
+                type="button"
+                onClick={clearFilters}
+                className="px-4 py-2 bg-secondary text-muted-foreground text-sm font-medium rounded-lg hover:text-white transition-colors"
+              >
+                Limpar filtros
+              </button>
+            )}
+          />
+        ) : (
+          <PositionsTable positions={filteredPositions} />
+        )
         }
       </div>
     </div>
