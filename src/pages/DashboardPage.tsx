@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Wallet, TrendingUp, CalendarDays, BarChart3, PieChart, Activity } from "lucide-react";
 import { portfolioApi } from "@/api/portfolio";
@@ -15,6 +16,8 @@ import { ErrorState } from "@/components/common/ErrorState";
 import { formatCurrency } from "@/utils/format";
 
 export function DashboardPage() {
+  const [selectedType, setSelectedType] = useState<string | null>(null);
+
   const summary = useQuery({
     queryKey: ["portfolio", "summary"],
     queryFn: () => portfolioApi.getSummary().then((r) => r.data),
@@ -55,7 +58,36 @@ export function DashboardPage() {
     return <ErrorState onRetry={() => summary.refetch()} />;
   }
 
-  const data = summary.data!;
+  const data = summary.data;
+  if (!data) {
+    return <ErrorState message="Não foi possível carregar os dados do dashboard." onRetry={() => summary.refetch()} />;
+  }
+
+  const positions = Array.isArray(data.positions) ? data.positions : [];
+
+  const selectedTypeLabel = useMemo(() => {
+    if (!selectedType || !allocationByType.data) return null;
+    const item = allocationByType.data.find((entry) => entry.type === selectedType);
+    return item?.type_display || selectedType;
+  }, [allocationByType.data, selectedType]);
+
+  const filteredPositions = useMemo(() => {
+    if (!selectedType) return positions;
+    return positions.filter((position) => position.asset_type === selectedType);
+  }, [positions, selectedType]);
+
+  useEffect(() => {
+    if (!selectedType) return;
+    if (!allocationByType.data?.some((entry) => entry.type === selectedType)) {
+      setSelectedType(null);
+    }
+  }, [allocationByType.data, selectedType]);
+
+  const clearTypeFilter = () => {
+    setSelectedType(null);
+  };
+
+  const hasActiveTypeFilter = Boolean(selectedType);
 
   return (
     <div className="space-y-6">
@@ -136,7 +168,13 @@ export function DashboardPage() {
           {allocationByType.isLoading ? (
             <LoadingState />
           ) : allocationByType.data?.length ? (
-            <AllocationChart data={allocationByType.data} labelKey="type_display" />
+            <AllocationChart
+              data={allocationByType.data}
+              labelKey="type_display"
+              valueKey="type"
+              selectedValue={selectedType}
+              onSelectValue={setSelectedType}
+            />
           ) : (
             <p className="text-sm text-muted-foreground py-8 text-center">Sem dados de alocação</p>
           )}
@@ -162,10 +200,33 @@ export function DashboardPage() {
         <div className="flex flex-wrap items-center gap-2 p-4 sm:p-5 border-b border-haveres-border">
           <Wallet size={18} className="text-haveres-blue" />
           <h2 className="text-sm font-semibold text-white">Posições</h2>
-          <span className="sm:ml-auto text-xs text-muted-foreground">{data.positions.length} ativos</span>
+          <span className="text-xs text-muted-foreground">
+            {filteredPositions.length} ativos
+            {hasActiveTypeFilter ? ` de ${positions.length}` : ""}
+          </span>
+          {selectedTypeLabel && (
+            <span className="text-xs px-2 py-0.5 rounded bg-secondary text-muted-foreground">
+              Classe: {selectedTypeLabel}
+            </span>
+          )}
+          {hasActiveTypeFilter && (
+            <button
+              type="button"
+              onClick={clearTypeFilter}
+              className="sm:ml-auto text-xs px-2 py-1 rounded bg-secondary text-muted-foreground hover:text-white transition-colors"
+            >
+              Limpar filtro
+            </button>
+          )}
         </div>
-        {data.positions.length > 0 ? (
-          <PositionsTable positions={data.positions} />
+        {positions.length > 0 ? (
+          filteredPositions.length > 0 ? (
+            <PositionsTable positions={filteredPositions} />
+          ) : (
+            <p className="text-sm text-muted-foreground py-8 text-center">
+              Nenhuma posição para o filtro selecionado.
+            </p>
+          )
         ) : (
           <p className="text-sm text-muted-foreground py-8 text-center">
             Nenhuma posição. Cadastre movimentações para começar.

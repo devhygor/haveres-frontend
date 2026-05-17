@@ -231,7 +231,7 @@ export function DividendsPage() {
                     <YAxis type="category" dataKey="ticker" tick={{ fill: "#a0aec0", fontSize: 11 }}
                       axisLine={false} tickLine={false} width={52} />
                     <Tooltip
-                      cursor={false}
+                      cursor={{ fill: 'transparent' }}
                       content={({ active, payload }) => {
                         if (!active || !payload?.length) return null;
                         return (
@@ -401,7 +401,7 @@ export function DividendsPage() {
               <table className="w-full min-w-[1100px] text-sm">
                 <thead>
                   <tr className="border-b border-haveres-border">
-                    {["Data com", "Ticker", "Tipo", "Qtd", "Valor/ação", "Bruto", "IR", "Líquido", "Origem", ""].map((h, i) => (
+                    {["Data com", "Pgto", "Ticker", "Tipo", "Qtd", "Valor/ação", "Bruto", "IR", "Líquido", "Origem", ""].map((h, i) => (
                       <th key={i} className="text-left py-3 px-4 text-xs font-medium text-muted-foreground uppercase tracking-wider">
                         {h}
                       </th>
@@ -412,6 +412,7 @@ export function DividendsPage() {
                   {filteredData.map(d => (
                     <tr key={d.id} className="border-b border-haveres-border/50 hover:bg-secondary/30 group">
                       <td className="py-3 px-4 text-muted-foreground text-xs">{formatDate(d.ex_date)}</td>
+                      <td className="py-3 px-4 text-muted-foreground text-xs">{d.payment_date ? formatDate(d.payment_date) : "—"}</td>
                       <td className="py-3 px-4">
                         <div>
                           <span className="font-mono font-semibold text-white text-sm">{d.asset_ticker}</span>
