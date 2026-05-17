@@ -37,10 +37,5 @@ jobs:
           npm install
           
           echo "==== 4. Derrubar o servidor Vite anterior (liberar porta 5173) ===="
+          # Deixe apenas o pkill do vite. Remova o pkill do node!
           pkill -f "vite" || true
-          pkill -f "node" || true
-          
-          echo "==== 5. Iniciar o Vite em segundo plano (Detached) ===="
-          nohup npm run dev -- --host > vite_production.log 2>&1 &
-          
-          echo "==== DEPLOY DO FRONTEND CONCLUÍDO COM SUCESSO! ===="
