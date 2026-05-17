@@ -2,7 +2,7 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Legend,
 } from "recharts";
-import { addMonths, format, parseISO, startOfMonth } from "date-fns";
+import { addMonths, format, isValid, parseISO, startOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { formatCurrency } from "@/utils/format";
 import type { PatrimonyPoint } from "@/types/portfolio";
@@ -31,12 +31,18 @@ export function PatrimonyChart({ data }: Props) {
   const formatted = data
     .map((d) => {
       const parsedDate = typeof d.date === "string" ? parseISO(d.date) : d.date;
+
+      if (!isValid(parsedDate)) {
+        return null;
+      }
+
       return {
         ...d,
         timestamp: parsedDate.getTime(),
         tooltip_label: format(parsedDate, "dd MMM", { locale: ptBR }),
       };
     })
+    .filter((point): point is NonNullable<typeof point> => point !== null)
     .sort((a, b) => a.timestamp - b.timestamp);
 
   const monthTicks = formatted.length > 0

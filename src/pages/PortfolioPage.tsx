@@ -35,7 +35,12 @@ export function PortfolioPage() {
   if (summary.isLoading) return <LoadingState />;
   if (summary.isError) return <ErrorState onRetry={() => summary.refetch()} />;
 
-  const data = summary.data!;
+  const data = summary.data;
+  if (!data) {
+    return <ErrorState message="Não foi possível carregar os dados da carteira." onRetry={() => summary.refetch()} />;
+  }
+
+  const positions = Array.isArray(data.positions) ? data.positions : [];
 
   const selectedTypeLabel = useMemo(() => {
     if (!selectedType || !allocation.data) return null;
@@ -50,12 +55,12 @@ export function PortfolioPage() {
   }, [allocationBySector.data, selectedSector]);
 
   const filteredPositions = useMemo(() => {
-    return data.positions.filter((position) => {
+    return positions.filter((position) => {
       const typeMatches = !selectedType || position.asset_type === selectedType;
       const sectorMatches = !selectedSector || position.sector === selectedSector;
       return typeMatches && sectorMatches;
     });
-  }, [data.positions, selectedSector, selectedType]);
+  }, [positions, selectedSector, selectedType]);
 
   useEffect(() => {
     if (!selectedType) return;
@@ -168,7 +173,7 @@ export function PortfolioPage() {
           <h2 className="text-sm font-semibold text-white">Posições ({filteredPositions.length})</h2>
           {hasActiveFilters && (
             <>
-              <span className="text-xs text-muted-foreground">de {data.positions.length} ativos</span>
+              <span className="text-xs text-muted-foreground">de {positions.length} ativos</span>
               {selectedTypeLabel && (
                 <span className="text-xs px-2 py-0.5 rounded bg-secondary text-muted-foreground">
                   Classe: {selectedTypeLabel}
@@ -189,7 +194,7 @@ export function PortfolioPage() {
             </>
           )}
         </div>
-        {data.positions.length === 0 ? (
+        {positions.length === 0 ? (
           <EmptyState title="Nenhuma posição" description="Cadastre compras para ver suas posições." />
         ) : filteredPositions.length === 0 ? (
           <EmptyState
