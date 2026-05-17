@@ -1,11 +1,15 @@
 import { useQuery } from "@tanstack/react-query";
-import { Wallet, TrendingUp, CalendarDays, BarChart3, PieChart } from "lucide-react";
+import { Wallet, TrendingUp, CalendarDays, BarChart3, PieChart, Activity } from "lucide-react";
 import { portfolioApi } from "@/api/portfolio";
+import { quotesApi } from "@/api/quotes";
 import { StatCard, PLCard } from "@/components/cards/StatCard";
 import { PatrimonyChart } from "@/components/charts/PatrimonyChart";
 import { DividendsChart } from "@/components/charts/DividendsChart";
 import { AllocationChart } from "@/components/charts/AllocationChart";
+import { BenchmarkChart } from "@/components/charts/BenchmarkChart";
 import { PositionsTable } from "@/components/tables/PositionsTable";
+import { CurrencyWidget } from "@/components/cards/CurrencyWidget";
+import { MacroWidget } from "@/components/cards/MacroWidget";
 import { LoadingState, SkeletonCard } from "@/components/common/LoadingState";
 import { ErrorState } from "@/components/common/ErrorState";
 import { formatCurrency } from "@/utils/format";
@@ -29,6 +33,11 @@ export function DashboardPage() {
   const dividendsEvolution = useQuery({
     queryKey: ["portfolio", "evolution", "dividends"],
     queryFn: () => portfolioApi.getDividendsEvolution(12).then((r) => r.data),
+  });
+
+  const benchmark = useQuery({
+    queryKey: ["quotes", "benchmark"],
+    queryFn: () => quotesApi.getBenchmark(12).then((r) => r.data),
   });
 
   if (summary.isLoading) {
@@ -79,6 +88,12 @@ export function DashboardPage() {
         />
       </div>
 
+      {/* Câmbio + Indicadores macro */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <CurrencyWidget />
+        <MacroWidget />
+      </div>
+
       {/* Evolução patrimonial */}
       <div className="card-haveres p-5">
         <div className="flex items-center gap-2 mb-4">
@@ -97,6 +112,17 @@ export function DashboardPage() {
           </div>
         )}
       </div>
+
+      {/* Carteira vs CDI */}
+      {benchmark.data && benchmark.data.length > 0 && (
+        <div className="card-haveres p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <Activity size={18} className="text-haveres-blue" />
+            <h2 className="text-sm font-semibold text-white">Carteira vs CDI (12 meses)</h2>
+          </div>
+          <BenchmarkChart data={benchmark.data} />
+        </div>
+      )}
 
       {/* Alocação + Dividendos */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

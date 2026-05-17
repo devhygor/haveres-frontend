@@ -3,6 +3,7 @@ import {
   type ColumnDef, type SortingState, type Row,
 } from "@tanstack/react-table";
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { formatCurrency, formatPercent, formatQuantity, plClass } from "@/utils/format";
 import { cn } from "@/utils/cn";
@@ -29,7 +30,12 @@ const columns: ColumnDef<Position>[] = [
     header: "Ticker",
     cell: ({ row }) => (
       <div>
-        <p className="font-semibold text-white font-mono text-sm">{row.original.ticker}</p>
+        <Link
+          to={`/ativos/${row.original.ticker}`}
+          className="font-semibold text-haveres-blue hover:text-white font-mono text-sm transition-colors"
+        >
+          {row.original.ticker}
+        </Link>
         <p className="text-xs text-muted-foreground truncate max-w-[120px]">{row.original.name}</p>
       </div>
     ),

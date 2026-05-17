@@ -8,4 +8,5 @@ export const dividendsApi = {
   get: (id: string) => api.get<Dividend>(`/dividends/${id}`),
   update: (id: string, payload: unknown) => api.put<Dividend>(`/dividends/${id}`, payload),
   delete: (id: string) => api.delete(`/dividends/${id}`),
+  sync: () => api.post("/dividends/sync"),
 };

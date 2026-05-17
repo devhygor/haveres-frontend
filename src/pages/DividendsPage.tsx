@@ -8,7 +8,7 @@ import { ErrorState } from "@/components/common/ErrorState";
 import { EmptyState } from "@/components/common/EmptyState";
 import { DividendFormModal } from "@/components/forms/DividendFormModal";
 import { formatCurrency, formatDate } from "@/utils/format";
-import { TrendingUp, Plus, Pencil, Trash2 } from "lucide-react";
+import { TrendingUp, Plus, Pencil, Trash2, RefreshCw } from "lucide-react";
 import type { Dividend } from "@/types/dividend";
 
 const TYPE_COLORS: Record<string, string> = {
@@ -41,6 +41,14 @@ export function DividendsPage() {
       qc.invalidateQueries({ queryKey: ["dividends"] });
       qc.invalidateQueries({ queryKey: ["portfolio"] });
       setDeletingId(null);
+    },
+  });
+
+  const syncDividends = useMutation({
+    mutationFn: () => dividendsApi.sync(),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["dividends"] });
+      qc.invalidateQueries({ queryKey: ["portfolio"] });
     },
   });
 
@@ -90,12 +98,23 @@ export function DividendsPage() {
           <div className="flex items-center gap-2 p-5 border-b border-haveres-border">
             <h2 className="text-sm font-semibold text-white">Histórico de Proventos</h2>
             <span className="text-xs text-muted-foreground">{data.length} registros</span>
-            <button
-              onClick={openCreate}
-              className="ml-auto flex items-center gap-1.5 px-3 py-1.5 bg-haveres-blue text-white text-xs font-medium rounded-lg hover:bg-haveres-blue-dark transition-colors"
-            >
-              <Plus size={13} /> Novo Provento
-            </button>
+            <div className="ml-auto flex items-center gap-2">
+              <button
+                onClick={() => syncDividends.mutate()}
+                disabled={syncDividends.isPending}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-secondary text-muted-foreground text-xs font-medium rounded-lg hover:text-white transition-colors disabled:opacity-50"
+                title="Sincronizar proventos via Brapi"
+              >
+                <RefreshCw size={13} className={syncDividends.isPending ? "animate-spin" : ""} />
+                Sincronizar Proventos
+              </button>
+              <button
+                onClick={openCreate}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-haveres-blue text-white text-xs font-medium rounded-lg hover:bg-haveres-blue-dark transition-colors"
+              >
+                <Plus size={13} /> Novo Provento
+              </button>
+            </div>
           </div>
 
           {!data.length ? (
@@ -116,7 +135,7 @@ export function DividendsPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-haveres-border">
-                    {["Data com", "Ticker", "Tipo", "Qtd", "Valor/ação", "Bruto", "IR", "Líquido", ""].map((h, i) => (
+                    {["Data com", "Ticker", "Tipo", "Qtd", "Valor/ação", "Bruto", "IR", "Líquido", "Origem", ""].map((h, i) => (
                       <th key={i} className="text-left py-3 px-4 text-xs font-medium text-muted-foreground uppercase tracking-wider">
                         {h}
                       </th>
@@ -143,6 +162,11 @@ export function DividendsPage() {
                       <td className="py-3 px-4 font-numeric text-sm text-gain">{formatCurrency(Number(d.gross_amount))}</td>
                       <td className="py-3 px-4 font-numeric text-xs text-muted-foreground">{formatCurrency(Number(d.ir_withheld))}</td>
                       <td className="py-3 px-4 font-numeric text-sm text-white font-medium">{formatCurrency(Number(d.net_amount))}</td>
+                      <td className="py-3 px-4">
+                        {d.source === "brapi_sync" ? (
+                          <span className="px-1.5 py-0.5 rounded text-xs font-medium bg-haveres-blue/20 text-haveres-blue">Auto</span>
+                        ) : null}
+                      </td>
                       <td className="py-3 px-4 w-20">
                         {deletingId === d.id ? (
                           <div className="flex items-center gap-2 text-xs">

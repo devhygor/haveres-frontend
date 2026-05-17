@@ -21,7 +21,18 @@ export function Header() {
   const title = PAGE_TITLES[location.pathname] ?? "Haveres";
 
   function handleRefresh() {
-    queryClient.invalidateQueries();
+    const userScopedRoots = [
+      "portfolio",
+      "transactions",
+      "dividends",
+      "imports",
+      "open-finance",
+      "system",
+    ];
+
+    queryClient.invalidateQueries({
+      predicate: (query) => userScopedRoots.includes(String(query.queryKey[0])),
+    });
   }
 
   return (

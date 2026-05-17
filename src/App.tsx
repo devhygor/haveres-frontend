@@ -10,6 +10,7 @@ import { ImportsPage } from "@/pages/ImportsPage";
 import { OpenFinancePage } from "@/pages/OpenFinancePage";
 import { SettingsPage } from "@/pages/SettingsPage";
 import { SystemPage } from "@/pages/SystemPage";
+import { AssetDetailPage } from "@/pages/AssetDetailPage";
 import { useAuthStore } from "@/stores/authStore";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -40,6 +41,7 @@ export default function App() {
         <Route path="open-finance" element={<OpenFinancePage />} />
         <Route path="configuracoes" element={<SettingsPage />} />
         <Route path="sistema" element={<SystemPage />} />
+        <Route path="ativos/:ticker" element={<AssetDetailPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>

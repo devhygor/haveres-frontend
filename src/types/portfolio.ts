@@ -13,6 +13,13 @@ export interface Position {
   pl_percent: number;
   realized_gain: number;
   allocation: number;
+  // Fundamentalistas
+  price_to_earnings?: number | null;
+  price_to_book?: number | null;
+  earnings_per_share?: number | null;
+  market_cap?: number | null;
+  week_52_high?: number | null;
+  week_52_low?: number | null;
 }
 
 export interface PortfolioSummary {

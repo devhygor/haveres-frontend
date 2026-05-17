@@ -1,0 +1,80 @@
+import { useParams, Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { ArrowLeft } from "lucide-react";
+import { portfolioApi } from "@/api/portfolio";
+import { FundamentalsCard } from "@/components/cards/FundamentalsCard";
+import { PriceHistoryChart } from "@/components/charts/PriceHistoryChart";
+import { LoadingState } from "@/components/common/LoadingState";
+import { ErrorState } from "@/components/common/ErrorState";
+import { formatCurrency, formatPercent } from "@/utils/format";
+import { plClass } from "@/utils/format";
+import { cn } from "@/utils/cn";
+
+export function AssetDetailPage() {
+  const { ticker } = useParams<{ ticker: string }>();
+
+  const summary = useQuery({
+    queryKey: ["portfolio", "summary"],
+    queryFn: () => portfolioApi.getSummary().then((r) => r.data),
+  });
+
+  if (summary.isLoading) return <LoadingState />;
+  if (summary.isError) return <ErrorState onRetry={() => summary.refetch()} />;
+
+  const position = summary.data?.positions.find(
+    (p) => p.ticker === ticker?.toUpperCase()
+  );
+
+  if (!position) {
+    return (
+      <div className="space-y-4">
+        <Link to="/dashboard" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-white transition-colors">
+          <ArrowLeft size={16} /> Voltar
+        </Link>
+        <p className="text-muted-foreground text-sm">Ativo {ticker} não encontrado na carteira.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-start gap-4">
+        <Link to="/dashboard" className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-white transition-colors mt-1">
+          <ArrowLeft size={16} />
+        </Link>
+        <div>
+          <h1 className="text-2xl font-bold text-white font-mono">{position.ticker}</h1>
+          <p className="text-sm text-muted-foreground">{position.name}</p>
+        </div>
+        <div className="ml-auto text-right">
+          <p className="text-2xl font-bold text-white font-mono">{formatCurrency(position.current_price)}</p>
+          <p className={cn("text-sm font-mono font-medium", plClass(position.pl_percent))}>
+            {formatPercent(position.pl_percent, true)}
+          </p>
+        </div>
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {[
+          { label: "Qtd", value: position.quantity },
+          { label: "Preço Médio", value: formatCurrency(position.average_price) },
+          { label: "Investido", value: formatCurrency(position.total_invested) },
+          { label: "Valor Atual", value: formatCurrency(position.current_value) },
+        ].map(({ label, value }) => (
+          <div key={label} className="card-haveres p-4">
+            <p className="text-xs text-muted-foreground mb-1">{label}</p>
+            <p className="font-mono text-sm font-semibold text-white">{value}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Gráfico de preços */}
+      <PriceHistoryChart ticker={position.ticker} />
+
+      {/* Fundamentalistas */}
+      <FundamentalsCard position={position} />
+    </div>
+  );
+}

@@ -13,4 +13,5 @@ export interface Dividend {
   ir_withheld: number;
   net_amount: number;
   notes: string;
+  source?: "manual" | "brapi_sync";
 }
