@@ -9,33 +9,36 @@ jobs:
   deploy:
     name: Deploy Frontend
     runs-on: ubuntu-latest
-    
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
     steps:
-    - name: Checkout do código
-      uses: actions/checkout@v4
+      - name: Checkout do código
+        uses: actions/checkout@v4
 
-    - name: Executar comandos de Deploy via SSH
-      uses: appleboy/ssh-action@v1.0.3
-      with:
-        host: ${{ secrets.REMOTE_HOST }}
-        username: ${{ secrets.REMOTE_USER }}
-        key: ${{ secrets.SSH_PRIVATE_KEY }}
-        port: ${{ secrets.REMOTE_PORT }}
-        script: |
-          echo "==== 1. Acessar a pasta do frontend no LXC ===="
-          # Corrigido para o caminho real que o seu 'ls' mostrou:
-          cd /home/deployuser/apps/haveres/haveres-frontend
-          
-          echo "==== 2. Atualizar o código da branch main ===="
-          git checkout main
-          git pull origin main
-          
-          echo "==== 3. Instalar novas dependências (se houver) ===="
-          npm install
-          
-          echo "==== 4. Derrubar o servidor Vite anterior (liberar porta 5173) ===="
-          # Deixe apenas o pkill do vite. Remova o pkill do node!
-          pkill -f "vite" || true
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.REMOTE_HOST }}
+          username: ${{ secrets.REMOTE_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.REMOTE_PORT }}
+
+          script: |
+            echo "==== 1. Entrando na pasta do projeto ===="
+            cd /home/deployuser/apps/haveres/haveres-frontend
+
+            echo "==== 2. Garantindo branch main ===="
+            git checkout main
+
+            echo "==== 3. Atualizando código ===="
+            git pull origin main
+
+            echo "==== 4. Instalando dependências ===="
+            npm install
+
+            echo "==== 5. Reiniciando frontend no PM2 ===="
+            pm2 restart haveres-frontend || pm2 start "npm run dev -- --host 0.0.0.0" --name haveres-frontend
+
+            echo "==== 6. Salvando configuração do PM2 ===="
+            pm2 save
+
+            echo "==== Deploy concluído com sucesso ===="
