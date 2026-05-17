@@ -11,6 +11,7 @@ import { EmptyState } from "@/components/common/EmptyState";
 import { DividendFormModal } from "@/components/forms/DividendFormModal";
 import { formatCurrency, formatDate } from "@/utils/format";
 import { TrendingUp, Plus, Pencil, Trash2, RefreshCw, PieChart, BarChart3 } from "lucide-react";
+import { SourceBadge } from "@/components/common/SourceBadge";
 import type { Dividend } from "@/types/dividend";
 import type { AllocationItem } from "@/types/portfolio";
 
@@ -232,11 +233,7 @@ export function DividendsPage() {
                       <td className="py-3 px-4 font-numeric text-sm text-gain">{formatCurrency(Number(d.gross_amount))}</td>
                       <td className="py-3 px-4 font-numeric text-xs text-muted-foreground">{formatCurrency(Number(d.ir_withheld))}</td>
                       <td className="py-3 px-4 font-numeric text-sm text-white font-medium">{formatCurrency(Number(d.net_amount))}</td>
-                      <td className="py-3 px-4">
-                        {d.source === "brapi_sync" ? (
-                          <span className="px-1.5 py-0.5 rounded text-xs font-medium bg-haveres-blue/20 text-haveres-blue">Auto</span>
-                        ) : null}
-                      </td>
+                      <td className="py-3 px-4"><SourceBadge source={d.source} /></td>
                       <td className="py-3 px-4 w-20">
                         {deletingId === d.id ? (
                           <div className="flex items-center gap-2 text-xs">

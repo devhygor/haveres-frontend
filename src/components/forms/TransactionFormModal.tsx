@@ -1,9 +1,12 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { AlertTriangle } from "lucide-react";
 import { Modal } from "@/components/common/Modal";
-import { transactionsApi } from "@/api/transactions";
+import { SourceBadge } from "@/components/common/SourceBadge";
+import { transactionsApi, type CreateTransactionPayload } from "@/api/transactions";
 import { assetsApi, ASSET_TYPES } from "@/api/assets";
-import type { Transaction } from "@/types/transaction";
+import { formatCurrency, formatDate } from "@/utils/format";
+import type { Transaction, DuplicateTransactionResponse } from "@/types/transaction";
 
 const TRANSACTION_TYPES = [
   { value: "BUY", label: "Compra" },
@@ -72,6 +75,8 @@ export function TransactionFormModal({ open, onClose, transaction }: Props) {
   const [newAsset, setNewAsset] = useState<NewAsset>(DEFAULT_NEW_ASSET);
   const [showNewAsset, setShowNewAsset] = useState(false);
   const [error, setError] = useState("");
+  const [duplicate, setDuplicate] = useState<DuplicateTransactionResponse | null>(null);
+  const [pendingPayload, setPendingPayload] = useState<CreateTransactionPayload | null>(null);
 
   useEffect(() => {
     if (open) {
@@ -93,6 +98,8 @@ export function TransactionFormModal({ open, onClose, transaction }: Props) {
       setShowNewAsset(false);
       setNewAsset(DEFAULT_NEW_ASSET);
       setError("");
+      setDuplicate(null);
+      setPendingPayload(null);
     }
   }, [open, transaction]);
 
@@ -115,16 +122,23 @@ export function TransactionFormModal({ open, onClose, transaction }: Props) {
   });
 
   const save = useMutation({
-    mutationFn: (payload: object) =>
+    mutationFn: (payload: CreateTransactionPayload | Partial<Transaction>) =>
       isEditing
-        ? transactionsApi.update(transaction!.id, payload as any)
-        : transactionsApi.create(payload as any),
+        ? transactionsApi.update(transaction!.id, payload as Partial<Transaction>)
+        : transactionsApi.create(payload as CreateTransactionPayload),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["transactions"] });
       qc.invalidateQueries({ queryKey: ["portfolio"] });
       onClose();
     },
-    onError: () => setError("Erro ao salvar. Verifique os dados e tente novamente."),
+    onError: (err: any) => {
+      if (!isEditing && err?.response?.status === 409) {
+        const data: DuplicateTransactionResponse = err.response.data;
+        setDuplicate(data);
+        return;
+      }
+      setError("Erro ao salvar. Verifique os dados e tente novamente.");
+    },
   });
 
   const handleAddAsset = () => {
@@ -139,6 +153,7 @@ export function TransactionFormModal({ open, onClose, transaction }: Props) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setDuplicate(null);
     if (!form.asset_id) { setError("Selecione um ativo."); return; }
 
     const { showQuantity, showFactor, showPrice, showFees } = getFields(form.transaction_type);
@@ -146,7 +161,7 @@ export function TransactionFormModal({ open, onClose, transaction }: Props) {
     if (showPrice && !form.price) { setError("Informe o preço."); return; }
     if (showFactor && !form.factor) { setError("Informe o fator."); return; }
 
-    save.mutate({
+    const payload: CreateTransactionPayload = {
       asset_id: form.asset_id,
       transaction_type: form.transaction_type,
       date: form.date,
@@ -156,7 +171,15 @@ export function TransactionFormModal({ open, onClose, transaction }: Props) {
       factor: showFactor ? parseFloat(form.factor || "1") : 1,
       broker_id: form.broker_id || null,
       notes: form.notes,
-    });
+    };
+    setPendingPayload(payload);
+    save.mutate(payload);
+  };
+
+  const handleForceInsert = () => {
+    if (!pendingPayload) return;
+    setDuplicate(null);
+    save.mutate({ ...pendingPayload, force: true });
   };
 
   const fields = getFields(form.transaction_type);
@@ -346,6 +369,49 @@ export function TransactionFormModal({ open, onClose, transaction }: Props) {
         </div>
 
         {error && <p className="text-xs text-loss">{error}</p>}
+
+        {duplicate && (
+          <div className="rounded-lg border border-yellow-400/40 bg-yellow-400/5 p-4 space-y-3">
+            <div className="flex items-center gap-2 text-yellow-400">
+              <AlertTriangle size={14} />
+              <span className="text-xs font-semibold">Possível duplicata encontrada</span>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Já existe uma movimentação com os mesmos dados cadastrada:
+            </p>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+              <span className="text-muted-foreground">Ativo</span>
+              <span className="font-mono text-white">{duplicate.existing.asset_ticker}</span>
+              <span className="text-muted-foreground">Data</span>
+              <span className="text-white">{formatDate(duplicate.existing.date)}</span>
+              <span className="text-muted-foreground">Tipo</span>
+              <span className="text-white">{duplicate.existing.transaction_type_display}</span>
+              <span className="text-muted-foreground">Quantidade</span>
+              <span className="font-numeric text-white">{duplicate.existing.quantity}</span>
+              <span className="text-muted-foreground">Preço</span>
+              <span className="font-numeric text-white">{formatCurrency(Number(duplicate.existing.price))}</span>
+              <span className="text-muted-foreground">Origem</span>
+              <span><SourceBadge source={duplicate.existing.source} /></span>
+            </div>
+            <div className="flex gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setDuplicate(null)}
+                className="flex-1 py-1.5 rounded-lg border border-haveres-border text-xs text-muted-foreground hover:text-white transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleForceInsert}
+                disabled={isPending}
+                className="flex-1 py-1.5 rounded-lg bg-yellow-500/20 border border-yellow-400/40 text-yellow-400 text-xs font-medium hover:bg-yellow-500/30 transition-colors disabled:opacity-50"
+              >
+                {isPending ? "Salvando..." : "Inserir mesmo assim"}
+              </button>
+            </div>
+          </div>
+        )}
 
         <div className="flex gap-3 pt-2">
           <button

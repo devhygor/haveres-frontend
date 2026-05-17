@@ -14,6 +14,14 @@ export interface Transaction {
   factor: number;
   total_value: number;
   notes: string;
+  source: string;
+  source_display: string;
+  created_at: string;
+}
+
+export interface DuplicateTransactionResponse {
+  duplicate: true;
+  existing: Transaction;
 }
 
 export interface Broker {

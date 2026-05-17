@@ -9,10 +9,23 @@ export interface TransactionFilters {
   broker_id?: string;
 }
 
+export interface CreateTransactionPayload {
+  asset_id: string;
+  transaction_type: string;
+  date: string;
+  quantity: number;
+  price: number;
+  fees: number;
+  factor: number;
+  broker_id: string | null;
+  notes: string;
+  force?: boolean;
+}
+
 export const transactionsApi = {
   list: (filters?: TransactionFilters) =>
     api.get<Transaction[]>("/transactions", { params: filters }),
-  create: (payload: Omit<Transaction, "id" | "asset_ticker" | "asset_name" | "broker_name" | "transaction_type_display" | "total_value">) =>
+  create: (payload: CreateTransactionPayload) =>
     api.post<Transaction>("/transactions", payload),
   get: (id: string) => api.get<Transaction>(`/transactions/${id}`),
   update: (id: string, payload: Partial<Transaction>) =>

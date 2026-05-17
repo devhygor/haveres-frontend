@@ -7,7 +7,9 @@ export interface RegisterPayload {
 }
 export interface UserOut {
   id: number; email: string; username: string;
-  full_name: string; display_name: string; is_email_verified: boolean;
+  first_name: string; last_name: string;
+  full_name: string; display_name: string; avatar_url: string;
+  is_email_verified: boolean;
 }
 
 export const authApi = {
@@ -24,4 +26,18 @@ export const authApi = {
 
   updateProfile: (payload: Partial<Pick<UserOut, "first_name" | "last_name" | "display_name">>) =>
     api.put<UserOut>("/auth/me", payload),
+
+  uploadAvatar: (file: File) => {
+    const form = new FormData();
+    form.append("avatar", file);
+    return api.post<UserOut>("/auth/me/avatar", form, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+  },
+
+  clearAccountData: () =>
+    api.delete<{ message: string; deleted: Record<string, number> }>(
+      "/auth/me/data",
+      { data: { confirm: true } },
+    ),
 };

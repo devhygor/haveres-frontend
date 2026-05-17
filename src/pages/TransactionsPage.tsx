@@ -11,6 +11,7 @@ import { TransactionFormModal } from "@/components/forms/TransactionFormModal";
 import { formatCurrency, formatDate, formatQuantity } from "@/utils/format";
 import { ArrowLeftRight, Plus, Pencil, Trash2, BarChart3 } from "lucide-react";
 import { cn } from "@/utils/cn";
+import { SourceBadge } from "@/components/common/SourceBadge";
 import type { Transaction } from "@/types/transaction";
 
 const TYPE_COLORS: Record<string, string> = {
@@ -141,7 +142,7 @@ export function TransactionsPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-haveres-border">
-                  {["Data", "Ticker", "Tipo", "Qtd", "Preço", "Taxas", "Total", "Corretora", ""].map((h, i) => (
+                  {["Data", "Ticker", "Tipo", "Qtd", "Preço", "Taxas", "Total", "Corretora", "Origem", ""].map((h, i) => (
                     <th
                       key={i}
                       className="text-left py-3 px-4 text-xs font-medium text-muted-foreground uppercase tracking-wider"
@@ -171,6 +172,7 @@ export function TransactionsPage() {
                     <td className="py-3 px-4 font-numeric text-xs text-muted-foreground">{formatCurrency(Number(t.fees))}</td>
                     <td className="py-3 px-4 font-numeric text-sm text-white font-medium">{formatCurrency(Number(t.total_value))}</td>
                     <td className="py-3 px-4 text-xs text-muted-foreground">{t.broker_name ?? "—"}</td>
+                    <td className="py-3 px-4"><SourceBadge source={t.source} /></td>
                     <td className="py-3 px-4 w-20">
                       {deletingId === t.id ? (
                         <div className="flex items-center gap-2 text-xs">
