@@ -95,9 +95,6 @@ export function LoginPage() {
           </p>
         </div>
 
-        <p className="text-center text-xs text-muted-foreground/60 mt-6">
-          Os dados são apenas informativos e não constituem recomendação de investimento.
-        </p>
       </div>
     </div>
   );

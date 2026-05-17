@@ -26,12 +26,6 @@ export function AppLayout() {
         <main className="flex-1 overflow-y-auto p-6">
           <Outlet />
         </main>
-        <footer className="px-6 py-3 border-t border-haveres-border">
-          <p className="text-xs text-muted-foreground text-center">
-            ⚠️ Os dados são apenas informativos e não constituem recomendação de compra ou venda
-            de ativos. Consulte um assessor de investimentos certificado.
-          </p>
-        </footer>
       </div>
     </div>
   );
