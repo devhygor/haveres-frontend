@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { systemApi } from "@/api/system";
 import { assetsApi } from "@/api/assets";
 import { LoadingState } from "@/components/common/LoadingState";
-import { Activity, Database, Wifi, Server, CheckCircle2, XCircle, RefreshCw, Package } from "lucide-react";
+import { Activity, Database, Wifi, Server, CheckCircle2, XCircle, RefreshCw, Package, Users } from "lucide-react";
 import { cn } from "@/utils/cn";
 import { formatDateTime } from "@/utils/format";
 
@@ -49,6 +49,11 @@ export function SystemPage() {
     queryKey: ["system", "integrations"],
     queryFn: () => systemApi.integrations().then((r) => r.data),
   });
+  const userMetrics = useQuery({
+    queryKey: ["system", "users", "metrics"],
+    queryFn: () => systemApi.userMetrics().then((r) => r.data),
+    refetchInterval: 60000,
+  });
   const syncStatus = useQuery({
     queryKey: ["assets", "sync-status"],
     queryFn: () => assetsApi.syncStatus().then((r) => r.data),
@@ -66,10 +71,18 @@ export function SystemPage() {
 
   const h = health.data;
   const i = integrations.data;
+  const m = userMetrics.data;
   const s = syncStatus.data;
 
+  const verifiedRate = m && m.total_users > 0
+    ? Math.round((m.verified_users / m.total_users) * 100)
+    : 0;
+  const activeRate = m && m.total_users > 0
+    ? Math.round((m.active_users / m.total_users) * 100)
+    : 0;
+
   return (
-    <div className="space-y-6 max-w-2xl">
+    <div className="space-y-6 max-w-4xl">
       <div className="card-haveres p-5">
         <div className="flex items-center gap-2 mb-4">
           <Activity size={18} className="text-haveres-blue" />
@@ -87,6 +100,49 @@ export function SystemPage() {
             <StatusRow icon={Wifi} label="Cache" status={h.cache === "ok"} detail="Redis" />
           </div>
         )}
+      </div>
+
+      <div className="card-haveres p-5">
+        <div className="flex items-center gap-2 mb-4">
+          <Users size={18} className="text-haveres-blue" />
+          <h2 className="text-sm font-semibold text-white">Usuários da Plataforma</h2>
+          {m && (
+            <span className="ml-auto text-xs text-muted-foreground">
+              Ativos {activeRate}% · Verificados {verifiedRate}%
+            </span>
+          )}
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+          <div className="bg-haveres-dark rounded-lg p-3 text-center">
+            <p className="text-2xl font-numeric font-bold text-white">{m?.total_users ?? "—"}</p>
+            <p className="text-xs text-muted-foreground mt-1">Total de usuários</p>
+          </div>
+          <div className="bg-haveres-dark rounded-lg p-3 text-center">
+            <p className="text-2xl font-numeric font-bold text-white">{m?.active_users ?? "—"}</p>
+            <p className="text-xs text-muted-foreground mt-1">Usuários ativos</p>
+          </div>
+          <div className="bg-haveres-dark rounded-lg p-3 text-center">
+            <p className="text-2xl font-numeric font-bold text-gain">{m?.verified_users ?? "—"}</p>
+            <p className="text-xs text-muted-foreground mt-1">E-mails verificados</p>
+          </div>
+          <div className="bg-haveres-dark rounded-lg p-3 text-center">
+            <p className="text-2xl font-numeric font-bold text-white">{m?.users_with_transactions ?? "—"}</p>
+            <p className="text-xs text-muted-foreground mt-1">Com movimentações</p>
+          </div>
+          <div className="bg-haveres-dark rounded-lg p-3 text-center">
+            <p className="text-2xl font-numeric font-bold text-white">{m?.users_with_open_finance ?? "—"}</p>
+            <p className="text-xs text-muted-foreground mt-1">Com Open Finance</p>
+          </div>
+          <div className="bg-haveres-dark rounded-lg p-3 text-center">
+            <p className="text-2xl font-numeric font-bold text-haveres-blue">{m?.new_users_last_7_days ?? "—"}</p>
+            <p className="text-xs text-muted-foreground mt-1">Novos (7 dias)</p>
+          </div>
+          <div className="bg-haveres-dark rounded-lg p-3 text-center col-span-2 sm:col-span-1">
+            <p className="text-2xl font-numeric font-bold text-haveres-blue">{m?.new_users_last_30_days ?? "—"}</p>
+            <p className="text-xs text-muted-foreground mt-1">Novos (30 dias)</p>
+          </div>
+        </div>
       </div>
 
       {i && (
