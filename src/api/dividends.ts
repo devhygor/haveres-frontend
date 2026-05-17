@@ -9,4 +9,5 @@ export const dividendsApi = {
   update: (id: string, payload: unknown) => api.put<Dividend>(`/dividends/${id}`, payload),
   delete: (id: string) => api.delete(`/dividends/${id}`),
   sync: () => api.post("/dividends/sync"),
+  upcoming: () => api.get<Dividend[]>("/dividends/upcoming"),
 };

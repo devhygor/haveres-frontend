@@ -10,7 +10,7 @@ import { ErrorState } from "@/components/common/ErrorState";
 import { EmptyState } from "@/components/common/EmptyState";
 import { DividendFormModal } from "@/components/forms/DividendFormModal";
 import { formatCurrency, formatDate } from "@/utils/format";
-import { TrendingUp, Plus, Pencil, Trash2, RefreshCw, PieChart, BarChart3 } from "lucide-react";
+import { TrendingUp, Plus, Pencil, Trash2, RefreshCw, PieChart, BarChart3, CalendarDays } from "lucide-react";
 import { SourceBadge } from "@/components/common/SourceBadge";
 import type { Dividend } from "@/types/dividend";
 import type { AllocationItem } from "@/types/portfolio";
@@ -37,6 +37,10 @@ export function DividendsPage() {
   const evolution = useQuery({
     queryKey: ["portfolio", "evolution", "dividends"],
     queryFn: () => portfolioApi.getDividendsEvolution(12).then(r => r.data),
+  });
+  const upcoming = useQuery({
+    queryKey: ["dividends", "upcoming"],
+    queryFn: () => dividendsApi.upcoming().then(r => r.data),
   });
 
   const deleteDividend = useMutation({
@@ -150,6 +154,44 @@ export function DividendsPage() {
                 </ResponsiveContainer>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Proventos a Receber */}
+        {upcoming.data && upcoming.data.length > 0 && (
+          <div className="card-haveres p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <CalendarDays size={18} className="text-haveres-blue" />
+              <h2 className="text-sm font-semibold text-white">A Receber</h2>
+              <span className="text-xs text-muted-foreground">{upcoming.data.length} proventos agendados</span>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-haveres-border">
+                    {["Pgto", "Ticker", "Tipo", "Qtd", "Valor/ação", "Total Bruto"].map((h, i) => (
+                      <th key={i} className="text-left py-2 px-4 text-xs font-medium text-muted-foreground uppercase tracking-wider">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {upcoming.data.map(d => (
+                    <tr key={d.id} className="border-b border-haveres-border/50 hover:bg-secondary/30">
+                      <td className="py-2 px-4 text-muted-foreground text-xs">{d.payment_date ? formatDate(d.payment_date) : "—"}</td>
+                      <td className="py-2 px-4 font-mono font-semibold text-white text-sm">{d.asset_ticker}</td>
+                      <td className="py-2 px-4">
+                        <span className={`text-xs font-medium ${TYPE_COLORS[d.dividend_type] ?? "text-muted-foreground"}`}>
+                          {d.dividend_type_display}
+                        </span>
+                      </td>
+                      <td className="py-2 px-4 font-numeric text-sm">{d.quantity_held}</td>
+                      <td className="py-2 px-4 font-numeric text-sm">{formatCurrency(Number(d.value_per_share))}</td>
+                      <td className="py-2 px-4 font-numeric text-sm text-gain font-medium">{formatCurrency(Number(d.gross_amount))}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
 
