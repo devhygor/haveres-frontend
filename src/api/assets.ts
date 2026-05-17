@@ -11,6 +11,18 @@ export interface Asset {
   is_active: boolean;
 }
 
+export interface AssetSyncStatus {
+  status: string;
+  is_fresh: boolean;
+  total: number | null;
+  synced_at: string | null;
+  provider: string | null;
+  created: number | null;
+  updated: number | null;
+  processed: number | null;
+  message: string | null;
+}
+
 export const ASSET_TYPES = [
   { value: "STOCK", label: "Ação" },
   { value: "FII", label: "FII" },
@@ -26,4 +38,6 @@ export const assetsApi = {
   list: () => api.get<Asset[]>("/assets/"),
   create: (payload: { ticker: string; name: string; asset_type: string; sector?: string }) =>
     api.post<Asset>("/assets/", payload),
+  syncStatus: () => api.get<AssetSyncStatus>("/assets/sync/status"),
+  triggerSync: (force = false) => api.post<{ message: string }>(`/assets/sync?force=${force}`),
 };

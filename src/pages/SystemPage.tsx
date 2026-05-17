@@ -1,8 +1,10 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { systemApi } from "@/api/system";
+import { assetsApi } from "@/api/assets";
 import { LoadingState } from "@/components/common/LoadingState";
-import { Activity, Database, Wifi, Server, CheckCircle2, XCircle } from "lucide-react";
+import { Activity, Database, Wifi, Server, CheckCircle2, XCircle, RefreshCw, Package } from "lucide-react";
 import { cn } from "@/utils/cn";
+import { formatDate } from "@/utils/format";
 
 function StatusBadge({ ok }: { ok: boolean }) {
   return ok ? (
@@ -36,6 +38,8 @@ function StatusRow({ icon: Icon, label, status, detail }: {
 }
 
 export function SystemPage() {
+  const queryClient = useQueryClient();
+
   const health = useQuery({
     queryKey: ["system", "health"],
     queryFn: () => systemApi.health().then((r) => r.data),
@@ -45,11 +49,24 @@ export function SystemPage() {
     queryKey: ["system", "integrations"],
     queryFn: () => systemApi.integrations().then((r) => r.data),
   });
+  const syncStatus = useQuery({
+    queryKey: ["assets", "sync-status"],
+    queryFn: () => assetsApi.syncStatus().then((r) => r.data),
+    refetchInterval: 60000,
+  });
+
+  const triggerSync = useMutation({
+    mutationFn: (force: boolean) => assetsApi.triggerSync(force),
+    onSuccess: () => {
+      setTimeout(() => queryClient.invalidateQueries({ queryKey: ["assets", "sync-status"] }), 3000);
+    },
+  });
 
   if (health.isLoading) return <LoadingState />;
 
   const h = health.data;
   const i = integrations.data;
+  const s = syncStatus.data;
 
   return (
     <div className="space-y-6 max-w-2xl">
@@ -89,6 +106,74 @@ export function SystemPage() {
           />
         </div>
       )}
+
+      <div className="card-haveres p-5">
+        <div className="flex items-center gap-2 mb-4">
+          <Package size={18} className="text-haveres-blue" />
+          <h2 className="text-sm font-semibold text-white">Catálogo de Ativos</h2>
+          {s && (
+            <span className={cn("ml-2 text-xs font-medium", s.is_fresh ? "text-gain" : "text-amber-400")}>
+              {s.is_fresh ? "● Fresco" : "● Cache expirado"}
+            </span>
+          )}
+        </div>
+
+        <div className="grid grid-cols-3 gap-3 mb-4">
+          <div className="bg-haveres-dark rounded-lg p-3 text-center">
+            <p className="text-2xl font-numeric font-bold text-white">{s?.total ?? "—"}</p>
+            <p className="text-xs text-muted-foreground mt-1">Ativos ativos</p>
+          </div>
+          <div className="bg-haveres-dark rounded-lg p-3 text-center">
+            <p className="text-2xl font-numeric font-bold text-white">{s?.processed ?? "—"}</p>
+            <p className="text-xs text-muted-foreground mt-1">Processados</p>
+          </div>
+          <div className="bg-haveres-dark rounded-lg p-3 text-center">
+            <p className="text-2xl font-numeric font-bold text-gain">{s?.created ?? "—"}</p>
+            <p className="text-xs text-muted-foreground mt-1">Criados</p>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between py-3 border-t border-haveres-border">
+          <div>
+            <p className="text-xs text-muted-foreground">Última sincronização</p>
+            <p className="text-sm text-white mt-0.5">
+              {s?.synced_at ? formatDate(s.synced_at) : "Nunca sincronizado"}
+            </p>
+            {s?.provider && (
+              <p className="text-xs text-muted-foreground mt-0.5">via {s.provider}</p>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => triggerSync.mutate(false)}
+              disabled={triggerSync.isPending || s?.is_fresh}
+              className={cn(
+                "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors",
+                s?.is_fresh
+                  ? "bg-haveres-border text-muted-foreground cursor-not-allowed"
+                  : "bg-haveres-blue hover:bg-blue-600 text-white"
+              )}
+            >
+              <RefreshCw size={12} className={triggerSync.isPending ? "animate-spin" : ""} />
+              Sincronizar
+            </button>
+            <button
+              onClick={() => triggerSync.mutate(true)}
+              disabled={triggerSync.isPending}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-haveres-dark border border-haveres-border hover:border-haveres-blue text-muted-foreground hover:text-white transition-colors"
+            >
+              Forçar
+            </button>
+          </div>
+        </div>
+
+        {triggerSync.isSuccess && (
+          <p className="text-xs text-gain mt-2">Sincronização agendada. Aguarde alguns instantes.</p>
+        )}
+        {triggerSync.isError && (
+          <p className="text-xs text-loss mt-2">Erro ao agendar sincronização.</p>
+        )}
+      </div>
     </div>
   );
 }
