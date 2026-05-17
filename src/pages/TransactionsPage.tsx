@@ -1,12 +1,15 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import { format, parseISO } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { transactionsApi } from "@/api/transactions";
 import { LoadingState } from "@/components/common/LoadingState";
 import { ErrorState } from "@/components/common/ErrorState";
 import { EmptyState } from "@/components/common/EmptyState";
 import { TransactionFormModal } from "@/components/forms/TransactionFormModal";
 import { formatCurrency, formatDate, formatQuantity } from "@/utils/format";
-import { ArrowLeftRight, Plus, Pencil, Trash2 } from "lucide-react";
+import { ArrowLeftRight, Plus, Pencil, Trash2, BarChart3 } from "lucide-react";
 import { cn } from "@/utils/cn";
 import type { Transaction } from "@/types/transaction";
 
@@ -46,11 +49,67 @@ export function TransactionsPage() {
   const openCreate = () => { setEditing(undefined); setModalOpen(true); };
   const openEdit = (t: Transaction) => { setEditing(t); setModalOpen(true); };
 
+  const monthlyVolume = useMemo(() => {
+    const map: Record<string, { month: string; compra: number; venda: number }> = {};
+    (data ?? []).forEach(t => {
+      if (!["BUY", "SELL"].includes(t.transaction_type)) return;
+      const m = t.date.slice(0, 7);
+      if (!map[m]) map[m] = { month: format(parseISO(m + "-01"), "MMM/yy", { locale: ptBR }), compra: 0, venda: 0 };
+      if (t.transaction_type === "BUY") map[m].compra += Number(t.total_value);
+      if (t.transaction_type === "SELL") map[m].venda += Number(t.total_value);
+    });
+    return Object.entries(map)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .slice(-12)
+      .map(([, v]) => v);
+  }, [data]);
+
   if (isLoading) return <LoadingState />;
   if (isError) return <ErrorState onRetry={refetch} />;
 
   return (
     <>
+      {/* Volume mensal de compras/vendas */}
+      {monthlyVolume.length > 0 && (
+        <div className="card-haveres p-5 mb-6">
+          <div className="flex items-center gap-2 mb-4">
+            <BarChart3 size={18} className="text-haveres-blue" />
+            <h2 className="text-sm font-semibold text-white">Volume Mensal (compras / vendas)</h2>
+          </div>
+          <ResponsiveContainer width="100%" height={220}>
+            <BarChart data={monthlyVolume} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#2d3748" vertical={false} />
+              <XAxis dataKey="month" tick={{ fill: "#718096", fontSize: 11 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fill: "#718096", fontSize: 11 }} axisLine={false} tickLine={false}
+                tickFormatter={(v) => formatCurrency(v, true)} width={65} />
+              <Tooltip
+                content={({ active, payload, label }) => {
+                  if (!active || !payload?.length) return null;
+                  return (
+                    <div className="bg-haveres-card border border-haveres-border rounded-lg p-3 shadow-xl text-xs space-y-1">
+                      <p className="text-muted-foreground mb-1">{label}</p>
+                      {payload.map((p) => (
+                        <div key={p.name} className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: p.color }} />
+                          <span className="text-muted-foreground">{p.name}:</span>
+                          <span className="font-mono text-white">{formatCurrency(p.value as number)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                }}
+              />
+              <Legend
+                wrapperStyle={{ fontSize: 12 }}
+                formatter={(v) => <span style={{ color: "#a0aec0" }}>{v}</span>}
+              />
+              <Bar dataKey="compra" name="Compras" fill="#3b82f6" radius={[4, 4, 0, 0]} maxBarSize={28} />
+              <Bar dataKey="venda" name="Vendas" fill="#ef4444" radius={[4, 4, 0, 0]} maxBarSize={28} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+
       <div className="card-haveres">
         <div className="flex items-center gap-2 p-5 border-b border-haveres-border">
           <ArrowLeftRight size={18} className="text-haveres-blue" />

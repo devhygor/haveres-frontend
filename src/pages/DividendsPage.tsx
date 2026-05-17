@@ -1,15 +1,18 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { dividendsApi } from "@/api/dividends";
 import { portfolioApi } from "@/api/portfolio";
 import { DividendsChart } from "@/components/charts/DividendsChart";
+import { AllocationChart } from "@/components/charts/AllocationChart";
 import { LoadingState } from "@/components/common/LoadingState";
 import { ErrorState } from "@/components/common/ErrorState";
 import { EmptyState } from "@/components/common/EmptyState";
 import { DividendFormModal } from "@/components/forms/DividendFormModal";
 import { formatCurrency, formatDate } from "@/utils/format";
-import { TrendingUp, Plus, Pencil, Trash2, RefreshCw } from "lucide-react";
+import { TrendingUp, Plus, Pencil, Trash2, RefreshCw, PieChart, BarChart3 } from "lucide-react";
 import type { Dividend } from "@/types/dividend";
+import type { AllocationItem } from "@/types/portfolio";
 
 const TYPE_COLORS: Record<string, string> = {
   DIVIDEND: "text-gain",
@@ -55,6 +58,29 @@ export function DividendsPage() {
   const openCreate = () => { setEditing(undefined); setModalOpen(true); };
   const openEdit = (d: Dividend) => { setEditing(d); setModalOpen(true); };
 
+  const byType: AllocationItem[] = useMemo(() => {
+    const d = dividends.data ?? [];
+    const totalNet = d.reduce((s, x) => s + Number(x.net_amount), 0);
+    if (!d.length || totalNet === 0) return [];
+    const map: Record<string, number> = {};
+    d.forEach(x => { map[x.dividend_type_display] = (map[x.dividend_type_display] || 0) + Number(x.net_amount); });
+    return Object.entries(map).map(([type_display, value]) => ({
+      type_display,
+      value,
+      allocation: (value / totalNet) * 100,
+    }));
+  }, [dividends.data]);
+
+  const byAsset = useMemo(() => {
+    const d = dividends.data ?? [];
+    const map: Record<string, { ticker: string; total: number }> = {};
+    d.forEach(x => {
+      if (!map[x.asset_ticker]) map[x.asset_ticker] = { ticker: x.asset_ticker, total: 0 };
+      map[x.asset_ticker].total += Number(x.net_amount);
+    });
+    return Object.values(map).sort((a, b) => b.total - a.total).slice(0, 10);
+  }, [dividends.data]);
+
   if (dividends.isLoading) return <LoadingState />;
   if (dividends.isError) return <ErrorState onRetry={() => dividends.refetch()} />;
 
@@ -82,7 +108,51 @@ export function DividendsPage() {
           </div>
         </div>
 
-        {/* Gráfico */}
+        {/* Distribuição por tipo + por ativo */}
+        {(byType.length > 0 || byAsset.length > 0) && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {byType.length > 0 && (
+              <div className="card-haveres p-5">
+                <div className="flex items-center gap-2 mb-4">
+                  <PieChart size={18} className="text-haveres-blue" />
+                  <h2 className="text-sm font-semibold text-white">Proventos por Tipo</h2>
+                </div>
+                <AllocationChart data={byType} labelKey="type_display" />
+              </div>
+            )}
+            {byAsset.length > 0 && (
+              <div className="card-haveres p-5">
+                <div className="flex items-center gap-2 mb-4">
+                  <BarChart3 size={18} className="text-gain" />
+                  <h2 className="text-sm font-semibold text-white">Top Ativos (líquido)</h2>
+                </div>
+                <ResponsiveContainer width="100%" height={260}>
+                  <BarChart data={byAsset} layout="vertical" margin={{ top: 0, right: 10, left: 10, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#2d3748" horizontal={false} />
+                    <XAxis type="number" tick={{ fill: "#718096", fontSize: 11 }} axisLine={false} tickLine={false}
+                      tickFormatter={(v) => formatCurrency(v, true)} />
+                    <YAxis type="category" dataKey="ticker" tick={{ fill: "#a0aec0", fontSize: 11 }}
+                      axisLine={false} tickLine={false} width={52} />
+                    <Tooltip
+                      content={({ active, payload }) => {
+                        if (!active || !payload?.length) return null;
+                        return (
+                          <div className="bg-haveres-card border border-haveres-border rounded-lg p-3 shadow-xl text-xs">
+                            <p className="text-white font-mono font-semibold mb-1">{payload[0].payload.ticker}</p>
+                            <p className="text-gain font-mono">{formatCurrency(payload[0].value as number)}</p>
+                          </div>
+                        );
+                      }}
+                    />
+                    <Bar dataKey="total" name="Líquido" fill="#22c55e" radius={[0, 4, 4, 0]} maxBarSize={20} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Gráfico mensal */}
         {evolution.data?.length ? (
           <div className="card-haveres p-5">
             <div className="flex items-center gap-2 mb-4">
