@@ -1,4 +1,5 @@
 import { NavLink, useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   LayoutDashboard, Briefcase, ArrowLeftRight, TrendingUp, Upload,
   Building2, Settings, Activity, ChevronLeft, ChevronRight, LogOut,
@@ -24,9 +25,11 @@ const bottomItems = [
 export function Sidebar() {
   const { sidebarOpen, toggleSidebar } = useUIStore();
   const { logout, user } = useAuthStore();
+  const queryClient = useQueryClient();
   const navigate = useNavigate();
 
   function handleLogout() {
+    queryClient.clear();
     logout();
     navigate("/login");
   }
