@@ -4,7 +4,7 @@ import { assetsApi } from "@/api/assets";
 import { LoadingState } from "@/components/common/LoadingState";
 import { Activity, Database, Wifi, Server, CheckCircle2, XCircle, RefreshCw, Package } from "lucide-react";
 import { cn } from "@/utils/cn";
-import { formatDate } from "@/utils/format";
+import { formatDateTime } from "@/utils/format";
 
 function StatusBadge({ ok }: { ok: boolean }) {
   return ok ? (
@@ -137,7 +137,7 @@ export function SystemPage() {
           <div>
             <p className="text-xs text-muted-foreground">Última sincronização</p>
             <p className="text-sm text-white mt-0.5">
-              {s?.synced_at ? formatDate(s.synced_at) : "Nunca sincronizado"}
+              {s?.synced_at ? formatDateTime(s.synced_at) : "Nunca sincronizado"}
             </p>
             {s?.provider && (
               <p className="text-xs text-muted-foreground mt-0.5">via {s.provider}</p>
