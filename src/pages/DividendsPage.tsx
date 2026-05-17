@@ -24,20 +24,28 @@ const TYPE_COLORS: Record<string, string> = {
   OTHER: "text-muted-foreground",
 };
 
+const EVOLUTION_RANGE_OPTIONS = [
+  { label: "12 meses", value: 12 },
+  { label: "24 meses", value: 24 },
+  { label: "36 meses", value: 36 },
+  { label: "Todo período", value: 0 },
+] as const;
+
 export function DividendsPage() {
   const qc = useQueryClient();
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Dividend | undefined>();
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [selectedDividendType, setSelectedDividendType] = useState<string | null>(null);
+  const [evolutionRangeMonths, setEvolutionRangeMonths] = useState<number>(12);
 
   const dividends = useQuery({
     queryKey: ["dividends"],
     queryFn: () => dividendsApi.list().then(r => r.data),
   });
   const evolution = useQuery({
-    queryKey: ["portfolio", "evolution", "dividends"],
-    queryFn: () => portfolioApi.getDividendsEvolution(12).then(r => r.data),
+    queryKey: ["portfolio", "evolution", "dividends", evolutionRangeMonths],
+    queryFn: () => portfolioApi.getDividendsEvolution(evolutionRangeMonths).then(r => r.data),
   });
   const upcoming = useQuery({
     queryKey: ["dividends", "upcoming"],
@@ -107,14 +115,20 @@ export function DividendsPage() {
       monthTotals[monthKey] = (monthTotals[monthKey] || 0) + Number(item.net_amount);
     });
 
-    return Object.entries(monthTotals)
+    const monthlyData = Object.entries(monthTotals)
       .sort(([a], [b]) => a.localeCompare(b))
-      .slice(-12)
       .map(([month, total]) => ({
         month: `${month}-01`,
         total,
       }));
-  }, [evolution.data, filteredData, selectedDividendType]);
+
+    if (evolutionRangeMonths === 0) return monthlyData;
+    return monthlyData.slice(-evolutionRangeMonths);
+  }, [evolution.data, evolutionRangeMonths, filteredData, selectedDividendType]);
+
+  const selectedEvolutionRangeLabel = useMemo(() => {
+    return EVOLUTION_RANGE_OPTIONS.find((option) => option.value === evolutionRangeMonths)?.label ?? "12 meses";
+  }, [evolutionRangeMonths]);
 
   const selectedTypeLabel = useMemo(() => {
     if (!selectedDividendType) return null;
@@ -284,13 +298,38 @@ export function DividendsPage() {
         )}
 
         {/* Gráfico mensal */}
-        {filteredEvolution.length ? (
+        {(filteredData.length > 0 || evolution.isLoading) ? (
           <div className="card-haveres p-5">
             <div className="flex items-center gap-2 mb-4">
               <TrendingUp size={18} className="text-gain" />
               <h2 className="text-sm font-semibold text-white">Proventos por Mês</h2>
+              <div className="ml-auto flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">Período</span>
+                <select
+                  value={evolutionRangeMonths}
+                  onChange={(event) => setEvolutionRangeMonths(Number(event.target.value))}
+                  className="bg-secondary border border-haveres-border text-white text-xs rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-haveres-blue"
+                >
+                  {EVOLUTION_RANGE_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
-            <DividendsChart data={filteredEvolution} />
+            <p className="text-xs text-muted-foreground mb-3">
+              Exibindo {selectedEvolutionRangeLabel.toLowerCase()}.
+            </p>
+            {evolution.isLoading ? (
+              <LoadingState />
+            ) : filteredEvolution.length ? (
+              <DividendsChart data={filteredEvolution} />
+            ) : (
+              <p className="text-sm text-muted-foreground py-4">
+                Sem dados nesse período. Selecione um intervalo maior para visualizar mais histórico.
+              </p>
+            )}
           </div>
         ) : null}
 

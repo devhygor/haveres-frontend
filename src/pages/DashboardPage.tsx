@@ -102,6 +102,8 @@ export function DashboardPage() {
         </div>
         {patrimonyEvolution.isLoading ? (
           <LoadingState />
+        ) : patrimonyEvolution.isError ? (
+          <ErrorState onRetry={() => patrimonyEvolution.refetch()} />
         ) : patrimonyEvolution.data && patrimonyEvolution.data.length > 0 ? (
           <PatrimonyChart data={patrimonyEvolution.data} />
         ) : (

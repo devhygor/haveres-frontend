@@ -108,6 +108,8 @@ export function PortfolioPage() {
         </div>
         {patrimonyEvolution.isLoading ? (
           <LoadingState />
+        ) : patrimonyEvolution.isError ? (
+          <ErrorState onRetry={() => patrimonyEvolution.refetch()} />
         ) : patrimonyEvolution.data?.length ? (
           <PatrimonyChart data={patrimonyEvolution.data} />
         ) : (
