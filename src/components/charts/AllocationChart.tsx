@@ -98,7 +98,7 @@ export function AllocationChart({
             type="button"
             onClick={() => handleSelect(entry.key)}
             disabled={!isInteractive}
-            className="flex items-center gap-1.5 disabled:cursor-default"
+            className="flex items-center gap-1.5 bg-transparent border-0 p-0 disabled:cursor-default focus-visible:outline-none"
           >
             <span
               className="w-2.5 h-2.5 rounded-full flex-shrink-0"

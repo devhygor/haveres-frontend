@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { dividendsApi } from "@/api/dividends";
@@ -29,6 +29,7 @@ export function DividendsPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Dividend | undefined>();
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [selectedDividendType, setSelectedDividendType] = useState<string | null>(null);
 
   const dividends = useQuery({
     queryKey: ["dividends"],
@@ -67,32 +68,89 @@ export function DividendsPage() {
     const d = dividends.data ?? [];
     const totalNet = d.reduce((s, x) => s + Number(x.net_amount), 0);
     if (!d.length || totalNet === 0) return [];
-    const map: Record<string, number> = {};
-    d.forEach(x => { map[x.dividend_type_display] = (map[x.dividend_type_display] || 0) + Number(x.net_amount); });
-    return Object.entries(map).map(([type_display, value]) => ({
-      type_display,
-      value,
-      allocation: (value / totalNet) * 100,
+    const map: Record<string, { type_display: string; value: number }> = {};
+    d.forEach((x) => {
+      if (!map[x.dividend_type]) {
+        map[x.dividend_type] = { type_display: x.dividend_type_display, value: 0 };
+      }
+      map[x.dividend_type].value += Number(x.net_amount);
+    });
+
+    return Object.entries(map).map(([type, entry]) => ({
+      type,
+      type_display: entry.type_display,
+      value: entry.value,
+      allocation: (entry.value / totalNet) * 100,
     }));
   }, [dividends.data]);
 
-  const byAsset = useMemo(() => {
+  const filteredData = useMemo(() => {
     const d = dividends.data ?? [];
+    if (!selectedDividendType) return d;
+    return d.filter((item) => item.dividend_type === selectedDividendType);
+  }, [dividends.data, selectedDividendType]);
+
+  const filteredUpcoming = useMemo(() => {
+    const d = upcoming.data ?? [];
+    if (!selectedDividendType) return d;
+    return d.filter((item) => item.dividend_type === selectedDividendType);
+  }, [selectedDividendType, upcoming.data]);
+
+  const filteredEvolution = useMemo(() => {
+    if (!selectedDividendType) return evolution.data ?? [];
+    if (!filteredData.length) return [];
+
+    const monthTotals: Record<string, number> = {};
+    filteredData.forEach((item) => {
+      const monthKey = item.ex_date.slice(0, 7);
+      if (!monthKey) return;
+      monthTotals[monthKey] = (monthTotals[monthKey] || 0) + Number(item.net_amount);
+    });
+
+    return Object.entries(monthTotals)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .slice(-12)
+      .map(([month, total]) => ({
+        month: `${month}-01`,
+        total,
+      }));
+  }, [evolution.data, filteredData, selectedDividendType]);
+
+  const selectedTypeLabel = useMemo(() => {
+    if (!selectedDividendType) return null;
+    return byType.find((entry) => entry.type === selectedDividendType)?.type_display ?? selectedDividendType;
+  }, [byType, selectedDividendType]);
+
+  useEffect(() => {
+    if (!selectedDividendType) return;
+    if (!byType.some((entry) => entry.type === selectedDividendType)) {
+      setSelectedDividendType(null);
+    }
+  }, [byType, selectedDividendType]);
+
+  const hasActiveTypeFilter = selectedDividendType !== null;
+
+  const clearTypeFilter = () => {
+    setSelectedDividendType(null);
+  };
+
+  const byAsset = useMemo(() => {
+    const d = filteredData;
     const map: Record<string, { ticker: string; total: number }> = {};
     d.forEach(x => {
       if (!map[x.asset_ticker]) map[x.asset_ticker] = { ticker: x.asset_ticker, total: 0 };
       map[x.asset_ticker].total += Number(x.net_amount);
     });
     return Object.values(map).sort((a, b) => b.total - a.total).slice(0, 10);
-  }, [dividends.data]);
+  }, [filteredData]);
 
   if (dividends.isLoading) return <LoadingState />;
   if (dividends.isError) return <ErrorState onRetry={() => dividends.refetch()} />;
 
   const data = dividends.data ?? [];
-  const totalGross = data.reduce((s, d) => s + Number(d.gross_amount), 0);
-  const totalNet = data.reduce((s, d) => s + Number(d.net_amount), 0);
-  const totalIR = data.reduce((s, d) => s + Number(d.ir_withheld), 0);
+  const totalGross = filteredData.reduce((s, d) => s + Number(d.gross_amount), 0);
+  const totalNet = filteredData.reduce((s, d) => s + Number(d.net_amount), 0);
+  const totalIR = filteredData.reduce((s, d) => s + Number(d.ir_withheld), 0);
 
   return (
     <>
@@ -121,8 +179,28 @@ export function DividendsPage() {
                 <div className="flex items-center gap-2 mb-4">
                   <PieChart size={18} className="text-haveres-blue" />
                   <h2 className="text-sm font-semibold text-white">Proventos por Tipo</h2>
+                  {hasActiveTypeFilter && selectedTypeLabel ? (
+                    <>
+                      <span className="text-xs px-2 py-0.5 rounded bg-secondary text-muted-foreground">
+                        Tipo: {selectedTypeLabel}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={clearTypeFilter}
+                        className="ml-auto text-xs px-2 py-1 rounded bg-secondary text-muted-foreground hover:text-white transition-colors"
+                      >
+                        Limpar filtro
+                      </button>
+                    </>
+                  ) : null}
                 </div>
-                <AllocationChart data={byType} labelKey="type_display" />
+                <AllocationChart
+                  data={byType}
+                  labelKey="type_display"
+                  valueKey="type"
+                  selectedValue={selectedDividendType}
+                  onSelectValue={setSelectedDividendType}
+                />
               </div>
             )}
             {byAsset.length > 0 && (
@@ -139,6 +217,7 @@ export function DividendsPage() {
                     <YAxis type="category" dataKey="ticker" tick={{ fill: "#a0aec0", fontSize: 11 }}
                       axisLine={false} tickLine={false} width={52} />
                     <Tooltip
+                      cursor={false}
                       content={({ active, payload }) => {
                         if (!active || !payload?.length) return null;
                         return (
@@ -158,51 +237,60 @@ export function DividendsPage() {
         )}
 
         {/* Proventos a Receber */}
-        {upcoming.data && upcoming.data.length > 0 && (
+        {(filteredUpcoming.length > 0 || hasActiveTypeFilter) && (
           <div className="card-haveres p-5">
             <div className="flex items-center gap-2 mb-4">
               <CalendarDays size={18} className="text-haveres-blue" />
               <h2 className="text-sm font-semibold text-white">A Receber</h2>
-              <span className="text-xs text-muted-foreground">{upcoming.data.length} proventos agendados</span>
+              <span className="text-xs text-muted-foreground">
+                {filteredUpcoming.length} proventos agendados
+                {hasActiveTypeFilter ? ` de ${upcoming.data?.length ?? 0}` : ""}
+              </span>
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-haveres-border">
-                    {["Pgto", "Ticker", "Tipo", "Qtd", "Valor/ação", "Total Bruto"].map((h, i) => (
-                      <th key={i} className="text-left py-2 px-4 text-xs font-medium text-muted-foreground uppercase tracking-wider">{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {upcoming.data.map(d => (
-                    <tr key={d.id} className="border-b border-haveres-border/50 hover:bg-secondary/30">
-                      <td className="py-2 px-4 text-muted-foreground text-xs">{d.payment_date ? formatDate(d.payment_date) : "—"}</td>
-                      <td className="py-2 px-4 font-mono font-semibold text-white text-sm">{d.asset_ticker}</td>
-                      <td className="py-2 px-4">
-                        <span className={`text-xs font-medium ${TYPE_COLORS[d.dividend_type] ?? "text-muted-foreground"}`}>
-                          {d.dividend_type_display}
-                        </span>
-                      </td>
-                      <td className="py-2 px-4 font-numeric text-sm">{d.quantity_held}</td>
-                      <td className="py-2 px-4 font-numeric text-sm">{formatCurrency(Number(d.value_per_share))}</td>
-                      <td className="py-2 px-4 font-numeric text-sm text-gain font-medium">{formatCurrency(Number(d.gross_amount))}</td>
+            {filteredUpcoming.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-haveres-border">
+                      {["Pgto", "Ticker", "Tipo", "Qtd", "Valor/ação", "Total Bruto"].map((h, i) => (
+                        <th key={i} className="text-left py-2 px-4 text-xs font-medium text-muted-foreground uppercase tracking-wider">{h}</th>
+                      ))}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {filteredUpcoming.map(d => (
+                      <tr key={d.id} className="border-b border-haveres-border/50 hover:bg-secondary/30">
+                        <td className="py-2 px-4 text-muted-foreground text-xs">{d.payment_date ? formatDate(d.payment_date) : "—"}</td>
+                        <td className="py-2 px-4 font-mono font-semibold text-white text-sm">{d.asset_ticker}</td>
+                        <td className="py-2 px-4">
+                          <span className={`text-xs font-medium ${TYPE_COLORS[d.dividend_type] ?? "text-muted-foreground"}`}>
+                            {d.dividend_type_display}
+                          </span>
+                        </td>
+                        <td className="py-2 px-4 font-numeric text-sm">{d.quantity_held}</td>
+                        <td className="py-2 px-4 font-numeric text-sm">{formatCurrency(Number(d.value_per_share))}</td>
+                        <td className="py-2 px-4 font-numeric text-sm text-gain font-medium">{formatCurrency(Number(d.gross_amount))}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground py-4">
+                Nenhum provento agendado para o filtro selecionado.
+              </p>
+            )}
           </div>
         )}
 
         {/* Gráfico mensal */}
-        {evolution.data?.length ? (
+        {filteredEvolution.length ? (
           <div className="card-haveres p-5">
             <div className="flex items-center gap-2 mb-4">
               <TrendingUp size={18} className="text-gain" />
               <h2 className="text-sm font-semibold text-white">Proventos por Mês</h2>
             </div>
-            <DividendsChart data={evolution.data} />
+            <DividendsChart data={filteredEvolution} />
           </div>
         ) : null}
 
@@ -210,8 +298,20 @@ export function DividendsPage() {
         <div className="card-haveres">
           <div className="flex flex-wrap items-center gap-2 p-4 sm:p-5 border-b border-haveres-border">
             <h2 className="text-sm font-semibold text-white">Histórico de Proventos</h2>
-            <span className="text-xs text-muted-foreground">{data.length} registros</span>
+            <span className="text-xs text-muted-foreground">
+              {filteredData.length} registros
+              {hasActiveTypeFilter ? ` de ${data.length}` : ""}
+            </span>
             <div className="w-full sm:w-auto sm:ml-auto flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+              {hasActiveTypeFilter && (
+                <button
+                  type="button"
+                  onClick={clearTypeFilter}
+                  className="w-full sm:w-auto justify-center flex items-center gap-1.5 px-3 py-1.5 bg-secondary text-muted-foreground text-xs font-medium rounded-lg hover:text-white transition-colors"
+                >
+                  Limpar filtro
+                </button>
+              )}
               <button
                 onClick={() => syncDividends.mutate()}
                 disabled={syncDividends.isPending}
@@ -243,6 +343,20 @@ export function DividendsPage() {
                 </button>
               }
             />
+          ) : !filteredData.length ? (
+            <EmptyState
+              title="Nenhum provento para este filtro"
+              description="Selecione outra fatia no gráfico ou limpe o filtro aplicado."
+              action={(
+                <button
+                  type="button"
+                  onClick={clearTypeFilter}
+                  className="flex items-center gap-1.5 px-4 py-2 bg-secondary text-muted-foreground text-sm font-medium rounded-lg hover:text-white transition-colors"
+                >
+                  Limpar filtro
+                </button>
+              )}
+            />
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full min-w-[1100px] text-sm">
@@ -256,7 +370,7 @@ export function DividendsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {data.map(d => (
+                  {filteredData.map(d => (
                     <tr key={d.id} className="border-b border-haveres-border/50 hover:bg-secondary/30 group">
                       <td className="py-3 px-4 text-muted-foreground text-xs">{formatDate(d.ex_date)}</td>
                       <td className="py-3 px-4">
