@@ -1,0 +1,45 @@
+name: Deploy React to Proxmox LXC
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: Deploy Frontend
+    runs-on: ubuntu-latest
+    
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
+    steps:
+    - name: Checkout do código
+      uses: actions/checkout@v4
+
+    - name: Executar comandos de Deploy via SSH
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.REMOTE_HOST }}
+        username: ${{ secrets.REMOTE_USER }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        port: ${{ secrets.REMOTE_PORT }}
+        script: |
+          echo "==== 1. Acessar a pasta do frontend no LXC ===="
+          cd /home/deployuser/apps/haveres-frontend
+          
+          echo "==== 2. Atualizar o código da branch main ===="
+          git checkout main
+          git pull origin main
+          
+          echo "==== 3. Instalar novas dependências (se houver) ===="
+          npm install
+          
+          echo "==== 4. Derrubar o servidor Vite anterior (liberar porta 5173) ===="
+          pkill -f "vite" || true
+          pkill -f "node" || true
+          
+          echo "==== 5. Iniciar o Vite em segundo plano (Detached) ===="
+          nohup npm run dev -- --host > vite_production.log 2>&1 &
+          
+          echo "==== DEPLOY DO FRONTEND CONCLUÍDO COM SUCESSO! ===="
