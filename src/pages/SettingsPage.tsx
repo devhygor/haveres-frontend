@@ -77,14 +77,14 @@ export function SettingsPage() {
     <div className="max-w-xl space-y-6">
 
       {/* Perfil */}
-      <div className="card-haveres p-6">
+      <div className="card-haveres p-5 sm:p-6">
         <div className="flex items-center gap-2 mb-6">
           <Settings size={18} className="text-haveres-blue" />
           <h2 className="text-sm font-semibold text-white">Perfil</h2>
         </div>
 
         {/* Avatar */}
-        <div className="flex items-center gap-4 mb-6">
+        <div className="flex items-center gap-3 sm:gap-4 mb-6">
           <div className="relative group">
             <button
               type="button"
@@ -111,7 +111,7 @@ export function SettingsPage() {
               onChange={handleAvatarChange}
             />
           </div>
-          <div>
+          <div className="min-w-0">
             <p className="text-sm text-white font-medium">{user?.full_name || user?.email}</p>
             <p className="text-xs text-muted-foreground mt-0.5">
               {uploadAvatar.isPending ? "Enviando..." : "Clique no avatar para alterar"}
@@ -133,11 +133,11 @@ export function SettingsPage() {
             <label className="block text-sm text-muted-foreground mb-1.5">E-mail</label>
             <input value={user?.email ?? ""} disabled className={INPUT + " opacity-50 cursor-not-allowed"} />
           </div>
-          <div className="flex items-center gap-3 pt-2">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 pt-2">
             <button
               type="submit"
               disabled={isSubmitting}
-              className="bg-haveres-blue hover:bg-haveres-blue-dark text-white text-sm font-medium px-6 py-2.5 rounded-lg transition-colors disabled:opacity-50"
+              className="w-full sm:w-auto bg-haveres-blue hover:bg-haveres-blue-dark text-white text-sm font-medium px-6 py-2.5 rounded-lg transition-colors disabled:opacity-50"
             >
               {isSubmitting ? "Salvando..." : "Salvar"}
             </button>
@@ -147,7 +147,7 @@ export function SettingsPage() {
       </div>
 
       {/* Dados da Conta */}
-      <div className="card-haveres p-6">
+      <div className="card-haveres p-5 sm:p-6">
         <div className="flex items-center gap-2 mb-2">
           <Database size={18} className="text-muted-foreground" />
           <h2 className="text-sm font-semibold text-white">Dados da Conta</h2>
@@ -166,7 +166,7 @@ export function SettingsPage() {
         )}
 
         <div className="rounded-lg border border-loss/30 bg-loss/5 p-4">
-          <div className="flex items-start gap-3">
+          <div className="flex flex-col sm:flex-row sm:items-start gap-3">
             <AlertTriangle size={16} className="text-loss mt-0.5 flex-shrink-0" />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-white">Limpar todos os registros</p>
@@ -177,7 +177,7 @@ export function SettingsPage() {
             </div>
             <button
               onClick={() => { setShowClearModal(true); setClearConfirmText(""); }}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-loss/40 text-loss text-xs font-medium hover:bg-loss/10 transition-colors flex-shrink-0"
+              className="w-full sm:w-auto justify-center flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-loss/40 text-loss text-xs font-medium hover:bg-loss/10 transition-colors flex-shrink-0"
             >
               <Trash2 size={12} /> Limpar...
             </button>
@@ -188,7 +188,7 @@ export function SettingsPage() {
       {/* Modal de confirmação de limpeza */}
       {showClearModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="card-haveres w-full max-w-md p-6 space-y-4">
+          <div className="card-haveres w-full max-w-md p-5 sm:p-6 space-y-4">
             <div className="flex items-center gap-2">
               <AlertTriangle size={18} className="text-loss" />
               <h3 className="text-sm font-semibold text-white">Tem certeza que deseja continuar?</h3>
@@ -217,7 +217,7 @@ export function SettingsPage() {
               />
             </div>
 
-            <div className="flex gap-3 pt-1">
+            <div className="flex flex-col-reverse sm:flex-row gap-3 pt-1">
               <button
                 type="button"
                 onClick={() => { setShowClearModal(false); setClearConfirmText(""); }}

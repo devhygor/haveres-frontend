@@ -118,7 +118,7 @@ export function SystemPage() {
           )}
         </div>
 
-        <div className="grid grid-cols-3 gap-3 mb-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
           <div className="bg-haveres-dark rounded-lg p-3 text-center">
             <p className="text-2xl font-numeric font-bold text-white">{s?.total ?? "—"}</p>
             <p className="text-xs text-muted-foreground mt-1">Ativos ativos</p>
@@ -133,7 +133,7 @@ export function SystemPage() {
           </div>
         </div>
 
-        <div className="flex items-center justify-between py-3 border-t border-haveres-border">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 py-3 border-t border-haveres-border">
           <div>
             <p className="text-xs text-muted-foreground">Última sincronização</p>
             <p className="text-sm text-white mt-0.5">
@@ -143,12 +143,12 @@ export function SystemPage() {
               <p className="text-xs text-muted-foreground mt-0.5">via {s.provider}</p>
             )}
           </div>
-          <div className="flex gap-2">
+          <div className="flex w-full sm:w-auto gap-2">
             <button
               onClick={() => triggerSync.mutate(false)}
               disabled={triggerSync.isPending || s?.is_fresh}
               className={cn(
-                "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors",
+                "flex-1 sm:flex-none justify-center flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors",
                 s?.is_fresh
                   ? "bg-haveres-border text-muted-foreground cursor-not-allowed"
                   : "bg-haveres-blue hover:bg-blue-600 text-white"
@@ -160,7 +160,7 @@ export function SystemPage() {
             <button
               onClick={() => triggerSync.mutate(true)}
               disabled={triggerSync.isPending}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-haveres-dark border border-haveres-border hover:border-haveres-blue text-muted-foreground hover:text-white transition-colors"
+              className="flex-1 sm:flex-none justify-center flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-haveres-dark border border-haveres-border hover:border-haveres-blue text-muted-foreground hover:text-white transition-colors"
             >
               Forçar
             </button>

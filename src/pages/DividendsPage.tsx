@@ -94,7 +94,7 @@ export function DividendsPage() {
     <>
       <div className="space-y-6">
         {/* Resumo */}
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
           <div className="card-haveres p-5">
             <p className="text-xs text-muted-foreground mb-2">Total Bruto</p>
             <p className="text-xl font-bold font-numeric text-gain">{formatCurrency(totalGross)}</p>
@@ -166,14 +166,14 @@ export function DividendsPage() {
 
         {/* Tabela */}
         <div className="card-haveres">
-          <div className="flex items-center gap-2 p-5 border-b border-haveres-border">
+          <div className="flex flex-wrap items-center gap-2 p-4 sm:p-5 border-b border-haveres-border">
             <h2 className="text-sm font-semibold text-white">Histórico de Proventos</h2>
             <span className="text-xs text-muted-foreground">{data.length} registros</span>
-            <div className="ml-auto flex items-center gap-2">
+            <div className="w-full sm:w-auto sm:ml-auto flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
               <button
                 onClick={() => syncDividends.mutate()}
                 disabled={syncDividends.isPending}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-secondary text-muted-foreground text-xs font-medium rounded-lg hover:text-white transition-colors disabled:opacity-50"
+                className="w-full sm:w-auto justify-center flex items-center gap-1.5 px-3 py-1.5 bg-secondary text-muted-foreground text-xs font-medium rounded-lg hover:text-white transition-colors disabled:opacity-50"
                 title="Sincronizar proventos via Brapi"
               >
                 <RefreshCw size={13} className={syncDividends.isPending ? "animate-spin" : ""} />
@@ -181,7 +181,7 @@ export function DividendsPage() {
               </button>
               <button
                 onClick={openCreate}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-haveres-blue text-white text-xs font-medium rounded-lg hover:bg-haveres-blue-dark transition-colors"
+                className="w-full sm:w-auto justify-center flex items-center gap-1.5 px-3 py-1.5 bg-haveres-blue text-white text-xs font-medium rounded-lg hover:bg-haveres-blue-dark transition-colors"
               >
                 <Plus size={13} /> Novo Provento
               </button>
@@ -203,7 +203,7 @@ export function DividendsPage() {
             />
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full min-w-[1100px] text-sm">
                 <thead>
                   <tr className="border-b border-haveres-border">
                     {["Data com", "Ticker", "Tipo", "Qtd", "Valor/ação", "Bruto", "IR", "Líquido", "Origem", ""].map((h, i) => (
@@ -250,7 +250,7 @@ export function DividendsPage() {
                             </button>
                           </div>
                         ) : (
-                          <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className="flex items-center gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                             <button
                               onClick={() => openEdit(d)}
                               className="text-muted-foreground hover:text-white transition-colors"

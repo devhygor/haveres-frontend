@@ -39,16 +39,16 @@ export function AssetDetailPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-start gap-4">
-        <Link to="/dashboard" className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-white transition-colors mt-1">
+      <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4">
+        <Link to="/dashboard" className="w-fit flex items-center gap-1.5 text-sm text-muted-foreground hover:text-white transition-colors mt-1">
           <ArrowLeft size={16} />
         </Link>
         <div>
-          <h1 className="text-2xl font-bold text-white font-mono">{position.ticker}</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-white font-mono">{position.ticker}</h1>
           <p className="text-sm text-muted-foreground">{position.name}</p>
         </div>
-        <div className="ml-auto text-right">
-          <p className="text-2xl font-bold text-white font-mono">{formatCurrency(position.current_price)}</p>
+        <div className="sm:ml-auto text-left sm:text-right">
+          <p className="text-xl sm:text-2xl font-bold text-white font-mono">{formatCurrency(position.current_price)}</p>
           <p className={cn("text-sm font-mono font-medium", plClass(position.pl_percent))}>
             {formatPercent(position.pl_percent, true)}
           </p>
@@ -56,7 +56,7 @@ export function AssetDetailPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         {[
           { label: "Qtd", value: position.quantity },
           { label: "Preço Médio", value: formatCurrency(position.average_price) },

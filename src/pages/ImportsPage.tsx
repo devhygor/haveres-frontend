@@ -114,7 +114,7 @@ export function ImportsPage() {
     <div className="space-y-6">
       {/* Drop zone / botão de importar */}
       <div
-        className={`card-haveres p-8 flex flex-col items-center gap-4 border-2 border-dashed transition-colors cursor-pointer
+        className={`card-haveres p-5 sm:p-8 flex flex-col items-center gap-4 border-2 border-dashed transition-colors cursor-pointer
           ${dragOver ? "border-haveres-blue bg-haveres-blue/5" : "border-haveres-border hover:border-haveres-blue/50"}`}
         onClick={() => setModalOpen(true)}
         onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
@@ -154,7 +154,7 @@ export function ImportsPage() {
         ) : (
           <div className="divide-y divide-haveres-border">
             {batches.map((b) => (
-              <div key={b.id} className="flex items-center justify-between px-5 py-3 text-sm">
+              <div key={b.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-4 sm:px-5 py-3 text-sm">
                 <div className="flex items-center gap-3">
                   {STATUS_ICON[b.status] ?? <Clock size={14} />}
                   <div>
@@ -164,7 +164,7 @@ export function ImportsPage() {
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-6 text-muted-foreground text-xs font-numeric">
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-muted-foreground text-xs font-numeric">
                   <span>{STATUS_LABEL[b.status] ?? b.status}</span>
                   <span>{b.imported_rows}/{b.total_rows} linhas</span>
                   {b.error_rows > 0 && (
@@ -237,7 +237,7 @@ export function ImportsPage() {
               <p className="text-xs text-loss">{uploadError}</p>
             )}
 
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-2">
               <button
                 onClick={closeModal}
                 className="px-4 py-2 rounded-lg text-sm text-muted-foreground hover:text-white hover:bg-secondary transition-colors"
@@ -256,7 +256,7 @@ export function ImportsPage() {
         ) : (
           <div className="space-y-4">
             {/* Resumo */}
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {[
                 { label: "Total", value: preview.total_rows },
                 { label: "Válidas", value: preview.valid_rows, className: "text-gain" },
@@ -277,7 +277,7 @@ export function ImportsPage() {
                 <p className="text-xs text-muted-foreground mb-2">Registros a importar</p>
                 <div className="rounded-lg border border-haveres-border overflow-hidden">
                   <div className="overflow-x-auto max-h-56 overflow-y-auto">
-                    <table className="w-full text-xs">
+                    <table className="w-full min-w-[640px] text-xs">
                       <thead className="sticky top-0 bg-haveres-card border-b border-haveres-border">
                         <tr className="text-muted-foreground">
                           <th className="text-left px-3 py-2 font-medium">#</th>
@@ -341,7 +341,7 @@ export function ImportsPage() {
               </div>
             )}
 
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-2">
               <button
                 onClick={() => cancelMutation.mutate(preview.id)}
                 disabled={isLoading}

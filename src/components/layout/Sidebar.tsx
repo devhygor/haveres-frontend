@@ -23,10 +23,16 @@ const bottomItems = [
 ];
 
 export function Sidebar() {
-  const { sidebarOpen, toggleSidebar } = useUIStore();
+  const { sidebarOpen, toggleSidebar, setSidebarOpen } = useUIStore();
   const { logout, user } = useAuthStore();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+
+  function closeOnMobile() {
+    if (window.matchMedia("(max-width: 767px)").matches) {
+      setSidebarOpen(false);
+    }
+  }
 
   function handleLogout() {
     queryClient.clear();
@@ -40,7 +46,7 @@ export function Sidebar() {
         "fixed left-0 top-0 h-full z-40 flex flex-col",
         "bg-haveres-card border-r border-haveres-border",
         "transition-all duration-300",
-        sidebarOpen ? "w-64" : "w-16"
+        sidebarOpen ? "w-64 translate-x-0" : "w-64 -translate-x-full md:w-16 md:translate-x-0"
       )}
     >
       {/* Logo */}
@@ -68,6 +74,7 @@ export function Sidebar() {
           <NavLink
             key={to}
             to={to}
+            onClick={closeOnMobile}
             className={({ isActive }) =>
               cn(
                 "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all",
@@ -92,6 +99,7 @@ export function Sidebar() {
           <NavLink
             key={to}
             to={to}
+            onClick={closeOnMobile}
             className={({ isActive }) =>
               cn(
                 "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all",

@@ -53,11 +53,11 @@ export function RegisterPage() {
           <div className="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-br from-haveres-blue to-haveres-green flex items-center justify-center mb-4 shadow-lg shadow-haveres-blue/20">
             <span className="text-white font-bold text-2xl">H</span>
           </div>
-          <h1 className="text-2xl font-bold text-white">Haveres</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-white">Haveres</h1>
           <p className="text-muted-foreground text-sm mt-1">Crie sua conta</p>
         </div>
 
-        <div className="card-haveres p-8">
+        <div className="card-haveres p-5 sm:p-8">
           <h2 className="text-lg font-semibold text-white mb-6">Cadastro</h2>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <Field label="E-mail" error={errors.email?.message}>

@@ -72,7 +72,7 @@ export function TransactionsPage() {
     <>
       {/* Volume mensal de compras/vendas */}
       {monthlyVolume.length > 0 && (
-        <div className="card-haveres p-5 mb-6">
+        <div className="card-haveres p-4 sm:p-5 mb-6">
           <div className="flex items-center gap-2 mb-4">
             <BarChart3 size={18} className="text-haveres-blue" />
             <h2 className="text-sm font-semibold text-white">Volume Mensal (compras / vendas)</h2>
@@ -112,13 +112,13 @@ export function TransactionsPage() {
       )}
 
       <div className="card-haveres">
-        <div className="flex items-center gap-2 p-5 border-b border-haveres-border">
+        <div className="flex flex-wrap items-center gap-2 p-4 sm:p-5 border-b border-haveres-border">
           <ArrowLeftRight size={18} className="text-haveres-blue" />
           <h2 className="text-sm font-semibold text-white">Movimentações</h2>
           <span className="text-xs text-muted-foreground">{data?.length ?? 0} registros</span>
           <button
             onClick={openCreate}
-            className="ml-auto flex items-center gap-1.5 px-3 py-1.5 bg-haveres-blue text-white text-xs font-medium rounded-lg hover:bg-haveres-blue-dark transition-colors"
+            className="w-full sm:w-auto sm:ml-auto justify-center flex items-center gap-1.5 px-3 py-1.5 bg-haveres-blue text-white text-xs font-medium rounded-lg hover:bg-haveres-blue-dark transition-colors"
           >
             <Plus size={13} /> Nova Movimentação
           </button>
@@ -139,7 +139,7 @@ export function TransactionsPage() {
           />
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full min-w-[1080px] text-sm">
               <thead>
                 <tr className="border-b border-haveres-border">
                   {["Data", "Ticker", "Tipo", "Qtd", "Preço", "Taxas", "Total", "Corretora", "Origem", ""].map((h, i) => (
@@ -189,7 +189,7 @@ export function TransactionsPage() {
                           </button>
                         </div>
                       ) : (
-                        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex items-center gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                           <button
                             onClick={() => openEdit(t)}
                             className="text-muted-foreground hover:text-white transition-colors"

@@ -36,14 +36,14 @@ export function PortfolioPage() {
   return (
     <div className="space-y-6">
       {/* Resumo */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
         {[
           { label: "Valor Atual", value: formatCurrency(data.total_value), highlight: true },
           { label: "Total Investido", value: formatCurrency(data.total_invested) },
           { label: "P&L Absoluto", value: formatCurrency(data.pl_absolute), colored: data.pl_absolute },
           { label: "P&L %", value: formatPercent(data.pl_percent, true), colored: data.pl_percent },
         ].map(({ label, value, highlight, colored }) => (
-          <div key={label} className="card-haveres p-5">
+          <div key={label} className="card-haveres p-4 sm:p-5">
             <p className="text-xs text-muted-foreground mb-2">{label}</p>
             <p className={cn(
               "text-xl font-bold font-numeric",
@@ -56,7 +56,7 @@ export function PortfolioPage() {
       </div>
 
       {/* Evolução Patrimonial */}
-      <div className="card-haveres p-5">
+      <div className="card-haveres p-4 sm:p-5">
         <div className="flex items-center gap-2 mb-4">
           <BarChart3 size={18} className="text-haveres-blue" />
           <h2 className="text-sm font-semibold text-white">Evolução Patrimonial (12 meses)</h2>
@@ -74,7 +74,7 @@ export function PortfolioPage() {
 
       {/* Alocação por Classe + por Setor */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="card-haveres p-5">
+        <div className="card-haveres p-4 sm:p-5">
           <div className="flex items-center gap-2 mb-4">
             <PieChart size={18} className="text-haveres-blue" />
             <h2 className="text-sm font-semibold text-white">Alocação por Classe</h2>
@@ -85,7 +85,7 @@ export function PortfolioPage() {
           }
         </div>
 
-        <div className="card-haveres p-5">
+        <div className="card-haveres p-4 sm:p-5">
           <div className="flex items-center gap-2 mb-4">
             <PieChart size={18} className="text-haveres-blue" />
             <h2 className="text-sm font-semibold text-white">Alocação por Setor</h2>
@@ -102,7 +102,7 @@ export function PortfolioPage() {
 
       {/* Posições */}
       <div className="card-haveres">
-        <div className="flex items-center gap-2 p-5 border-b border-haveres-border">
+        <div className="flex items-center gap-2 p-4 sm:p-5 border-b border-haveres-border">
           <Briefcase size={18} className="text-haveres-blue" />
           <h2 className="text-sm font-semibold text-white">Posições ({data.positions.length})</h2>
         </div>

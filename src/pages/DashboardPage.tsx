@@ -43,7 +43,7 @@ export function DashboardPage() {
   if (summary.isLoading) {
     return (
       <div className="space-y-6">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
           {[...Array(4)].map((_, i) => <SkeletonCard key={i} />)}
         </div>
         <LoadingState />
@@ -60,14 +60,14 @@ export function DashboardPage() {
   return (
     <div className="space-y-6">
       {/* Cards principais */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           title="Patrimônio Total"
           value={formatCurrency(data.total_value)}
           icon={Wallet}
           iconColor="text-haveres-blue"
           subtitle={`${data.positions_count} posições`}
-          className="col-span-2 lg:col-span-1"
+          className="sm:col-span-2 lg:col-span-1"
         />
         <PLCard
           title="Lucro / Prejuízo"
@@ -95,7 +95,7 @@ export function DashboardPage() {
       </div>
 
       {/* Evolução patrimonial */}
-      <div className="card-haveres p-5">
+      <div className="card-haveres p-4 sm:p-5">
         <div className="flex items-center gap-2 mb-4">
           <BarChart3 size={18} className="text-haveres-blue" />
           <h2 className="text-sm font-semibold text-white">Evolução Patrimonial</h2>
@@ -126,7 +126,7 @@ export function DashboardPage() {
 
       {/* Alocação + Dividendos */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="card-haveres p-5">
+        <div className="card-haveres p-4 sm:p-5">
           <div className="flex items-center gap-2 mb-4">
             <PieChart size={18} className="text-haveres-blue" />
             <h2 className="text-sm font-semibold text-white">Alocação por Classe</h2>
@@ -140,7 +140,7 @@ export function DashboardPage() {
           )}
         </div>
 
-        <div className="card-haveres p-5">
+        <div className="card-haveres p-4 sm:p-5">
           <div className="flex items-center gap-2 mb-4">
             <TrendingUp size={18} className="text-gain" />
             <h2 className="text-sm font-semibold text-white">Proventos Mensais</h2>
@@ -157,10 +157,10 @@ export function DashboardPage() {
 
       {/* Posições */}
       <div className="card-haveres">
-        <div className="flex items-center gap-2 p-5 border-b border-haveres-border">
+        <div className="flex flex-wrap items-center gap-2 p-4 sm:p-5 border-b border-haveres-border">
           <Wallet size={18} className="text-haveres-blue" />
           <h2 className="text-sm font-semibold text-white">Posições</h2>
-          <span className="ml-auto text-xs text-muted-foreground">{data.positions.length} ativos</span>
+          <span className="sm:ml-auto text-xs text-muted-foreground">{data.positions.length} ativos</span>
         </div>
         {data.positions.length > 0 ? (
           <PositionsTable positions={data.positions} />
