@@ -2,7 +2,9 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Legend,
 } from "recharts";
-import { formatCurrency, formatDateShort } from "@/utils/format";
+import { format, parseISO } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { formatCurrency } from "@/utils/format";
 import type { PatrimonyPoint } from "@/types/portfolio";
 
 interface Props { data: PatrimonyPoint[] }
@@ -26,8 +28,13 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 export function PatrimonyChart({ data }: Props) {
   const formatted = data.map((d) => ({
     ...d,
-    date_label: formatDateShort(d.date),
+    date_label: format(
+      typeof d.date === "string" ? parseISO(d.date) : d.date,
+      "dd MMM",
+      { locale: ptBR }
+    ),
   }));
+  const tickInterval = Math.max(0, Math.floor(formatted.length / 12) - 1);
 
   return (
     <ResponsiveContainer width="100%" height={280}>
@@ -43,7 +50,7 @@ export function PatrimonyChart({ data }: Props) {
           </linearGradient>
         </defs>
         <CartesianGrid strokeDasharray="3 3" stroke="#2d3748" vertical={false} />
-        <XAxis dataKey="date_label" tick={{ fill: "#718096", fontSize: 11 }} axisLine={false} tickLine={false} />
+        <XAxis dataKey="date_label" interval={tickInterval} tick={{ fill: "#718096", fontSize: 11 }} axisLine={false} tickLine={false} />
         <YAxis tick={{ fill: "#718096", fontSize: 11 }} axisLine={false} tickLine={false}
           tickFormatter={(v) => formatCurrency(v, true)} width={70} />
         <Tooltip content={<CustomTooltip />} />
