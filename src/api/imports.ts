@@ -1,5 +1,29 @@
 import { api } from "@/config/api";
 
+export interface ImportRowError {
+  row_number: number;
+  error_message: string;
+}
+
+export interface ImportRowParsed {
+  ticker?: string;
+  transaction_type?: string;
+  date?: string;
+  quantity?: string;
+  price?: string;
+  fees?: string;
+  broker_name?: string;
+}
+
+export interface ImportRow {
+  row_number: number;
+  is_valid: boolean;
+  is_duplicate: boolean;
+  was_imported: boolean;
+  error_message: string;
+  parsed_data: ImportRowParsed | null;
+}
+
 export interface ImportBatch {
   id: string;
   source: string;
@@ -10,6 +34,7 @@ export interface ImportBatch {
   imported_rows: number;
   error_rows: number;
   error_message: string;
+  row_errors: ImportRowError[];
 }
 
 export const SOURCE_LABELS: Record<string, string> = {
@@ -32,4 +57,5 @@ export const importsApi = {
   cancel: (batchId: string) => api.post(`/imports/${batchId}/cancel`),
   list: () => api.get<ImportBatch[]>("/imports"),
   get: (batchId: string) => api.get<ImportBatch>(`/imports/${batchId}`),
+  rows: (batchId: string) => api.get<ImportRow[]>(`/imports/${batchId}/rows`),
 };

@@ -1,9 +1,10 @@
 import { useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Upload, FileText, CheckCircle, XCircle, Clock, AlertCircle } from "lucide-react";
+import { Upload, FileText, CheckCircle, XCircle, Clock, AlertCircle, ChevronDown, ChevronUp } from "lucide-react";
 import { Modal } from "@/components/common/Modal";
 import { EmptyState } from "@/components/common/EmptyState";
 import { importsApi, SOURCE_LABELS, type ImportBatch } from "@/api/imports";
+import { formatCurrency, formatDate } from "@/utils/format";
 
 const SOURCES = [
   { value: "b3", label: "B3 (Excel)" },
@@ -37,6 +38,16 @@ export function ImportsPage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<ImportBatch | null>(null);
   const [dragOver, setDragOver] = useState(false);
+  const [errorsExpanded, setErrorsExpanded] = useState(false);
+
+  const { data: previewRows = [] } = useQuery({
+    queryKey: ["import-rows", preview?.id],
+    queryFn: () => importsApi.rows(preview!.id).then((r) => r.data),
+    enabled: !!preview?.id,
+  });
+
+  const validRows = previewRows.filter((r) => r.is_valid);
+  const errorRows = previewRows.filter((r) => !r.is_valid);
 
   const { data: batches = [] } = useQuery({
     queryKey: ["imports"],
@@ -171,7 +182,7 @@ export function ImportsPage() {
         open={modalOpen}
         onClose={closeModal}
         title="Importar extrato"
-        size="md"
+        size={preview ? "lg" : "md"}
       >
         {!preview ? (
           <div className="space-y-4">
@@ -244,15 +255,12 @@ export function ImportsPage() {
           </div>
         ) : (
           <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              Revise o resumo antes de confirmar a importação.
-            </p>
-
-            <div className="grid grid-cols-2 gap-3">
+            {/* Resumo */}
+            <div className="grid grid-cols-3 gap-3">
               {[
-                { label: "Total de linhas", value: preview.total_rows },
-                { label: "Linhas válidas", value: preview.valid_rows, className: "text-gain" },
-                { label: "Linhas com erro", value: preview.error_rows, className: preview.error_rows > 0 ? "text-loss" : "" },
+                { label: "Total", value: preview.total_rows },
+                { label: "Válidas", value: preview.valid_rows, className: "text-gain" },
+                { label: "Com erro", value: preview.error_rows, className: preview.error_rows > 0 ? "text-loss" : "" },
               ].map((item) => (
                 <div key={item.label} className="bg-secondary rounded-lg p-3">
                   <p className="text-xs text-muted-foreground">{item.label}</p>
@@ -263,9 +271,73 @@ export function ImportsPage() {
               ))}
             </div>
 
-            {preview.error_message && (
-              <div className="bg-loss/10 border border-loss/30 rounded-lg p-3">
-                <p className="text-xs text-loss">{preview.error_message}</p>
+            {/* Tabela de linhas válidas */}
+            {validRows.length > 0 && (
+              <div>
+                <p className="text-xs text-muted-foreground mb-2">Registros a importar</p>
+                <div className="rounded-lg border border-haveres-border overflow-hidden">
+                  <div className="overflow-x-auto max-h-56 overflow-y-auto">
+                    <table className="w-full text-xs">
+                      <thead className="sticky top-0 bg-haveres-card border-b border-haveres-border">
+                        <tr className="text-muted-foreground">
+                          <th className="text-left px-3 py-2 font-medium">#</th>
+                          <th className="text-left px-3 py-2 font-medium">Ticker</th>
+                          <th className="text-left px-3 py-2 font-medium">Tipo</th>
+                          <th className="text-left px-3 py-2 font-medium">Data</th>
+                          <th className="text-right px-3 py-2 font-medium">Qtd</th>
+                          <th className="text-right px-3 py-2 font-medium">Preço</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-haveres-border">
+                        {validRows.map((row) => (
+                          <tr key={row.row_number} className="hover:bg-secondary/50">
+                            <td className="px-3 py-2 text-muted-foreground font-numeric">{row.row_number}</td>
+                            <td className="px-3 py-2 text-white font-medium">{row.parsed_data?.ticker ?? "—"}</td>
+                            <td className="px-3 py-2">
+                              <span className={row.parsed_data?.transaction_type === "BUY" ? "text-gain" : "text-loss"}>
+                                {row.parsed_data?.transaction_type === "BUY" ? "COMPRA" : "VENDA"}
+                              </span>
+                            </td>
+                            <td className="px-3 py-2 text-muted-foreground font-numeric">
+                              {row.parsed_data?.date ? formatDate(row.parsed_data.date) : "—"}
+                            </td>
+                            <td className="px-3 py-2 text-right font-numeric text-white">
+                              {row.parsed_data?.quantity ?? "—"}
+                            </td>
+                            <td className="px-3 py-2 text-right font-numeric text-white">
+                              {row.parsed_data?.price ? formatCurrency(Number(row.parsed_data.price)) : "—"}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Linhas com erro */}
+            {errorRows.length > 0 && (
+              <div>
+                <button
+                  onClick={() => setErrorsExpanded((v) => !v)}
+                  className="flex items-center gap-2 text-xs text-loss hover:text-loss/80 transition-colors"
+                >
+                  {errorsExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                  {errorRows.length} linha{errorRows.length > 1 ? "s" : ""} com erro (não serão importadas)
+                </button>
+                {errorsExpanded && (
+                  <div className="mt-2 rounded-lg border border-loss/30 overflow-hidden">
+                    <div className="max-h-40 overflow-y-auto divide-y divide-haveres-border">
+                      {errorRows.map((row) => (
+                        <div key={row.row_number} className="flex gap-3 px-3 py-2 text-xs">
+                          <span className="text-muted-foreground font-numeric shrink-0">Linha {row.row_number}</span>
+                          <span className="text-loss">{row.error_message}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
