@@ -84,7 +84,7 @@ export function PatrimonyChart({ data }: Props) {
           scale="time"
           domain={["dataMin", "dataMax"]}
           ticks={monthTicks}
-          tickFormatter={(value) => format(new Date(value), "dd MMM", { locale: ptBR })}
+          tickFormatter={(value) => format(new Date(value), "MMM yyyy", { locale: ptBR })}
           tick={{ fill: "#718096", fontSize: 11 }}
           axisLine={false}
           tickLine={false}
