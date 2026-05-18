@@ -12,6 +12,7 @@ import { formatCurrency, formatDate, formatQuantity } from "@/utils/format";
 import { ArrowLeftRight, Plus, Pencil, Trash2, BarChart3 } from "lucide-react";
 import { cn } from "@/utils/cn";
 import { SourceBadge } from "@/components/common/SourceBadge";
+import { AssetLogo } from "@/components/common/AssetLogo";
 import type { Transaction } from "@/types/transaction";
 
 const TYPE_COLORS: Record<string, string> = {
@@ -84,6 +85,7 @@ export function TransactionsPage() {
               <YAxis tick={{ fill: "#718096", fontSize: 11 }} axisLine={false} tickLine={false}
                 tickFormatter={(v) => formatCurrency(v, true)} width={65} />
               <Tooltip
+                cursor={{ fill: "rgba(160, 174, 192, 0.12)" }}
                 content={({ active, payload, label }) => {
                   if (!active || !payload?.length) return null;
                   return (
@@ -157,9 +159,12 @@ export function TransactionsPage() {
                   <tr key={t.id} className="border-b border-haveres-border/50 hover:bg-secondary/30 group">
                     <td className="py-3 px-4 text-muted-foreground text-xs">{formatDate(t.date)}</td>
                     <td className="py-3 px-4">
-                      <div>
-                        <span className="font-mono font-semibold text-white text-sm">{t.asset_ticker}</span>
-                        <p className="text-xs text-muted-foreground truncate max-w-[120px]">{t.asset_name}</p>
+                      <div className="flex items-center gap-2">
+                        <AssetLogo logoUrl={t.asset_logo_url} ticker={t.asset_ticker} />
+                        <div>
+                          <span className="font-mono font-semibold text-white text-sm">{t.asset_ticker}</span>
+                          <p className="text-xs text-muted-foreground truncate max-w-[120px]">{t.asset_name}</p>
+                        </div>
                       </div>
                     </td>
                     <td className="py-3 px-4">

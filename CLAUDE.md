@@ -39,6 +39,7 @@ Variável obrigatória: `VITE_API_URL=http://localhost:8000/api` (copiar de `.en
 | `haveres-blue` | `#3b82f6` | Botões, navegação, gráficos |
 | `gain` | `#22c55e` | Positivo → `text-gain` |
 | `loss` | `#ef4444` | Negativo → `text-loss` |
+| `chart-hover-soft` | `rgba(160, 174, 192, 0.12)` | Destaque sutil no hover de gráficos |
 
 ## Convenções obrigatórias
 
@@ -46,6 +47,7 @@ Variável obrigatória: `VITE_API_URL=http://localhost:8000/api` (copiar de `.en
 - P&L: sempre `plClass(value)` → `text-gain` / `text-loss` / `text-muted-foreground`
 - Dados financeiros: sempre `font-numeric` (`font-mono tabular-nums`)
 - Cards: classe utilitária `card-haveres` (`bg-haveres-card border border-haveres-border rounded-xl`)
+- Gráficos Recharts: hover com destaque sutil via `Tooltip cursor={{ fill: "rgba(160, 174, 192, 0.12)" }}` (evitar `cursor={false}`)
 
 ## Auth flow
 

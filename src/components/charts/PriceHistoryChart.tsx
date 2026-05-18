@@ -82,7 +82,7 @@ export function PriceHistoryChart({ ticker }: Props) {
             <XAxis dataKey="date" tick={{ fill: "#718096", fontSize: 11 }} axisLine={false} tickLine={false} />
             <YAxis tick={{ fill: "#718096", fontSize: 11 }} axisLine={false} tickLine={false}
               tickFormatter={(v) => formatCurrency(v, true)} width={65} />
-            <Tooltip content={<CustomTooltip />} />
+            <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(160, 174, 192, 0.12)" }} />
             <Area type="monotone" dataKey="price" stroke="#3b82f6" strokeWidth={2}
               fill="url(#gradPrice)" dot={false} />
           </AreaChart>

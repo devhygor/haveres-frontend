@@ -20,6 +20,7 @@ export interface Position {
   market_cap?: number | null;
   week_52_high?: number | null;
   week_52_low?: number | null;
+  logo_url?: string;
 }
 
 export interface PortfolioSummary {

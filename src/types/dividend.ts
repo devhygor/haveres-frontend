@@ -3,6 +3,7 @@ export interface Dividend {
   asset_id: string;
   asset_ticker: string;
   asset_name: string;
+  asset_logo_url?: string;
   dividend_type: string;
   dividend_type_display: string;
   ex_date: string;

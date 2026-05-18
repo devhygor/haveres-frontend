@@ -40,7 +40,7 @@ export function DividendsChart({ data }: Props) {
         <XAxis dataKey="month" tick={{ fill: "#718096", fontSize: 11 }} axisLine={false} tickLine={false} />
         <YAxis tick={{ fill: "#718096", fontSize: 11 }} axisLine={false} tickLine={false}
           tickFormatter={(v) => formatCurrency(v, true)} width={65} />
-        <Tooltip content={<CustomTooltip />} cursor={{ fill: 'transparent' }} />
+        <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(160, 174, 192, 0.12)" }} />
         <Bar dataKey="paid" name="Recebido" stackId="a" fill="#22c55e" radius={[0, 0, 0, 0]} maxBarSize={32} />
         <Bar dataKey="upcoming" name="A receber" stackId="a" fill="#86efac" radius={[4, 4, 0, 0]} maxBarSize={32} />
       </BarChart>

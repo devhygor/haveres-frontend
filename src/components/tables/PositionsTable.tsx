@@ -9,6 +9,7 @@ import { formatCurrency, formatPercent, formatQuantity, plClass } from "@/utils/
 import { cn } from "@/utils/cn";
 import type { Position } from "@/types/portfolio";
 import { ASSET_TYPE_LABELS } from "@/types/asset";
+import { AssetLogo } from "@/components/common/AssetLogo";
 
 function toNumber(value: unknown): number {
   if (typeof value === "number") return Number.isFinite(value) ? value : 0;
@@ -30,14 +31,17 @@ const columns: ColumnDef<Position>[] = [
     accessorKey: "ticker",
     header: "Ticker",
     cell: ({ row }) => (
-      <div>
-        <Link
-          to={`/ativos/${row.original.ticker}`}
-          className="font-semibold text-haveres-blue hover:text-white font-mono text-sm transition-colors"
-        >
-          {row.original.ticker}
-        </Link>
-        <p className="text-xs text-muted-foreground truncate max-w-[120px]">{row.original.name}</p>
+      <div className="flex items-center gap-2">
+        <AssetLogo logoUrl={row.original.logo_url} ticker={row.original.ticker} />
+        <div>
+          <Link
+            to={`/ativos/${row.original.ticker}`}
+            className="font-semibold text-haveres-blue hover:text-white font-mono text-sm transition-colors"
+          >
+            {row.original.ticker}
+          </Link>
+          <p className="text-xs text-muted-foreground truncate max-w-[120px]">{row.original.name}</p>
+        </div>
       </div>
     ),
   },

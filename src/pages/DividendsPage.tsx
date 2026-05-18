@@ -11,6 +11,7 @@ import { DividendFormModal } from "@/components/forms/DividendFormModal";
 import { formatCurrency, formatDate } from "@/utils/format";
 import { TrendingUp, Plus, Pencil, Trash2, RefreshCw, PieChart, BarChart3, CalendarDays } from "lucide-react";
 import { SourceBadge } from "@/components/common/SourceBadge";
+import { AssetLogo } from "@/components/common/AssetLogo";
 import type { Dividend } from "@/types/dividend";
 import type { AllocationItem } from "@/types/portfolio";
 
@@ -232,7 +233,7 @@ export function DividendsPage() {
                     <YAxis type="category" dataKey="ticker" tick={{ fill: "#a0aec0", fontSize: 11 }}
                       axisLine={false} tickLine={false} width={52} />
                     <Tooltip
-                      cursor={{ fill: 'transparent' }}
+                      cursor={{ fill: "rgba(160, 174, 192, 0.12)" }}
                       content={({ active, payload }) => {
                         if (!active || !payload?.length) return null;
                         return (
@@ -310,7 +311,12 @@ export function DividendsPage() {
                     {filteredUpcoming.map(d => (
                       <tr key={d.id} className="border-b border-haveres-border/50 hover:bg-secondary/30">
                         <td className="py-2 px-4 text-muted-foreground text-xs">{d.payment_date ? formatDate(d.payment_date) : "—"}</td>
-                        <td className="py-2 px-4 font-mono font-semibold text-white text-sm">{d.asset_ticker}</td>
+                        <td className="py-2 px-4">
+                          <div className="flex items-center gap-2">
+                            <AssetLogo logoUrl={d.asset_logo_url} ticker={d.asset_ticker} size={20} />
+                            <span className="font-mono font-semibold text-white text-sm">{d.asset_ticker}</span>
+                          </div>
+                        </td>
                         <td className="py-2 px-4">
                           <span className={`text-xs font-medium ${TYPE_COLORS[d.dividend_type] ?? "text-muted-foreground"}`}>
                             {d.dividend_type_display}
@@ -413,9 +419,12 @@ export function DividendsPage() {
                       <td className="py-3 px-4 text-muted-foreground text-xs">{formatDate(d.ex_date)}</td>
                       <td className="py-3 px-4 text-muted-foreground text-xs">{d.payment_date ? formatDate(d.payment_date) : "—"}</td>
                       <td className="py-3 px-4">
-                        <div>
-                          <span className="font-mono font-semibold text-white text-sm">{d.asset_ticker}</span>
-                          <p className="text-xs text-muted-foreground truncate max-w-[120px]">{d.asset_name}</p>
+                        <div className="flex items-center gap-2">
+                          <AssetLogo logoUrl={d.asset_logo_url} ticker={d.asset_ticker} />
+                          <div>
+                            <span className="font-mono font-semibold text-white text-sm">{d.asset_ticker}</span>
+                            <p className="text-xs text-muted-foreground truncate max-w-[120px]">{d.asset_name}</p>
+                          </div>
                         </div>
                       </td>
                       <td className="py-3 px-4">

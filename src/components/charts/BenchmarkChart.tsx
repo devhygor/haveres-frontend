@@ -36,7 +36,7 @@ export function BenchmarkChart({ data }: Props) {
         <XAxis dataKey="date" tick={{ fill: "#718096", fontSize: 11 }} axisLine={false} tickLine={false} />
         <YAxis tick={{ fill: "#718096", fontSize: 11 }} axisLine={false} tickLine={false}
           tickFormatter={(v) => `${v.toFixed(1)}%`} width={55} />
-        <Tooltip content={<CustomTooltip />} />
+        <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(160, 174, 192, 0.12)" }} />
         <Legend
           wrapperStyle={{ fontSize: 12 }}
           formatter={(v) => <span style={{ color: "#a0aec0" }}>{v}</span>}

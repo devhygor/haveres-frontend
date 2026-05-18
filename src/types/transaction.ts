@@ -3,6 +3,7 @@ export interface Transaction {
   asset_id: string;
   asset_ticker: string;
   asset_name: string;
+  asset_logo_url?: string;
   broker_id: string | null;
   broker_name: string | null;
   transaction_type: string;
