@@ -15,17 +15,25 @@ const SOURCES = [
 
 const STATUS_ICON: Record<string, React.ReactNode> = {
   PENDING:    <Clock size={14} className="text-yellow-400" />,
-  PREVIEWED:  <Clock size={14} className="text-haveres-blue" />,
-  IMPORTED:   <CheckCircle size={14} className="text-gain" />,
+  PREVIEW:    <Clock size={14} className="text-haveres-blue" />,
+  PROCESSING: <Clock size={14} className="text-haveres-blue" />,
+  COMPLETED:  <CheckCircle size={14} className="text-gain" />,
+  PREVIEWED:  <Clock size={14} className="text-haveres-blue" />, // legado
+  IMPORTED:   <CheckCircle size={14} className="text-gain" />,    // legado
   CANCELLED:  <XCircle size={14} className="text-loss" />,
-  ERROR:      <AlertCircle size={14} className="text-loss" />,
+  FAILED:     <AlertCircle size={14} className="text-loss" />,
+  ERROR:      <AlertCircle size={14} className="text-loss" />,    // legado
 };
 
 const STATUS_LABEL: Record<string, string> = {
   PENDING:   "Pendente",
-  PREVIEWED: "Aguardando confirmação",
-  IMPORTED:  "Importado",
+  PREVIEW:   "Aguardando confirmação",
+  PROCESSING:"Processando",
+  COMPLETED: "Concluído",
+  PREVIEWED: "Aguardando confirmação", // legado
+  IMPORTED:  "Importado",              // legado
   CANCELLED: "Cancelado",
+  FAILED:    "Falhou",
   ERROR:     "Erro",
 };
 
@@ -39,6 +47,7 @@ export function ImportsPage() {
   const [preview, setPreview] = useState<ImportBatch | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const [errorsExpanded, setErrorsExpanded] = useState(false);
+  const [historyErrorsBatch, setHistoryErrorsBatch] = useState<ImportBatch | null>(null);
 
   const { data: previewRows = [] } = useQuery({
     queryKey: ["import-rows", preview?.id],
@@ -168,7 +177,13 @@ export function ImportsPage() {
                   <span>{STATUS_LABEL[b.status] ?? b.status}</span>
                   <span>{b.imported_rows}/{b.total_rows} linhas</span>
                   {b.error_rows > 0 && (
-                    <span className="text-loss">{b.error_rows} erros</span>
+                    <button
+                      type="button"
+                      onClick={() => setHistoryErrorsBatch(b)}
+                      className="text-loss hover:underline"
+                    >
+                      {b.error_rows} erro{b.error_rows > 1 ? "s" : ""}
+                    </button>
                   )}
                 </div>
               </div>
@@ -176,6 +191,50 @@ export function ImportsPage() {
           </div>
         )}
       </div>
+
+      {/* Modal de detalhes de erro por lote */}
+      <Modal
+        open={!!historyErrorsBatch}
+        onClose={() => setHistoryErrorsBatch(null)}
+        title="Detalhes dos erros da importação"
+        size="md"
+      >
+        {historyErrorsBatch ? (
+          <div className="space-y-3">
+            <div className="text-xs text-muted-foreground">
+              <p className="text-white font-medium text-sm">{historyErrorsBatch.file_name}</p>
+              <p>{SOURCE_LABELS[historyErrorsBatch.source] ?? historyErrorsBatch.source}</p>
+            </div>
+
+            {historyErrorsBatch.row_errors?.length ? (
+              <div className="rounded-lg border border-loss/30 overflow-hidden">
+                <div className="max-h-64 overflow-y-auto divide-y divide-haveres-border">
+                  {historyErrorsBatch.row_errors.map((error) => (
+                    <div key={`${historyErrorsBatch.id}-${error.row_number}`} className="flex gap-3 px-3 py-2 text-xs">
+                      <span className="text-muted-foreground font-numeric shrink-0">Linha {error.row_number}</span>
+                      <span className="text-loss">{error.error_message}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                Não há detalhes de linha para este lote.
+              </p>
+            )}
+
+            <div className="flex justify-end pt-1">
+              <button
+                type="button"
+                onClick={() => setHistoryErrorsBatch(null)}
+                className="px-4 py-2 rounded-lg text-sm text-muted-foreground hover:text-white hover:bg-secondary transition-colors"
+              >
+                Fechar
+              </button>
+            </div>
+          </div>
+        ) : null}
+      </Modal>
 
       {/* Modal de importação */}
       <Modal
