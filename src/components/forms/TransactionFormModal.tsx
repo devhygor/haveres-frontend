@@ -55,7 +55,7 @@ const today = () => new Date().toISOString().split("T")[0];
 
 const DEFAULT_FORM: FormState = {
   asset_id: "", transaction_type: "BUY", date: today(),
-  quantity: "", price: "", fees: "0", factor: "2", broker_id: "", notes: "",
+  quantity: "", price: "", fees: "0,00", factor: "2", broker_id: "", notes: "",
 };
 
 const DEFAULT_NEW_ASSET: NewAsset = { ticker: "", name: "", asset_type: "STOCK" };
@@ -158,7 +158,7 @@ export function TransactionFormModal({ open, onClose, transaction }: Props) {
               date: transaction.date,
               quantity: String(transaction.quantity),
               price: formatMoneyFromNumber(Number(transaction.price)),
-              fees: String(transaction.fees),
+              fees: formatMoneyFromNumber(Number(transaction.fees)),
               factor: String(transaction.factor),
               broker_id: transaction.broker_id ?? "",
               notes: transaction.notes,
@@ -295,6 +295,13 @@ export function TransactionFormModal({ open, onClose, transaction }: Props) {
     const safeCurrent = Number.isFinite(current) ? current : 0;
     const next = Math.max(0, safeCurrent + delta);
     set("quantity", formatDecimalForInput(next));
+  };
+
+  const adjustMoney = (field: "price" | "fees", delta: number) => {
+    const current = parseLocaleNumber(form[field] || "0");
+    const safeCurrent = Number.isFinite(current) ? current : 0;
+    const next = Math.max(0, Number((safeCurrent + delta).toFixed(2)));
+    set(field, formatMoneyFromNumber(next));
   };
 
   const fields = getFields(form.transaction_type);
@@ -463,7 +470,7 @@ export function TransactionFormModal({ open, onClose, transaction }: Props) {
 
         {/* Quantidade + Preço */}
         {(fields.showQuantity || fields.showPrice) && (
-          <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-4">
             {fields.showQuantity && (
               <div>
                 <label className={LABEL}>Quantidade *</label>
@@ -499,15 +506,33 @@ export function TransactionFormModal({ open, onClose, transaction }: Props) {
             {fields.showPrice && (
               <div>
                 <label className={LABEL}>Preço unitário (R$) *</label>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  className={INPUT}
-                  placeholder="0,00"
-                  value={form.price}
-                  onChange={e => set("price", maskMoneyInput(e.target.value))}
-                  required
-                />
+                <div className="flex items-stretch gap-2">
+                  <button
+                    type="button"
+                    onClick={() => adjustMoney("price", -0.01)}
+                    className="px-3 rounded-lg border border-haveres-border bg-secondary text-white hover:border-white/30 transition-colors"
+                    aria-label="Diminuir preço unitário"
+                  >
+                    -
+                  </button>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    className={`${INPUT} text-center`}
+                    placeholder="0,00"
+                    value={form.price}
+                    onChange={e => set("price", maskMoneyInput(e.target.value))}
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => adjustMoney("price", 0.01)}
+                    className="px-3 rounded-lg border border-haveres-border bg-secondary text-white hover:border-white/30 transition-colors"
+                    aria-label="Aumentar preço unitário"
+                  >
+                    +
+                  </button>
+                </div>
               </div>
             )}
           </div>
@@ -517,13 +542,32 @@ export function TransactionFormModal({ open, onClose, transaction }: Props) {
         {fields.showFees && (
           <div>
             <label className={LABEL}>Taxas / Custos (R$)</label>
-            <input
-              type="number" step="0.01" min="0"
-              className={INPUT}
-              placeholder="0,00"
-              value={form.fees}
-              onChange={e => set("fees", e.target.value)}
-            />
+            <div className="flex items-stretch gap-2">
+              <button
+                type="button"
+                onClick={() => adjustMoney("fees", -0.01)}
+                className="px-3 rounded-lg border border-haveres-border bg-secondary text-white hover:border-white/30 transition-colors"
+                aria-label="Diminuir taxas e custos"
+              >
+                -
+              </button>
+              <input
+                type="text"
+                inputMode="numeric"
+                className={`${INPUT} text-center`}
+                placeholder="0,00"
+                value={form.fees}
+                onChange={e => set("fees", maskMoneyInput(e.target.value))}
+              />
+              <button
+                type="button"
+                onClick={() => adjustMoney("fees", 0.01)}
+                className="px-3 rounded-lg border border-haveres-border bg-secondary text-white hover:border-white/30 transition-colors"
+                aria-label="Aumentar taxas e custos"
+              >
+                +
+              </button>
+            </div>
           </div>
         )}
 

@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Modal } from "@/components/common/Modal";
 import { dividendsApi } from "@/api/dividends";
 import { assetsApi, ASSET_TYPES, type Asset } from "@/api/assets";
+import { portfolioApi } from "@/api/portfolio";
 import { useAuthStore } from "@/stores/authStore";
 import type { Dividend } from "@/types/dividend";
 
@@ -36,7 +37,7 @@ const today = () => new Date().toISOString().split("T")[0];
 
 const DEFAULT_FORM: FormState = {
   asset_id: "", dividend_type: "DIVIDEND", ex_date: today(),
-  payment_date: "", quantity_held: "", value_per_share: "", ir_withheld: "0", notes: "",
+  payment_date: "", quantity_held: "", value_per_share: "", ir_withheld: "0,00", notes: "",
 };
 
 const DEFAULT_NEW_ASSET: NewAsset = { ticker: "", name: "", asset_type: "FII" };
@@ -99,6 +100,21 @@ function formatDecimalForInput(value: number, precision = 8): string {
   return fixed.replace(".", ",");
 }
 
+function formatMoneyFromNumber(value: number, fractionDigits = 2): string {
+  if (!Number.isFinite(value)) return "";
+  return new Intl.NumberFormat("pt-BR", {
+    minimumFractionDigits: fractionDigits,
+    maximumFractionDigits: fractionDigits,
+  }).format(value);
+}
+
+function maskMoneyInput(value: string, fractionDigits = 2): string {
+  const digits = value.replace(/\D/g, "");
+  if (!digits) return "";
+  const amount = Number(digits) / 10 ** fractionDigits;
+  return formatMoneyFromNumber(amount, fractionDigits);
+}
+
 export function DividendFormModal({ open, onClose, dividend }: Props) {
   const qc = useQueryClient();
   const isEditing = !!dividend;
@@ -122,8 +138,8 @@ export function DividendFormModal({ open, onClose, dividend }: Props) {
               ex_date: dividend.ex_date,
               payment_date: dividend.payment_date ?? "",
               quantity_held: String(dividend.quantity_held),
-              value_per_share: String(dividend.value_per_share),
-              ir_withheld: String(dividend.ir_withheld),
+              value_per_share: formatMoneyFromNumber(Number(dividend.value_per_share), 6),
+              ir_withheld: formatMoneyFromNumber(Number(dividend.ir_withheld), 2),
               notes: dividend.notes,
             }
           : { ...DEFAULT_FORM, ex_date: today() }
@@ -137,6 +153,11 @@ export function DividendFormModal({ open, onClose, dividend }: Props) {
   }, [open, dividend]);
 
   const assets = useQuery({ queryKey: ["assets"], queryFn: () => assetsApi.list().then(r => r.data) });
+  const portfolioSummary = useQuery({
+    queryKey: ["portfolio", "summary"],
+    queryFn: () => portfolioApi.getSummary().then((r) => r.data),
+    enabled: open,
+  });
   const assetsList = assets.data ?? [];
 
   const set = (k: keyof FormState, v: string) => setForm(f => ({ ...f, [k]: v }));
@@ -220,6 +241,27 @@ export function DividendFormModal({ open, onClose, dividend }: Props) {
     set("quantity_held", formatDecimalForInput(next));
   };
 
+  const adjustValuePerShare = (delta: number) => {
+    const current = parseLocaleNumber(form.value_per_share || "0");
+    const safeCurrent = Number.isFinite(current) ? current : 0;
+    const next = Math.max(0, Number((safeCurrent + delta).toFixed(6)));
+    set("value_per_share", formatMoneyFromNumber(next, 6));
+  };
+
+  const adjustIrWithheld = (delta: number) => {
+    const current = parseLocaleNumber(form.ir_withheld || "0");
+    const safeCurrent = Number.isFinite(current) ? current : 0;
+    const next = Math.max(0, Number((safeCurrent + delta).toFixed(2)));
+    set("ir_withheld", formatMoneyFromNumber(next, 2));
+  };
+
+  const prefillValuePerShareFromAsset = (assetId: string) => {
+    const selectedPosition = portfolioSummary.data?.positions.find((position) => position.asset_id === assetId);
+    const currentPrice = Number(selectedPosition?.current_price);
+    if (!Number.isFinite(currentPrice) || currentPrice <= 0) return;
+    set("value_per_share", formatMoneyFromNumber(currentPrice, 6));
+  };
+
   const gross = (parseLocaleNumber(form.quantity_held || "0") || 0) * (parseLocaleNumber(form.value_per_share || "0") || 0);
   const net = gross - (parseLocaleNumber(form.ir_withheld || "0") || 0);
   const fmt = (v: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
@@ -278,6 +320,7 @@ export function DividendFormModal({ open, onClose, dividend }: Props) {
                     onClick={() => {
                       set("asset_id", asset.id);
                       setAssetSearch(assetLabel(asset));
+                      prefillValuePerShareFromAsset(asset.id);
                       setAssetMenuOpen(false);
                       setShowNewAsset(false);
                     }}
@@ -371,7 +414,7 @@ export function DividendFormModal({ open, onClose, dividend }: Props) {
         </div>
 
         {/* Quantidade + Valor/ação */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-4">
           <div>
             <label className={LABEL}>Quantidade na data com *</label>
             <div className="flex items-stretch gap-2">
@@ -404,27 +447,65 @@ export function DividendFormModal({ open, onClose, dividend }: Props) {
           </div>
           <div>
             <label className={LABEL}>Valor por ação (R$) *</label>
-            <input
-              type="number" step="0.000001" min="0"
-              className={INPUT}
-              placeholder="0,000000"
-              value={form.value_per_share}
-              onChange={e => set("value_per_share", e.target.value)}
-              required
-            />
+            <div className="flex items-stretch gap-2">
+              <button
+                type="button"
+                onClick={() => adjustValuePerShare(-0.000001)}
+                className="px-3 rounded-lg border border-haveres-border bg-secondary text-white hover:border-white/30 transition-colors"
+                aria-label="Diminuir valor por ação"
+              >
+                -
+              </button>
+              <input
+                type="text"
+                inputMode="numeric"
+                className={`${INPUT} text-center`}
+                placeholder="0,000000"
+                value={form.value_per_share}
+                onChange={e => set("value_per_share", maskMoneyInput(e.target.value, 6))}
+                required
+              />
+              <button
+                type="button"
+                onClick={() => adjustValuePerShare(0.000001)}
+                className="px-3 rounded-lg border border-haveres-border bg-secondary text-white hover:border-white/30 transition-colors"
+                aria-label="Aumentar valor por ação"
+              >
+                +
+              </button>
+            </div>
           </div>
         </div>
 
         {/* IR */}
         <div>
           <label className={LABEL}>IR Retido na Fonte (R$)</label>
-          <input
-            type="number" step="0.01" min="0"
-            className={INPUT}
-            placeholder="0,00"
-            value={form.ir_withheld}
-            onChange={e => set("ir_withheld", e.target.value)}
-          />
+          <div className="flex items-stretch gap-2">
+            <button
+              type="button"
+              onClick={() => adjustIrWithheld(-0.01)}
+              className="px-3 rounded-lg border border-haveres-border bg-secondary text-white hover:border-white/30 transition-colors"
+              aria-label="Diminuir IR retido"
+            >
+              -
+            </button>
+            <input
+              type="text"
+              inputMode="numeric"
+              className={`${INPUT} text-center`}
+              placeholder="0,00"
+              value={form.ir_withheld}
+              onChange={e => set("ir_withheld", maskMoneyInput(e.target.value, 2))}
+            />
+            <button
+              type="button"
+              onClick={() => adjustIrWithheld(0.01)}
+              className="px-3 rounded-lg border border-haveres-border bg-secondary text-white hover:border-white/30 transition-colors"
+              aria-label="Aumentar IR retido"
+            >
+              +
+            </button>
+          </div>
         </div>
 
         {/* Preview */}
