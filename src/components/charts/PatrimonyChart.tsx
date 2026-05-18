@@ -31,13 +31,17 @@ export function PatrimonyChart({ data }: Props) {
   const formatted = data
     .map((d) => {
       const parsedDate = typeof d.date === "string" ? parseISO(d.date) : d.date;
+      const totalValue = Number(d.total_value);
+      const totalInvested = Number(d.total_invested);
 
-      if (!isValid(parsedDate)) {
+      if (!isValid(parsedDate) || !Number.isFinite(totalValue) || !Number.isFinite(totalInvested)) {
         return null;
       }
 
       return {
         ...d,
+        total_value: totalValue,
+        total_invested: totalInvested,
         timestamp: parsedDate.getTime(),
         tooltip_label: format(parsedDate, "dd MMM", { locale: ptBR }),
       };

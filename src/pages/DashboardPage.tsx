@@ -43,27 +43,11 @@ export function DashboardPage() {
     queryFn: () => quotesApi.getBenchmark(12).then((r) => r.data),
   });
 
-  if (summary.isLoading) {
-    return (
-      <div className="space-y-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-          {[...Array(4)].map((_, i) => <SkeletonCard key={i} />)}
-        </div>
-        <LoadingState />
-      </div>
-    );
-  }
-
-  if (summary.isError) {
-    return <ErrorState onRetry={() => summary.refetch()} />;
-  }
-
   const data = summary.data;
-  if (!data) {
-    return <ErrorState message="Não foi possível carregar os dados do dashboard." onRetry={() => summary.refetch()} />;
-  }
 
-  const positions = Array.isArray(data.positions) ? data.positions : [];
+  const positions = useMemo(() => {
+    return Array.isArray(data?.positions) ? data.positions : [];
+  }, [data?.positions]);
 
   const selectedTypeLabel = useMemo(() => {
     if (!selectedType || !allocationByType.data) return null;
@@ -88,6 +72,25 @@ export function DashboardPage() {
   };
 
   const hasActiveTypeFilter = Boolean(selectedType);
+
+  if (summary.isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+          {[...Array(4)].map((_, i) => <SkeletonCard key={i} />)}
+        </div>
+        <LoadingState />
+      </div>
+    );
+  }
+
+  if (summary.isError) {
+    return <ErrorState onRetry={() => summary.refetch()} />;
+  }
+
+  if (!data) {
+    return <ErrorState message="Não foi possível carregar os dados do dashboard." onRetry={() => summary.refetch()} />;
+  }
 
   return (
     <div className="space-y-6">
@@ -188,7 +191,7 @@ export function DashboardPage() {
           {dividendsEvolution.isLoading ? (
             <LoadingState />
           ) : dividendsEvolution.data?.length ? (
-            <DividendsChart data={dividendsEvolution.data} />
+            <DividendsChart data={(dividendsEvolution.data ?? []).map(d => ({ month: d.month, paid: Number(d.total), upcoming: 0 }))} />
           ) : (
             <p className="text-sm text-muted-foreground py-8 text-center">Sem proventos registrados</p>
           )}

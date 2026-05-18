@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { dividendsApi } from "@/api/dividends";
-import { portfolioApi } from "@/api/portfolio";
 import { DividendsChart } from "@/components/charts/DividendsChart";
 import { AllocationChart } from "@/components/charts/AllocationChart";
 import { LoadingState } from "@/components/common/LoadingState";
@@ -42,10 +41,6 @@ export function DividendsPage() {
   const dividends = useQuery({
     queryKey: ["dividends"],
     queryFn: () => dividendsApi.list().then(r => r.data),
-  });
-  const evolution = useQuery({
-    queryKey: ["portfolio", "evolution", "dividends", evolutionRangeMonths],
-    queryFn: () => portfolioApi.getDividendsEvolution(evolutionRangeMonths).then(r => r.data),
   });
   const upcoming = useQuery({
     queryKey: ["dividends", "upcoming"],
@@ -98,33 +93,37 @@ export function DividendsPage() {
     return d.filter((item) => item.dividend_type === selectedDividendType);
   }, [dividends.data, selectedDividendType]);
 
+  const historyData = useMemo(() => {
+    const today = new Date().toISOString().split("T")[0];
+    return filteredData.filter((d) => !d.payment_date || d.payment_date < today);
+  }, [filteredData]);
+
   const filteredUpcoming = useMemo(() => {
     const d = upcoming.data ?? [];
     if (!selectedDividendType) return d;
     return d.filter((item) => item.dividend_type === selectedDividendType);
   }, [selectedDividendType, upcoming.data]);
 
-  const filteredEvolution = useMemo(() => {
-    if (!selectedDividendType) return evolution.data ?? [];
+  const chartData = useMemo(() => {
     if (!filteredData.length) return [];
-
-    const monthTotals: Record<string, number> = {};
+    const today = new Date().toISOString().split("T")[0];
+    const monthTotals: Record<string, { paid: number; upcoming: number }> = {};
     filteredData.forEach((item) => {
-      const monthKey = item.ex_date.slice(0, 7);
+      const monthKey = (item.payment_date || item.ex_date).slice(0, 7);
       if (!monthKey) return;
-      monthTotals[monthKey] = (monthTotals[monthKey] || 0) + Number(item.net_amount);
+      if (!monthTotals[monthKey]) monthTotals[monthKey] = { paid: 0, upcoming: 0 };
+      if (item.payment_date && item.payment_date >= today) {
+        monthTotals[monthKey].upcoming += Number(item.net_amount);
+      } else {
+        monthTotals[monthKey].paid += Number(item.net_amount);
+      }
     });
-
     const monthlyData = Object.entries(monthTotals)
       .sort(([a], [b]) => a.localeCompare(b))
-      .map(([month, total]) => ({
-        month: `${month}-01`,
-        total,
-      }));
-
+      .map(([month, values]) => ({ month: `${month}-01`, paid: values.paid, upcoming: values.upcoming }));
     if (evolutionRangeMonths === 0) return monthlyData;
     return monthlyData.slice(-evolutionRangeMonths);
-  }, [evolution.data, evolutionRangeMonths, filteredData, selectedDividendType]);
+  }, [filteredData, evolutionRangeMonths]);
 
   const selectedEvolutionRangeLabel = useMemo(() => {
     return EVOLUTION_RANGE_OPTIONS.find((option) => option.value === evolutionRangeMonths)?.label ?? "12 meses";
@@ -298,7 +297,7 @@ export function DividendsPage() {
         )}
 
         {/* Gráfico mensal */}
-        {(filteredData.length > 0 || evolution.isLoading) ? (
+        {filteredData.length > 0 ? (
           <div className="card-haveres p-5">
             <div className="flex items-center gap-2 mb-4">
               <TrendingUp size={18} className="text-gain" />
@@ -321,10 +320,8 @@ export function DividendsPage() {
             <p className="text-xs text-muted-foreground mb-3">
               Exibindo {selectedEvolutionRangeLabel.toLowerCase()}.
             </p>
-            {evolution.isLoading ? (
-              <LoadingState />
-            ) : filteredEvolution.length ? (
-              <DividendsChart data={filteredEvolution} />
+            {chartData.length ? (
+              <DividendsChart data={chartData} />
             ) : (
               <p className="text-sm text-muted-foreground py-4">
                 Sem dados nesse período. Selecione um intervalo maior para visualizar mais histórico.
@@ -338,7 +335,7 @@ export function DividendsPage() {
           <div className="flex flex-wrap items-center gap-2 p-4 sm:p-5 border-b border-haveres-border">
             <h2 className="text-sm font-semibold text-white">Histórico de Proventos</h2>
             <span className="text-xs text-muted-foreground">
-              {filteredData.length} registros
+              {historyData.length} registros
               {hasActiveTypeFilter ? ` de ${data.length}` : ""}
             </span>
             <div className="w-full sm:w-auto sm:ml-auto flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
@@ -382,7 +379,7 @@ export function DividendsPage() {
                 </button>
               }
             />
-          ) : !filteredData.length ? (
+          ) : !historyData.length ? (
             <EmptyState
               title="Nenhum provento para este filtro"
               description="Selecione outra fatia no gráfico ou limpe o filtro aplicado."
@@ -409,7 +406,7 @@ export function DividendsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredData.map(d => (
+                  {historyData.map(d => (
                     <tr key={d.id} className="border-b border-haveres-border/50 hover:bg-secondary/30 group">
                       <td className="py-3 px-4 text-muted-foreground text-xs">{formatDate(d.ex_date)}</td>
                       <td className="py-3 px-4 text-muted-foreground text-xs">{d.payment_date ? formatDate(d.payment_date) : "—"}</td>
