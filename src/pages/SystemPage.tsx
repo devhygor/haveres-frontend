@@ -46,6 +46,7 @@ const SYNC_LABELS: Record<string, string> = {
   quotes: "Cotações",
   portfolio_history: "Histórico de Preços",
   portfolio_snapshots: "Snapshots de Portfólio",
+  fii_details: "Detalhes FII (v2)",
 };
 
 function ProgressRow({ label, item, lastTs }: {

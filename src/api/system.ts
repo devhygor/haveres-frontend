@@ -20,12 +20,14 @@ export interface SyncStatus {
   quotes: string | null;
   portfolio_history: string | null;
   portfolio_snapshots: string | null;
+  fii_details: string | null;
 }
 export interface SyncAllResult {
   assets_catalog: string;
   quotes: string;
   portfolio_history: string;
   portfolio_snapshots: string;
+  fii_details: string;
 }
 export interface SyncProgressItem {
   status: "idle" | "running" | "done" | "error";
@@ -39,6 +41,7 @@ export interface SyncProgress {
   quotes: SyncProgressItem;
   portfolio_history: SyncProgressItem;
   portfolio_snapshots: SyncProgressItem;
+  fii_details: SyncProgressItem;
 }
 export interface AdminUser {
   id: number; email: string; display_name: string; first_name: string; last_name: string;
