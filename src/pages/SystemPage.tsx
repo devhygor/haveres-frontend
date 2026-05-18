@@ -3,9 +3,10 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { systemApi, type SyncProgressItem } from "@/api/system";
 import { assetsApi } from "@/api/assets";
 import { LoadingState } from "@/components/common/LoadingState";
+import { AssetsAdminTab } from "@/components/admin/AssetsAdminTab";
 import {
   Activity, Database, Wifi, Server, CheckCircle2, XCircle,
-  RefreshCw, Package, Users, Shield, UserPlus, Trash2,
+  RefreshCw, Package, Users, Shield, UserPlus, Trash2, LayoutList,
 } from "lucide-react";
 import { cn } from "@/utils/cn";
 import { formatDateTime } from "@/utils/format";
@@ -122,8 +123,11 @@ function ProgressRow({ label, item, lastTs, onSync, syncing }: {
   );
 }
 
+type Tab = "sistema" | "ativos";
+
 export function SystemPage() {
   const queryClient = useQueryClient();
+  const [tab, setTab] = useState<Tab>("sistema");
   const [adminEmail, setAdminEmail] = useState("");
   const [adminError, setAdminError] = useState("");
 
@@ -221,7 +225,33 @@ export function SystemPage() {
     ? Math.round((m.active_users / m.total_users) * 100) : 0;
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-6 max-w-5xl">
+
+      {/* Tabs */}
+      <div className="flex gap-1 border-b border-haveres-border">
+        {([
+          { id: "sistema", label: "Sistema", icon: Server },
+          { id: "ativos", label: "Ativos", icon: LayoutList },
+        ] as { id: Tab; label: string; icon: React.ElementType }[]).map(({ id, label, icon: Icon }) => (
+          <button
+            key={id}
+            onClick={() => setTab(id)}
+            className={cn(
+              "flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors",
+              tab === id
+                ? "border-haveres-blue text-white"
+                : "border-transparent text-muted-foreground hover:text-white"
+            )}
+          >
+            <Icon size={14} />
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {tab === "ativos" && <AssetsAdminTab />}
+
+      {tab === "sistema" && <>
 
       {/* Status da Aplicação */}
       <div className="card-haveres p-5">
@@ -443,6 +473,8 @@ export function SystemPage() {
         </div>
         {adminError && <p className="text-xs text-loss mt-2">{adminError}</p>}
       </div>
+
+      </>}
 
     </div>
   );

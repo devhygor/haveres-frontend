@@ -11,6 +11,8 @@ export interface Asset {
   logo_url: string;
   description: string;
   is_active: boolean;
+  manual_fields: string[];
+  current_price?: number | null;
 }
 
 export const ASSET_TYPE_LABELS: Record<string, string> = {
