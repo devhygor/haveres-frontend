@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { dividendsApi } from "@/api/dividends";
+import { portfolioApi } from "@/api/portfolio";
 import { DividendsChart } from "@/components/charts/DividendsChart";
 import { AllocationChart } from "@/components/charts/AllocationChart";
 import { LoadingState } from "@/components/common/LoadingState";
@@ -44,8 +45,9 @@ export function DividendsPage() {
     queryFn: () => dividendsApi.list().then(r => r.data),
   });
   const upcoming = useQuery({
-    queryKey: ["dividends", "upcoming"],
-    queryFn: () => dividendsApi.upcoming().then(r => r.data),
+    queryKey: ["portfolio", "upcoming-dividends"],
+    queryFn: () => portfolioApi.getUpcomingDividends().then(r => r.data),
+    staleTime: 1000 * 60 * 5,
   });
 
   const deleteDividend = useMutation({
@@ -308,13 +310,18 @@ export function DividendsPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredUpcoming.map(d => (
-                      <tr key={d.id} className="border-b border-haveres-border/50 hover:bg-secondary/30">
-                        <td className="py-2 px-4 text-muted-foreground text-xs">{d.payment_date ? formatDate(d.payment_date) : "—"}</td>
+                    {filteredUpcoming.map((d, i) => (
+                      <tr key={`${d.ticker}-${d.expected_date}-${i}`} className="border-b border-haveres-border/50 hover:bg-secondary/30">
+                        <td className="py-2 px-4 text-muted-foreground text-xs">
+                          {d.expected_date ? formatDate(d.expected_date) : "Próximo mês"}
+                          {d.source === "FII_PROJECTED" && (
+                            <span className="ml-1 text-haveres-blue/70">~</span>
+                          )}
+                        </td>
                         <td className="py-2 px-4">
                           <div className="flex items-center gap-2">
-                            <AssetLogo logoUrl={d.asset_logo_url} ticker={d.asset_ticker} size={20} />
-                            <span className="font-mono font-semibold text-white text-sm">{d.asset_ticker}</span>
+                            <AssetLogo logoUrl={d.logo_url} ticker={d.ticker} size={20} />
+                            <span className="font-mono font-semibold text-white text-sm">{d.ticker}</span>
                           </div>
                         </td>
                         <td className="py-2 px-4">
@@ -322,9 +329,9 @@ export function DividendsPage() {
                             {d.dividend_type_display}
                           </span>
                         </td>
-                        <td className="py-2 px-4 font-numeric text-sm">{d.quantity_held}</td>
-                        <td className="py-2 px-4 font-numeric text-sm">{formatCurrency(Number(d.value_per_share))}</td>
-                        <td className="py-2 px-4 font-numeric text-sm text-gain font-medium">{formatCurrency(Number(d.gross_amount))}</td>
+                        <td className="py-2 px-4 font-numeric text-sm">{Number(d.quantity).toFixed(0)}</td>
+                        <td className="py-2 px-4 font-numeric text-sm">{formatCurrency(d.value_per_share)}</td>
+                        <td className="py-2 px-4 font-numeric text-sm text-gain font-medium">{formatCurrency(d.expected_amount)}</td>
                       </tr>
                     ))}
                   </tbody>

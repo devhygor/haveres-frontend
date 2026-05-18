@@ -53,6 +53,20 @@ export interface PortfolioSummary {
   positions: Position[];
 }
 
+export interface ProjectedDividend {
+  ticker: string;
+  name: string;
+  asset_type: string;
+  logo_url: string;
+  dividend_type: string;
+  dividend_type_display: string;
+  value_per_share: number;
+  quantity: number;
+  expected_amount: number;
+  expected_date: string | null;
+  source: "DECLARED" | "FII_PROJECTED";
+}
+
 export interface AllocationItem {
   type?: string;
   type_display?: string;

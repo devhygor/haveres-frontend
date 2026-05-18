@@ -44,6 +44,12 @@ export function DashboardPage() {
     queryFn: () => quotesApi.getBenchmark(12).then((r) => r.data),
   });
 
+  const upcomingDividends = useQuery({
+    queryKey: ["portfolio", "upcoming-dividends"],
+    queryFn: () => portfolioApi.getUpcomingDividends().then((r) => r.data),
+    staleTime: 1000 * 60 * 5,
+  });
+
   const data = summary.data;
 
   const positions = useMemo(() => {
@@ -55,6 +61,30 @@ export function DashboardPage() {
     const item = allocationByType.data.find((entry) => entry.type === selectedType);
     return item?.type_display || selectedType;
   }, [allocationByType.data, selectedType]);
+
+  const upcomingTotal = useMemo(() => {
+    return (upcomingDividends.data ?? []).reduce((s, d) => s + d.expected_amount, 0);
+  }, [upcomingDividends.data]);
+
+  const dividendChartData = useMemo(() => {
+    const historical = (dividendsEvolution.data ?? []).map((d) => ({
+      month: d.month,
+      paid: Number(d.total),
+      upcoming: 0,
+    }));
+    const projected = upcomingDividends.data ?? [];
+    const byMonth: Record<string, number> = {};
+    projected.forEach((d) => {
+      if (!d.expected_date) return;
+      const key = d.expected_date.slice(0, 7) + "-01";
+      byMonth[key] = (byMonth[key] ?? 0) + d.expected_amount;
+    });
+    const existingMonths = new Set(historical.map((h) => h.month));
+    const projectedPoints = Object.entries(byMonth)
+      .filter(([m]) => !existingMonths.has(m))
+      .map(([month, upcoming]) => ({ month, paid: 0, upcoming }));
+    return [...historical, ...projectedPoints].sort((a, b) => a.month.localeCompare(b.month));
+  }, [dividendsEvolution.data, upcomingDividends.data]);
 
   const filteredPositions = useMemo(() => {
     if (!selectedType) return positions;
@@ -96,7 +126,7 @@ export function DashboardPage() {
   return (
     <div className="space-y-6">
       {/* Cards principais */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <StatCard
           title="Patrimônio Total"
           value={formatCurrency(data.total_value)}
@@ -121,6 +151,13 @@ export function DashboardPage() {
           value={formatCurrency(data.dividends_year)}
           icon={TrendingUp}
           iconColor="text-gain"
+        />
+        <StatCard
+          title="A Receber"
+          value={formatCurrency(upcomingTotal)}
+          icon={CalendarDays}
+          iconColor="text-haveres-blue"
+          subtitle={upcomingDividends.data ? `${upcomingDividends.data.length} proventos` : "—"}
         />
       </div>
 
@@ -191,8 +228,8 @@ export function DashboardPage() {
           </div>
           {dividendsEvolution.isLoading ? (
             <LoadingState />
-          ) : dividendsEvolution.data?.length ? (
-            <DividendsChart data={(dividendsEvolution.data ?? []).map(d => ({ month: d.month, paid: Number(d.total), upcoming: 0 }))} />
+          ) : dividendChartData.length ? (
+            <DividendsChart data={dividendChartData} />
           ) : (
             <p className="text-sm text-muted-foreground py-8 text-center">Sem proventos registrados</p>
           )}
