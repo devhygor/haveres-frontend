@@ -9,6 +9,7 @@ import { ErrorState } from "@/components/common/ErrorState";
 import { formatCurrency, formatPercent } from "@/utils/format";
 import { plClass } from "@/utils/format";
 import { cn } from "@/utils/cn";
+import { AssetLogo } from "@/components/common/AssetLogo";
 
 export function AssetDetailPage() {
   const { ticker } = useParams<{ ticker: string }>();
@@ -43,9 +44,12 @@ export function AssetDetailPage() {
         <Link to="/dashboard" className="w-fit flex items-center gap-1.5 text-sm text-muted-foreground hover:text-white transition-colors mt-1">
           <ArrowLeft size={16} />
         </Link>
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-white font-mono">{position.ticker}</h1>
-          <p className="text-sm text-muted-foreground">{position.name}</p>
+        <div className="flex items-center gap-3">
+          <AssetLogo logoUrl={position.logo_url} ticker={position.ticker} size={40} />
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold text-white font-mono">{position.ticker}</h1>
+            <p className="text-sm text-muted-foreground">{position.name}</p>
+          </div>
         </div>
         <div className="sm:ml-auto text-left sm:text-right">
           <p className="text-xl sm:text-2xl font-bold text-white font-mono">{formatCurrency(position.current_price)}</p>
