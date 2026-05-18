@@ -251,6 +251,40 @@ export function DividendsPage() {
           </div>
         )}
 
+        {/* Gráfico mensal */}
+        {filteredData.length > 0 ? (
+          <div className="card-haveres p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <TrendingUp size={18} className="text-gain" />
+              <h2 className="text-sm font-semibold text-white">Proventos por Mês</h2>
+              <div className="ml-auto flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">Período</span>
+                <select
+                  value={evolutionRangeMonths}
+                  onChange={(event) => setEvolutionRangeMonths(Number(event.target.value))}
+                  className="bg-secondary border border-haveres-border text-white text-xs rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-haveres-blue"
+                >
+                  {EVOLUTION_RANGE_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground mb-3">
+              Exibindo {selectedEvolutionRangeLabel.toLowerCase()}.
+            </p>
+            {chartData.length ? (
+              <DividendsChart data={chartData} />
+            ) : (
+              <p className="text-sm text-muted-foreground py-4">
+                Sem dados nesse período. Selecione um intervalo maior para visualizar mais histórico.
+              </p>
+            )}
+          </div>
+        ) : null}
+
         {/* Proventos a Receber */}
         {(filteredUpcoming.length > 0 || hasActiveTypeFilter) && (
           <div className="card-haveres p-5">
@@ -297,40 +331,6 @@ export function DividendsPage() {
             )}
           </div>
         )}
-
-        {/* Gráfico mensal */}
-        {filteredData.length > 0 ? (
-          <div className="card-haveres p-5">
-            <div className="flex items-center gap-2 mb-4">
-              <TrendingUp size={18} className="text-gain" />
-              <h2 className="text-sm font-semibold text-white">Proventos por Mês</h2>
-              <div className="ml-auto flex items-center gap-2">
-                <span className="text-xs text-muted-foreground">Período</span>
-                <select
-                  value={evolutionRangeMonths}
-                  onChange={(event) => setEvolutionRangeMonths(Number(event.target.value))}
-                  className="bg-secondary border border-haveres-border text-white text-xs rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-haveres-blue"
-                >
-                  {EVOLUTION_RANGE_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-            <p className="text-xs text-muted-foreground mb-3">
-              Exibindo {selectedEvolutionRangeLabel.toLowerCase()}.
-            </p>
-            {chartData.length ? (
-              <DividendsChart data={chartData} />
-            ) : (
-              <p className="text-sm text-muted-foreground py-4">
-                Sem dados nesse período. Selecione um intervalo maior para visualizar mais histórico.
-              </p>
-            )}
-          </div>
-        ) : null}
 
         {/* Tabela */}
         <div className="card-haveres">
