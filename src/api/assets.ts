@@ -9,6 +9,7 @@ export interface Asset {
   sector: string;
   sector_display: string;
   is_active: boolean;
+  current_price?: number | null;
 }
 
 export interface AssetSyncStatus {

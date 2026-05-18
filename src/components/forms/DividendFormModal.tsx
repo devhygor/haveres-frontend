@@ -1,10 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Modal } from "@/components/common/Modal";
 import { dividendsApi } from "@/api/dividends";
 import { assetsApi, ASSET_TYPES, type Asset } from "@/api/assets";
-import { portfolioApi } from "@/api/portfolio";
-import { quotesApi } from "@/api/quotes";
 import { useAuthStore } from "@/stores/authStore";
 import type { Dividend } from "@/types/dividend";
 
@@ -128,7 +126,6 @@ export function DividendFormModal({ open, onClose, dividend }: Props) {
   const [assetSearch, setAssetSearch] = useState("");
   const [assetMenuOpen, setAssetMenuOpen] = useState(false);
   const [error, setError] = useState("");
-  const prefillRequestRef = useRef(0);
 
   useEffect(() => {
     if (open) {
@@ -155,11 +152,6 @@ export function DividendFormModal({ open, onClose, dividend }: Props) {
   }, [open, dividend]);
 
   const assets = useQuery({ queryKey: ["assets"], queryFn: () => assetsApi.list().then(r => r.data) });
-  const portfolioSummary = useQuery({
-    queryKey: ["portfolio", "summary"],
-    queryFn: () => portfolioApi.getSummary().then((r) => r.data),
-    enabled: open,
-  });
   const assetsList = assets.data ?? [];
 
   const set = (k: keyof FormState, v: string) => setForm(f => ({ ...f, [k]: v }));
@@ -257,32 +249,12 @@ export function DividendFormModal({ open, onClose, dividend }: Props) {
     set("ir_withheld", formatMoneyFromNumber(next, 2));
   };
 
-  const prefillValuePerShareFromAsset = async (assetId: string) => {
-    const requestId = ++prefillRequestRef.current;
-    const selectedPosition = portfolioSummary.data?.positions.find((position) => position.asset_id === assetId);
-    const currentPrice = Number(selectedPosition?.current_price);
-    if (Number.isFinite(currentPrice) && currentPrice > 0) {
-      set("value_per_share", formatMoneyFromNumber(currentPrice, 6));
-      return;
-    }
-
+  const prefillValuePerShareFromAsset = (assetId: string) => {
     const selectedAsset = assetsList.find((asset) => asset.id === assetId);
-    if (!selectedAsset?.ticker) return;
-
-    try {
-      const history = await quotesApi.getHistory(selectedAsset.ticker, "1mo").then((response) => response.data);
-      if (prefillRequestRef.current !== requestId || !history.length) return;
-
-      const latestPoint = history.reduce((latest, point) => {
-        if (!latest) return point;
-        return point.date > latest.date ? point : latest;
-      }, history[0]);
-
-      const fallbackPrice = Number(latestPoint?.close_price);
-      if (!Number.isFinite(fallbackPrice) || fallbackPrice <= 0) return;
-      set("value_per_share", formatMoneyFromNumber(fallbackPrice, 6));
-    } catch {
-      // Sem fallback disponível de cotação para este ativo.
+    const assetListPrice = Number(selectedAsset?.current_price);
+    if (Number.isFinite(assetListPrice) && assetListPrice > 0) {
+      set("value_per_share", formatMoneyFromNumber(assetListPrice, 6));
+      return;
     }
   };
 
@@ -344,7 +316,7 @@ export function DividendFormModal({ open, onClose, dividend }: Props) {
                     onClick={() => {
                       set("asset_id", asset.id);
                       setAssetSearch(assetLabel(asset));
-                      void prefillValuePerShareFromAsset(asset.id);
+                      prefillValuePerShareFromAsset(asset.id);
                       setAssetMenuOpen(false);
                       setShowNewAsset(false);
                     }}

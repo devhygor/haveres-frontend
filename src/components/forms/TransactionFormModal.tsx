@@ -1,12 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle } from "lucide-react";
 import { Modal } from "@/components/common/Modal";
 import { SourceBadge } from "@/components/common/SourceBadge";
 import { transactionsApi, type CreateTransactionPayload } from "@/api/transactions";
 import { assetsApi, ASSET_TYPES, type Asset } from "@/api/assets";
-import { portfolioApi } from "@/api/portfolio";
-import { quotesApi } from "@/api/quotes";
 import { useAuthStore } from "@/stores/authStore";
 import { formatCurrency, formatDate } from "@/utils/format";
 import type { Transaction, DuplicateTransactionResponse } from "@/types/transaction";
@@ -148,7 +146,6 @@ export function TransactionFormModal({ open, onClose, transaction }: Props) {
   const [error, setError] = useState("");
   const [duplicate, setDuplicate] = useState<DuplicateTransactionResponse | null>(null);
   const [pendingPayload, setPendingPayload] = useState<CreateTransactionPayload | null>(null);
-  const prefillRequestRef = useRef(0);
 
   useEffect(() => {
     if (open) {
@@ -179,11 +176,6 @@ export function TransactionFormModal({ open, onClose, transaction }: Props) {
 
   const assets = useQuery({ queryKey: ["assets"], queryFn: () => assetsApi.list().then(r => r.data) });
   const brokers = useQuery({ queryKey: ["brokers"], queryFn: () => transactionsApi.listBrokers().then(r => r.data) });
-  const portfolioSummary = useQuery({
-    queryKey: ["portfolio", "summary"],
-    queryFn: () => portfolioApi.getSummary().then((r) => r.data),
-    enabled: open,
-  });
   const assetsList = assets.data ?? [];
 
   const set = (k: keyof FormState, v: string) => setForm(f => ({ ...f, [k]: v }));
@@ -281,35 +273,15 @@ export function TransactionFormModal({ open, onClose, transaction }: Props) {
     save.mutate({ ...pendingPayload, force: true });
   };
 
-  const prefillPriceFromAsset = async (assetId: string) => {
+  const prefillPriceFromAsset = (assetId: string) => {
     const showPrice = getFields(form.transaction_type).showPrice;
     if (!showPrice) return;
 
-    const requestId = ++prefillRequestRef.current;
-    const selectedPosition = portfolioSummary.data?.positions.find((position) => position.asset_id === assetId);
-    const currentPrice = Number(selectedPosition?.current_price);
-    if (Number.isFinite(currentPrice) && currentPrice > 0) {
-      set("price", formatMoneyFromNumber(currentPrice));
-      return;
-    }
-
     const selectedAsset = assetsList.find((asset) => asset.id === assetId);
-    if (!selectedAsset?.ticker) return;
-
-    try {
-      const history = await quotesApi.getHistory(selectedAsset.ticker, "1mo").then((response) => response.data);
-      if (prefillRequestRef.current !== requestId || !history.length) return;
-
-      const latestPoint = history.reduce((latest, point) => {
-        if (!latest) return point;
-        return point.date > latest.date ? point : latest;
-      }, history[0]);
-
-      const fallbackPrice = Number(latestPoint?.close_price);
-      if (!Number.isFinite(fallbackPrice) || fallbackPrice <= 0) return;
-      set("price", formatMoneyFromNumber(fallbackPrice));
-    } catch {
-      // Sem fallback disponível de cotação para este ativo.
+    const assetListPrice = Number(selectedAsset?.current_price);
+    if (Number.isFinite(assetListPrice) && assetListPrice > 0) {
+      set("price", formatMoneyFromNumber(assetListPrice));
+      return;
     }
   };
 
@@ -384,7 +356,7 @@ export function TransactionFormModal({ open, onClose, transaction }: Props) {
                     onClick={() => {
                       set("asset_id", asset.id);
                       setAssetSearch(assetLabel(asset));
-                      void prefillPriceFromAsset(asset.id);
+                      prefillPriceFromAsset(asset.id);
                       setAssetMenuOpen(false);
                       setShowNewAsset(false);
                     }}
