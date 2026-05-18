@@ -1,8 +1,7 @@
-import { useQuery } from "@tanstack/react-query";
-import { quotesApi } from "@/api/quotes";
 import { formatCurrency } from "@/utils/format";
 import { TermTooltip } from "@/components/common/TermTooltip";
 import { cn } from "@/utils/cn";
+import { FIIDetail } from "@/types/portfolio";
 
 function Row({ label, value, valueClass }: { label: React.ReactNode; value: string; valueClass?: string }) {
   return (
@@ -25,32 +24,10 @@ function fmtBig(v: number | null) {
 }
 
 interface Props {
-  ticker: string;
+  data: FIIDetail;
 }
 
-export function FIIDetailCard({ ticker }: Props) {
-  const { data, isLoading, isError } = useQuery({
-    queryKey: ["fii-detail", ticker],
-    queryFn: () => quotesApi.getFIIDetail(ticker).then((r) => r.data),
-    retry: false,
-    staleTime: 1000 * 60 * 60,
-  });
-
-  if (isLoading) {
-    return (
-      <div className="card-haveres p-5 animate-pulse">
-        <div className="h-4 bg-haveres-border rounded w-40 mb-4" />
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-          {Array.from({ length: 9 }).map((_, i) => (
-            <div key={i} className="h-10 bg-haveres-border rounded" />
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  if (isError || !data) return null;
-
+export function FIIDetailCard({ data }: Props) {
   const pvpClass = data.pvp !== null
     ? data.pvp < 1 ? "text-gain" : data.pvp > 1.1 ? "text-loss" : "text-white"
     : "text-white";
@@ -63,7 +40,7 @@ export function FIIDetailCard({ ticker }: Props) {
     <div className="card-haveres p-5">
       <div className="flex items-start justify-between mb-4">
         <h3 className="text-sm font-semibold text-white">Dados do Fundo</h3>
-        <div className="flex gap-2 text-xs">
+        <div className="flex gap-2 flex-wrap text-xs justify-end">
           {data.fii_type && (
             <span className="px-2 py-0.5 rounded-full bg-haveres-blue/15 text-haveres-blue font-medium">
               {data.fii_type}
@@ -72,6 +49,11 @@ export function FIIDetailCard({ ticker }: Props) {
           {data.fii_sector && (
             <span className="px-2 py-0.5 rounded-full bg-haveres-border text-muted-foreground font-medium">
               {data.fii_sector}
+            </span>
+          )}
+          {data.management_type && (
+            <span className="px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 font-medium">
+              {data.management_type}
             </span>
           )}
         </div>
@@ -108,6 +90,9 @@ export function FIIDetailCard({ ticker }: Props) {
         />
         {data.num_assets !== null && (
           <Row label="Nº de Ativos" value={String(data.num_assets)} />
+        )}
+        {data.total_investors !== null && (
+          <Row label="Cotistas" value={data.total_investors.toLocaleString("pt-BR")} />
         )}
       </div>
 

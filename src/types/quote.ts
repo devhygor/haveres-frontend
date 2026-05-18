@@ -44,4 +44,6 @@ export interface FIIDetailData {
   last_dividend_date: string | null;
   pvp: number | null;
   daily_liquidity: number | null;
+  management_type: string;
+  total_investors: number | null;
 }

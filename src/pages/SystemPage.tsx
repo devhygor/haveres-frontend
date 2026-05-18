@@ -49,22 +49,25 @@ const SYNC_LABELS: Record<string, string> = {
   fii_details: "Detalhes FII (v2)",
 };
 
-function ProgressRow({ label, item, lastTs }: {
+function ProgressRow({ label, item, lastTs, onSync, syncing }: {
   label: string;
   item: SyncProgressItem;
   lastTs: string | null;
+  onSync: () => void;
+  syncing: boolean;
 }) {
   const pct = item.total > 0 ? Math.round((item.done / item.total) * 100) : 0;
   const isRunning = item.status === "running";
   const isDone = item.status === "done";
   const isError = item.status === "error";
+  const isIndeterminate = isRunning && (item.total === 0 || item.done === 0);
 
   return (
     <div className="py-3 border-b border-haveres-border last:border-0">
       <div className="flex items-center justify-between mb-1.5">
         <p className="text-sm font-medium text-white">{SYNC_LABELS[label] ?? label}</p>
         <div className="flex items-center gap-2">
-          {isRunning && (
+          {isRunning && item.total > 0 && (
             <span className="text-xs text-haveres-blue font-medium font-numeric">
               {item.done}/{item.total}
             </span>
@@ -75,24 +78,42 @@ function ProgressRow({ label, item, lastTs }: {
             "bg-loss/10 text-loss": isError,
             "bg-secondary text-muted-foreground": item.status === "idle",
           })}>
-            {isRunning ? `${pct}%` : isDone ? "Concluído" : isError ? "Erro" : "Aguardando"}
+            {isRunning
+              ? isIndeterminate ? "Aguardando…" : `${pct}%`
+              : isDone ? "Concluído"
+              : isError ? "Erro"
+              : "Aguardando"}
           </span>
+          <button
+            onClick={onSync}
+            disabled={syncing || isRunning}
+            title={`Sincronizar ${SYNC_LABELS[label] ?? label}`}
+            className="p-1 rounded text-muted-foreground hover:text-white disabled:opacity-30 transition-colors"
+          >
+            <RefreshCw size={12} className={syncing || isRunning ? "animate-spin" : ""} />
+          </button>
         </div>
       </div>
       <div className="h-1.5 bg-haveres-dark rounded-full overflow-hidden">
-        <div
-          className={cn("h-full rounded-full transition-all duration-500", {
-            "bg-haveres-blue": isRunning,
-            "bg-gain": isDone,
-            "bg-loss": isError,
-            "bg-haveres-border": item.status === "idle",
-          })}
-          style={{ width: isDone ? "100%" : isRunning ? `${pct}%` : "0%" }}
-        />
+        {isIndeterminate ? (
+          <div className="h-full w-1/3 rounded-full bg-haveres-blue animate-pulse" />
+        ) : (
+          <div
+            className={cn("h-full rounded-full transition-all duration-500", {
+              "bg-haveres-blue": isRunning,
+              "bg-gain": isDone,
+              "bg-loss": isError,
+              "bg-haveres-border": item.status === "idle",
+            })}
+            style={{ width: isDone ? "100%" : isRunning ? `${pct}%` : "0%" }}
+          />
+        )}
       </div>
       <p className="text-xs text-muted-foreground mt-1">
         {isRunning
-          ? `Processando… ${item.done} de ${item.total}`
+          ? isIndeterminate
+            ? "Iniciando…"
+            : `Processando… ${item.done} de ${item.total}`
           : lastTs
           ? `Última: ${formatDateTime(lastTs)}`
           : "Nunca sincronizado"}
@@ -153,6 +174,17 @@ export function SystemPage() {
       }, 5000);
     },
   });
+
+  const [syncingOne, setSyncingOne] = useState<string | null>(null);
+  const triggerOne = async (name: string) => {
+    if (syncingOne) return;
+    setSyncingOne(name);
+    try {
+      await systemApi.triggerSync(name);
+    } finally {
+      setSyncingOne(null);
+    }
+  };
 
   const triggerCatalogSync = useMutation({
     mutationFn: (force: boolean) => assetsApi.triggerSync(force),
@@ -236,6 +268,8 @@ export function SystemPage() {
                 label={key}
                 item={sp[key]}
                 lastTs={ss?.[key] ?? null}
+                onSync={() => triggerOne(key)}
+                syncing={syncingOne === key}
               />
             ))}
           </div>

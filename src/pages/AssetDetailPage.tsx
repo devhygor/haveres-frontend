@@ -80,8 +80,8 @@ export function AssetDetailPage() {
       <PriceHistoryChart ticker={position.ticker} />
 
       {/* FII: dados do fundo (apenas para asset_type FII) */}
-      {position.asset_type === "FII" && (
-        <FIIDetailCard ticker={position.ticker} />
+      {position.asset_type === "FII" && position.fii_detail && (
+        <FIIDetailCard data={position.fii_detail} />
       )}
 
       {/* Fundamentalistas (ações, ETFs, BDRs) */}

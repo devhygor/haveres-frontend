@@ -1,3 +1,21 @@
+export interface FIIDetail {
+  fii_type: string;
+  fii_sector: string;
+  managed_by: string;
+  management_fee: number | null;
+  performance_fee: number | null;
+  net_worth: number | null;
+  net_worth_per_share: number | null;
+  num_assets: number | null;
+  dividend_yield: number | null;
+  last_dividend: number | null;
+  last_dividend_date: string | null;
+  pvp: number | null;
+  daily_liquidity: number | null;
+  management_type: string;
+  total_investors: number | null;
+}
+
 export interface Position {
   asset_id: string;
   ticker: string;
@@ -21,6 +39,7 @@ export interface Position {
   week_52_high?: number | null;
   week_52_low?: number | null;
   logo_url?: string;
+  fii_detail?: FIIDetail | null;
 }
 
 export interface PortfolioSummary {

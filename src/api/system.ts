@@ -58,4 +58,5 @@ export const systemApi = {
   setAdminStatus: (email: string, is_admin: boolean) =>
     api.post("/system/admins/set", { email, is_admin }),
   syncProgress: () => api.get<SyncProgress>("/system/sync-progress"),
+  triggerSync: (name: string) => api.post(`/system/sync/${name}`),
 };
