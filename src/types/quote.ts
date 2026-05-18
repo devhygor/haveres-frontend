@@ -29,3 +29,19 @@ export interface BenchmarkPoint {
   portfolio_return: number;
   cdi_return: number;
 }
+
+export interface FIIDetailData {
+  fii_type: string;
+  fii_sector: string;
+  managed_by: string;
+  management_fee: number | null;
+  performance_fee: number | null;
+  net_worth: number | null;
+  net_worth_per_share: number | null;
+  num_assets: number | null;
+  dividend_yield: number | null;
+  last_dividend: number | null;
+  last_dividend_date: string | null;
+  pvp: number | null;
+  daily_liquidity: number | null;
+}

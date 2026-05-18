@@ -1,5 +1,5 @@
 import { api } from "@/config/api";
-import type { HistoricalQuote, CurrencyQuote, MacroIndicator, BenchmarkPoint } from "@/types/quote";
+import type { HistoricalQuote, CurrencyQuote, MacroIndicator, BenchmarkPoint, FIIDetailData } from "@/types/quote";
 
 export const quotesApi = {
   getHistory: (ticker: string, range = "1y") =>
@@ -16,4 +16,7 @@ export const quotesApi = {
 
   getBenchmark: (months = 12) =>
     api.get<BenchmarkPoint[]>("/quotes/benchmark", { params: { months } }),
+
+  getFIIDetail: (ticker: string) =>
+    api.get<FIIDetailData>(`/quotes/${ticker}/fii-detail`),
 };

@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft } from "lucide-react";
 import { portfolioApi } from "@/api/portfolio";
 import { FundamentalsCard } from "@/components/cards/FundamentalsCard";
+import { FIIDetailCard } from "@/components/cards/FIIDetailCard";
 import { PriceHistoryChart } from "@/components/charts/PriceHistoryChart";
 import { LoadingState } from "@/components/common/LoadingState";
 import { ErrorState } from "@/components/common/ErrorState";
@@ -78,8 +79,15 @@ export function AssetDetailPage() {
       {/* Gráfico de preços */}
       <PriceHistoryChart ticker={position.ticker} />
 
-      {/* Fundamentalistas */}
-      <FundamentalsCard position={position} />
+      {/* FII: dados do fundo (apenas para asset_type FII) */}
+      {position.asset_type === "FII" && (
+        <FIIDetailCard ticker={position.ticker} />
+      )}
+
+      {/* Fundamentalistas (ações, ETFs, BDRs) */}
+      {position.asset_type !== "FII" && (
+        <FundamentalsCard position={position} />
+      )}
     </div>
   );
 }
