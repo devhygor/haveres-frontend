@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { systemApi } from "@/api/system";
+import { systemApi, type SyncProgressItem } from "@/api/system";
 import { assetsApi } from "@/api/assets";
 import { LoadingState } from "@/components/common/LoadingState";
 import {
@@ -48,28 +48,54 @@ const SYNC_LABELS: Record<string, string> = {
   portfolio_snapshots: "Snapshots de Portfólio",
 };
 
-function SyncRow({ label, ts, result }: { label: string; ts: string | null; result?: string }) {
-  const isTriggered = result === "triggered";
-  const isOk = result === "ok" || result === "skipped";
-  const isError = result?.startsWith("error");
+function ProgressRow({ label, item, lastTs }: {
+  label: string;
+  item: SyncProgressItem;
+  lastTs: string | null;
+}) {
+  const pct = item.total > 0 ? Math.round((item.done / item.total) * 100) : 0;
+  const isRunning = item.status === "running";
+  const isDone = item.status === "done";
+  const isError = item.status === "error";
 
   return (
-    <div className="flex items-center justify-between py-3 border-b border-haveres-border last:border-0">
-      <div>
+    <div className="py-3 border-b border-haveres-border last:border-0">
+      <div className="flex items-center justify-between mb-1.5">
         <p className="text-sm font-medium text-white">{SYNC_LABELS[label] ?? label}</p>
-        <p className="text-xs text-muted-foreground mt-0.5">
-          {ts ? `Última: ${formatDateTime(ts)}` : "Nunca sincronizado"}
-        </p>
+        <div className="flex items-center gap-2">
+          {isRunning && (
+            <span className="text-xs text-haveres-blue font-medium font-numeric">
+              {item.done}/{item.total}
+            </span>
+          )}
+          <span className={cn("text-xs font-medium px-2 py-0.5 rounded-full", {
+            "bg-haveres-blue/10 text-haveres-blue": isRunning,
+            "bg-gain/10 text-gain": isDone,
+            "bg-loss/10 text-loss": isError,
+            "bg-secondary text-muted-foreground": item.status === "idle",
+          })}>
+            {isRunning ? `${pct}%` : isDone ? "Concluído" : isError ? "Erro" : "Aguardando"}
+          </span>
+        </div>
       </div>
-      {result && (
-        <span className={cn("text-xs font-medium px-2 py-0.5 rounded-full", {
-          "bg-haveres-blue/10 text-haveres-blue": isTriggered,
-          "bg-gain/10 text-gain": isOk,
-          "bg-loss/10 text-loss": isError,
-        })}>
-          {isTriggered ? "Em fila" : result === "skipped" ? "Cache ok" : result === "ok" ? "Sincronizado" : result}
-        </span>
-      )}
+      <div className="h-1.5 bg-haveres-dark rounded-full overflow-hidden">
+        <div
+          className={cn("h-full rounded-full transition-all duration-500", {
+            "bg-haveres-blue": isRunning,
+            "bg-gain": isDone,
+            "bg-loss": isError,
+            "bg-haveres-border": item.status === "idle",
+          })}
+          style={{ width: isDone ? "100%" : isRunning ? `${pct}%` : "0%" }}
+        />
+      </div>
+      <p className="text-xs text-muted-foreground mt-1">
+        {isRunning
+          ? `Processando… ${item.done} de ${item.total}`
+          : lastTs
+          ? `Última: ${formatDateTime(lastTs)}`
+          : "Nunca sincronizado"}
+      </p>
     </div>
   );
 }
@@ -97,6 +123,15 @@ export function SystemPage() {
     queryKey: ["system", "sync-status"],
     queryFn: () => systemApi.syncStatus().then((r) => r.data),
     refetchInterval: 30000,
+  });
+  const syncProgressQuery = useQuery({
+    queryKey: ["system", "sync-progress"],
+    queryFn: () => systemApi.syncProgress().then((r) => r.data),
+    refetchInterval: (query) => {
+      const d = query.state.data;
+      const anyRunning = d && Object.values(d).some((i) => i.status === "running");
+      return anyRunning ? 2000 : 10000;
+    },
   });
   const syncCatalogStatus = useQuery({
     queryKey: ["assets", "sync-status"],
@@ -145,7 +180,7 @@ export function SystemPage() {
   const m = userMetrics.data;
   const s = syncCatalogStatus.data;
   const ss = syncStatus.data;
-  const syncResult = syncAll.data?.data;
+  const sp = syncProgressQuery.data;
 
   const verifiedRate = m && m.total_users > 0
     ? Math.round((m.verified_users / m.total_users) * 100) : 0;
@@ -192,14 +227,14 @@ export function SystemPage() {
           </button>
         </div>
 
-        {ss && (
+        {sp && ss !== undefined && (
           <div>
-            {Object.entries(ss).map(([key, ts]) => (
-              <SyncRow
+            {(Object.keys(sp) as Array<keyof typeof sp>).map((key) => (
+              <ProgressRow
                 key={key}
                 label={key}
-                ts={ts}
-                result={syncResult?.[key as keyof typeof syncResult]}
+                item={sp[key]}
+                lastTs={ss?.[key] ?? null}
               />
             ))}
           </div>

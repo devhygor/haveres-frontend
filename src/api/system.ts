@@ -27,6 +27,19 @@ export interface SyncAllResult {
   portfolio_history: string;
   portfolio_snapshots: string;
 }
+export interface SyncProgressItem {
+  status: "idle" | "running" | "done" | "error";
+  done: number;
+  total: number;
+  started_at: string | null;
+  finished_at: string | null;
+}
+export interface SyncProgress {
+  assets_catalog: SyncProgressItem;
+  quotes: SyncProgressItem;
+  portfolio_history: SyncProgressItem;
+  portfolio_snapshots: SyncProgressItem;
+}
 export interface AdminUser {
   id: number; email: string; display_name: string; first_name: string; last_name: string;
 }
@@ -41,4 +54,5 @@ export const systemApi = {
   listAdmins: () => api.get<AdminUser[]>("/system/admins"),
   setAdminStatus: (email: string, is_admin: boolean) =>
     api.post("/system/admins/set", { email, is_admin }),
+  syncProgress: () => api.get<SyncProgress>("/system/sync-progress"),
 };
