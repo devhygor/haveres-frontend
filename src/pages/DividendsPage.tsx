@@ -95,7 +95,9 @@ export function DividendsPage() {
 
   const historyData = useMemo(() => {
     const today = new Date().toISOString().split("T")[0];
-    return filteredData.filter((d) => !d.payment_date || d.payment_date < today);
+    return filteredData
+      .filter((d) => !d.payment_date || d.payment_date < today)
+      .sort((a, b) => (b.payment_date ?? b.ex_date).localeCompare(a.payment_date ?? a.ex_date));
   }, [filteredData]);
 
   const filteredUpcoming = useMemo(() => {
