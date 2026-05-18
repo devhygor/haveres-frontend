@@ -18,7 +18,6 @@ const navItems = [
 ];
 
 const bottomItems = [
-  { to: "/sistema", icon: Activity, label: "Sistema" },
   { to: "/configuracoes", icon: Settings, label: "Configurações" },
 ];
 
@@ -95,6 +94,24 @@ export function Sidebar() {
 
       {/* Bottom */}
       <div className="px-2 pb-4 space-y-1 border-t border-haveres-border pt-4">
+        {user?.is_staff && (
+          <NavLink
+            to="/sistema"
+            onClick={closeOnMobile}
+            className={({ isActive }) =>
+              cn(
+                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all",
+                "hover:bg-secondary hover:text-white",
+                isActive ? "bg-haveres-blue/10 text-haveres-blue" : "text-muted-foreground",
+                !sidebarOpen && "justify-center px-2"
+              )
+            }
+            title={!sidebarOpen ? "Sistema" : undefined}
+          >
+            <Activity size={18} className="flex-shrink-0" />
+            {sidebarOpen && <span>Sistema</span>}
+          </NavLink>
+        )}
         {bottomItems.map(({ to, icon: Icon, label }) => (
           <NavLink
             key={to}

@@ -19,6 +19,12 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+function AdminRoute({ children }: { children: React.ReactNode }) {
+  const user = useAuthStore((s) => s.user);
+  if (!user?.is_staff) return <Navigate to="/dashboard" replace />;
+  return <>{children}</>;
+}
+
 export default function App() {
   return (
     <Routes>
@@ -40,7 +46,7 @@ export default function App() {
         <Route path="importacoes" element={<ImportsPage />} />
         <Route path="open-finance" element={<OpenFinancePage />} />
         <Route path="configuracoes" element={<SettingsPage />} />
-        <Route path="sistema" element={<SystemPage />} />
+        <Route path="sistema" element={<AdminRoute><SystemPage /></AdminRoute>} />
         <Route path="ativos/:ticker" element={<AssetDetailPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
