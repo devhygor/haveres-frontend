@@ -32,15 +32,7 @@ export function PortfolioPage() {
     queryFn: () => portfolioApi.getPatrimonyEvolution(12).then((r) => r.data),
   });
 
-  if (summary.isLoading) return <LoadingState />;
-  if (summary.isError) return <ErrorState onRetry={() => summary.refetch()} />;
-
-  const data = summary.data;
-  if (!data) {
-    return <ErrorState message="Não foi possível carregar os dados da carteira." onRetry={() => summary.refetch()} />;
-  }
-
-  const positions = Array.isArray(data.positions) ? data.positions : [];
+  const positions = Array.isArray(summary.data?.positions) ? summary.data!.positions : [];
 
   const selectedTypeLabel = useMemo(() => {
     if (!selectedType || !allocation.data) return null;
@@ -77,6 +69,12 @@ export function PortfolioPage() {
   }, [allocationBySector.data, selectedSector]);
 
   const hasActiveFilters = Boolean(selectedType || selectedSector);
+
+  if (summary.isLoading) return <LoadingState />;
+  if (summary.isError) return <ErrorState onRetry={() => summary.refetch()} />;
+  if (!summary.data) return <ErrorState message="Não foi possível carregar os dados da carteira." onRetry={() => summary.refetch()} />;
+
+  const data = summary.data;
 
   const clearFilters = () => {
     setSelectedType(null);
