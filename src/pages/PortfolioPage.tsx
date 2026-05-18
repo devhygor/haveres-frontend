@@ -10,6 +10,7 @@ import { EmptyState } from "@/components/common/EmptyState";
 import { formatCurrency, formatPercent, plClass } from "@/utils/format";
 import { Briefcase, PieChart, BarChart3 } from "lucide-react";
 import { cn } from "@/utils/cn";
+import { TermTooltip } from "@/components/common/TermTooltip";
 
 export function PortfolioPage() {
   const [selectedType, setSelectedType] = useState<string | null>(null);
@@ -88,10 +89,10 @@ export function PortfolioPage() {
         {[
           { label: "Valor Atual", value: formatCurrency(data.total_value), highlight: true },
           { label: "Total Investido", value: formatCurrency(data.total_invested) },
-          { label: "P&L Absoluto", value: formatCurrency(data.pl_absolute), colored: data.pl_absolute },
-          { label: "P&L %", value: formatPercent(data.pl_percent, true), colored: data.pl_percent },
-        ].map(({ label, value, highlight, colored }) => (
-          <div key={label} className="card-haveres p-4 sm:p-5">
+          { label: <TermTooltip term="P&L Absoluto" />, key: "P&L Absoluto", value: formatCurrency(data.pl_absolute), colored: data.pl_absolute },
+          { label: <TermTooltip term="P&L %" />, key: "P&L %", value: formatPercent(data.pl_percent, true), colored: data.pl_percent },
+        ].map(({ label, key, value, highlight, colored }) => (
+          <div key={key ?? String(label)} className="card-haveres p-4 sm:p-5">
             <p className="text-xs text-muted-foreground mb-2">{label}</p>
             <p className={cn(
               "text-xl font-bold font-numeric",

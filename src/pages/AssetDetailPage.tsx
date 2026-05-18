@@ -10,6 +10,7 @@ import { formatCurrency, formatPercent } from "@/utils/format";
 import { plClass } from "@/utils/format";
 import { cn } from "@/utils/cn";
 import { AssetLogo } from "@/components/common/AssetLogo";
+import { TermTooltip } from "@/components/common/TermTooltip";
 
 export function AssetDetailPage() {
   const { ticker } = useParams<{ ticker: string }>();
@@ -63,11 +64,11 @@ export function AssetDetailPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         {[
           { label: "Qtd", value: position.quantity },
-          { label: "Preço Médio", value: formatCurrency(position.average_price) },
-          { label: "Investido", value: formatCurrency(position.total_invested) },
+          { label: <TermTooltip term="Preço Médio" />, key: "Preço Médio", value: formatCurrency(position.average_price) },
+          { label: <TermTooltip term="Investido" />, key: "Investido", value: formatCurrency(position.total_invested) },
           { label: "Valor Atual", value: formatCurrency(position.current_value) },
-        ].map(({ label, value }) => (
-          <div key={label} className="card-haveres p-4">
+        ].map(({ label, key, value }) => (
+          <div key={key ?? String(label)} className="card-haveres p-4">
             <p className="text-xs text-muted-foreground mb-1">{label}</p>
             <p className="font-mono text-sm font-semibold text-white">{value}</p>
           </div>

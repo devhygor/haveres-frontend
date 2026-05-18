@@ -74,6 +74,7 @@ export function AllocationChart({
               outerRadius={85}
               paddingAngle={2}
               isAnimationActive={false}
+              stroke="none"
             >
               {chartData.map((entry, i) => (
                 <Cell
@@ -81,7 +82,9 @@ export function AllocationChart({
                   fill={hasSelection && entry.key !== selectedValue ? "#6b7280" : entry.color}
                   stroke={entry.key === selectedValue ? "#ffffff" : "transparent"}
                   strokeWidth={entry.key === selectedValue ? 2 : 0}
+                  tabIndex={-1}
                   style={isInteractive ? { cursor: "pointer" } : undefined}
+                  onMouseDown={(event) => event.preventDefault()}
                   onClick={() => handleSelect(entry.key)}
                 />
               ))}

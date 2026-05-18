@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { LucideIcon, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { cn } from "@/utils/cn";
 import { formatCurrency, formatPercent, plClass } from "@/utils/format";
@@ -54,7 +55,7 @@ export function StatCard({
 }
 
 interface PLCardProps {
-  title: string;
+  title: ReactNode;
   absolute: number;
   percent: number;
   className?: string;

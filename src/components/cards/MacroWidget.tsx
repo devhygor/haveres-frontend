@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { quotesApi } from "@/api/quotes";
+import { TermTooltip } from "@/components/common/TermTooltip";
 
 const LABEL: Record<string, string> = {
   CDI: "CDI",
@@ -11,7 +12,7 @@ const LABEL: Record<string, string> = {
 function MacroRow({ type, value, accumulated }: { type: string; value: number; accumulated: number | null }) {
   return (
     <div className="flex items-center justify-between py-2">
-      <span className="text-xs text-muted-foreground">{LABEL[type] ?? type}</span>
+      <TermTooltip term={LABEL[type] ?? type} className="text-xs text-muted-foreground" />
       <div className="text-right">
         <span className="font-mono text-sm text-white font-medium">
           {value.toFixed(2)}% a.a.

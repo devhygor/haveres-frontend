@@ -10,6 +10,7 @@ import { cn } from "@/utils/cn";
 import type { Position } from "@/types/portfolio";
 import { ASSET_TYPE_LABELS } from "@/types/asset";
 import { AssetLogo } from "@/components/common/AssetLogo";
+import { TermTooltip } from "@/components/common/TermTooltip";
 
 function toNumber(value: unknown): number {
   if (typeof value === "number") return Number.isFinite(value) ? value : 0;
@@ -69,7 +70,7 @@ const columns: ColumnDef<Position>[] = [
   },
   {
     accessorKey: "average_price",
-    header: "PM",
+    header: () => <TermTooltip term="PM" />,
     sortingFn: numericSorting,
     cell: ({ getValue }) => (
       <span className="font-mono text-sm">{formatCurrency(getValue() as number)}</span>
@@ -77,7 +78,7 @@ const columns: ColumnDef<Position>[] = [
   },
   {
     accessorKey: "current_price",
-    header: "Cotação",
+    header: () => <TermTooltip term="Cotação" />,
     sortingFn: numericSorting,
     cell: ({ getValue }) => (
       <span className="font-mono text-sm text-white">{formatCurrency(getValue() as number)}</span>
@@ -85,7 +86,7 @@ const columns: ColumnDef<Position>[] = [
   },
   {
     accessorKey: "total_invested",
-    header: "Investido",
+    header: () => <TermTooltip term="Investido" />,
     sortingFn: numericSorting,
     cell: ({ getValue }) => (
       <span className="font-mono text-sm">{formatCurrency(getValue() as number)}</span>
@@ -103,7 +104,7 @@ const columns: ColumnDef<Position>[] = [
   },
   {
     accessorKey: "pl_absolute",
-    header: "P&L",
+    header: () => <TermTooltip term="P&L" />,
     sortingFn: numericSorting,
     cell: ({ row }) => (
       <div>
@@ -118,7 +119,7 @@ const columns: ColumnDef<Position>[] = [
   },
   {
     accessorKey: "allocation",
-    header: "Alocação",
+    header: () => <TermTooltip term="Alocação" />,
     sortingFn: numericSorting,
     cell: ({ getValue }) => {
       const v = getValue() as number;

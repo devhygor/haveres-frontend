@@ -14,6 +14,7 @@ import { MacroWidget } from "@/components/cards/MacroWidget";
 import { LoadingState, SkeletonCard } from "@/components/common/LoadingState";
 import { ErrorState } from "@/components/common/ErrorState";
 import { formatCurrency } from "@/utils/format";
+import { TermTooltip } from "@/components/common/TermTooltip";
 
 export function DashboardPage() {
   const [selectedType, setSelectedType] = useState<string | null>(null);
@@ -105,7 +106,7 @@ export function DashboardPage() {
           className="sm:col-span-2 lg:col-span-1"
         />
         <PLCard
-          title="Lucro / Prejuízo"
+          title={<TermTooltip term="Lucro / Prejuízo" />}
           absolute={data.pl_absolute}
           percent={data.pl_percent}
         />

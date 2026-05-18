@@ -1,12 +1,13 @@
 import { formatCurrency } from "@/utils/format";
 import type { Position } from "@/types/portfolio";
+import { TermTooltip } from "@/components/common/TermTooltip";
 
 function toNum(v: unknown): number | null {
   const n = Number(v);
   return Number.isFinite(n) ? n : null;
 }
 
-function Row({ label, value }: { label: string; value: string }) {
+function Row({ label, value }: { label: React.ReactNode; value: string }) {
   return (
     <div className="flex flex-col gap-0.5">
       <span className="text-xs text-muted-foreground">{label}</span>
@@ -46,12 +47,12 @@ export function FundamentalsCard({ position }: Props) {
     <div className="card-haveres p-5">
       <h3 className="text-sm font-semibold text-white mb-4">Indicadores Fundamentalistas</h3>
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-        <Row label="P/L" value={fmt(pl)} />
-        <Row label="P/VP" value={fmt(pvp)} />
-        <Row label="LPA (EPS)" value={eps !== null ? formatCurrency(eps) : "—"} />
-        <Row label="Market Cap" value={fmtCap(cap)} />
-        <Row label="Máx 52 semanas" value={high52 !== null ? formatCurrency(high52) : "—"} />
-        <Row label="Mín 52 semanas" value={low52 !== null ? formatCurrency(low52) : "—"} />
+        <Row label={<TermTooltip term="P/L" />} value={fmt(pl)} />
+        <Row label={<TermTooltip term="P/VP" />} value={fmt(pvp)} />
+        <Row label={<TermTooltip term="LPA">LPA (EPS)</TermTooltip>} value={eps !== null ? formatCurrency(eps) : "—"} />
+        <Row label={<TermTooltip term="Market Cap" />} value={fmtCap(cap)} />
+        <Row label={<TermTooltip term="Máx 52 semanas" />} value={high52 !== null ? formatCurrency(high52) : "—"} />
+        <Row label={<TermTooltip term="Mín 52 semanas" />} value={low52 !== null ? formatCurrency(low52) : "—"} />
       </div>
     </div>
   );
