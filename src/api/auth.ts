@@ -10,6 +10,8 @@ export interface UserOut {
   first_name: string; last_name: string;
   full_name: string; display_name: string; avatar_url: string;
   is_email_verified: boolean;
+  is_staff: boolean;
+  is_superuser: boolean;
 }
 
 export const authApi = {

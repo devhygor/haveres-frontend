@@ -4,7 +4,9 @@ import { AlertTriangle } from "lucide-react";
 import { Modal } from "@/components/common/Modal";
 import { SourceBadge } from "@/components/common/SourceBadge";
 import { transactionsApi, type CreateTransactionPayload } from "@/api/transactions";
-import { assetsApi, ASSET_TYPES } from "@/api/assets";
+import { assetsApi, ASSET_TYPES, type Asset } from "@/api/assets";
+import { portfolioApi } from "@/api/portfolio";
+import { useAuthStore } from "@/stores/authStore";
 import { formatCurrency, formatDate } from "@/utils/format";
 import type { Transaction, DuplicateTransactionResponse } from "@/types/transaction";
 
@@ -67,13 +69,81 @@ interface Props {
 const INPUT = "w-full bg-secondary border border-haveres-border rounded-lg px-3 py-2 text-sm text-white placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-haveres-blue";
 const LABEL = "block text-xs text-muted-foreground mb-1";
 
+function parseLocaleNumber(value: string): number {
+  const trimmed = value.trim();
+  if (!trimmed) return NaN;
+  if (trimmed.includes(",")) {
+    return Number(trimmed.replace(/\./g, "").replace(",", "."));
+  }
+  return Number(trimmed);
+}
+
+function sanitizeDecimalInput(value: string): string {
+  const cleaned = value.replace(/\s/g, "").replace(/[^0-9,.-]/g, "");
+  const sign = cleaned.startsWith("-") ? "-" : "";
+  const unsigned = sign ? cleaned.slice(1) : cleaned;
+  const withoutExtraSigns = unsigned.replace(/-/g, "");
+  const parts = withoutExtraSigns.split(/[.,]/);
+  if (parts.length <= 1) return sign + withoutExtraSigns;
+  return `${sign}${parts[0]},${parts.slice(1).join("")}`;
+}
+
+function assetLabel(asset: Asset): string {
+  return `${asset.ticker} - ${asset.name}`;
+}
+
+const ASSET_TYPE_KEYWORDS: Array<{ type: string; keywords: string[] }> = [
+  { type: "STOCK", keywords: ["acao", "acoes", "stock", "stocks"] },
+  { type: "FII", keywords: ["fii", "fundo imobiliario", "fundos imobiliarios"] },
+  { type: "ETF", keywords: ["etf", "etfs"] },
+  { type: "BDR", keywords: ["bdr", "bdrs"] },
+  { type: "FIXED_INCOME", keywords: ["renda fixa", "fixed income", "fixed"] },
+  { type: "TREASURY", keywords: ["tesouro", "tesouro direto", "treasury"] },
+  { type: "CASH", keywords: ["caixa", "cash"] },
+  { type: "CRYPTO", keywords: ["cripto", "criptomoeda", "crypto"] },
+];
+
+function normalizeText(value: string): string {
+  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+}
+
+function detectAssetTypeFilter(search: string): string | null {
+  if (!search) return null;
+  const match = ASSET_TYPE_KEYWORDS.find((entry) => entry.keywords.some((keyword) => search.includes(keyword)));
+  return match?.type ?? null;
+}
+
+function formatDecimalForInput(value: number, precision = 8): string {
+  const fixed = value.toFixed(precision).replace(/\.?0+$/, "");
+  return fixed.replace(".", ",");
+}
+
+function formatMoneyFromNumber(value: number): string {
+  if (!Number.isFinite(value)) return "";
+  return new Intl.NumberFormat("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value);
+}
+
+function maskMoneyInput(value: string): string {
+  const digits = value.replace(/\D/g, "");
+  if (!digits) return "";
+  const amount = Number(digits) / 100;
+  return formatMoneyFromNumber(amount);
+}
+
 export function TransactionFormModal({ open, onClose, transaction }: Props) {
   const qc = useQueryClient();
   const isEditing = !!transaction;
+  const user = useAuthStore((s) => s.user);
+  const isAdmin = Boolean(user?.is_staff || user?.is_superuser);
 
   const [form, setForm] = useState<FormState>(DEFAULT_FORM);
   const [newAsset, setNewAsset] = useState<NewAsset>(DEFAULT_NEW_ASSET);
   const [showNewAsset, setShowNewAsset] = useState(false);
+  const [assetSearch, setAssetSearch] = useState("");
+  const [assetMenuOpen, setAssetMenuOpen] = useState(false);
   const [error, setError] = useState("");
   const [duplicate, setDuplicate] = useState<DuplicateTransactionResponse | null>(null);
   const [pendingPayload, setPendingPayload] = useState<CreateTransactionPayload | null>(null);
@@ -87,7 +157,7 @@ export function TransactionFormModal({ open, onClose, transaction }: Props) {
               transaction_type: transaction.transaction_type,
               date: transaction.date,
               quantity: String(transaction.quantity),
-              price: String(transaction.price),
+              price: formatMoneyFromNumber(Number(transaction.price)),
               fees: String(transaction.fees),
               factor: String(transaction.factor),
               broker_id: transaction.broker_id ?? "",
@@ -96,6 +166,8 @@ export function TransactionFormModal({ open, onClose, transaction }: Props) {
           : { ...DEFAULT_FORM, date: today() }
       );
       setShowNewAsset(false);
+      setAssetSearch(transaction ? `${transaction.asset_ticker} - ${transaction.asset_name}` : "");
+      setAssetMenuOpen(false);
       setNewAsset(DEFAULT_NEW_ASSET);
       setError("");
       setDuplicate(null);
@@ -105,6 +177,12 @@ export function TransactionFormModal({ open, onClose, transaction }: Props) {
 
   const assets = useQuery({ queryKey: ["assets"], queryFn: () => assetsApi.list().then(r => r.data) });
   const brokers = useQuery({ queryKey: ["brokers"], queryFn: () => transactionsApi.listBrokers().then(r => r.data) });
+  const portfolioSummary = useQuery({
+    queryKey: ["portfolio", "summary"],
+    queryFn: () => portfolioApi.getSummary().then((r) => r.data),
+    enabled: open,
+  });
+  const assetsList = assets.data ?? [];
 
   const set = (k: keyof FormState, v: string) => setForm(f => ({ ...f, [k]: v }));
   const setNA = (k: keyof NewAsset, v: string) => setNewAsset(f => ({ ...f, [k]: v }));
@@ -114,12 +192,21 @@ export function TransactionFormModal({ open, onClose, transaction }: Props) {
     onSuccess: r => {
       qc.invalidateQueries({ queryKey: ["assets"] });
       set("asset_id", r.data.id);
+      setAssetSearch(assetLabel(r.data));
       setShowNewAsset(false);
+      setAssetMenuOpen(false);
       setNewAsset(DEFAULT_NEW_ASSET);
       setError("");
     },
     onError: () => setError("Erro ao cadastrar ativo."),
   });
+
+  useEffect(() => {
+    if (!form.asset_id) return;
+    const selected = assetsList.find((a) => a.id === form.asset_id);
+    if (!selected) return;
+    setAssetSearch(assetLabel(selected));
+  }, [form.asset_id, assetsList]);
 
   const save = useMutation({
     mutationFn: (payload: CreateTransactionPayload | Partial<Transaction>) =>
@@ -142,6 +229,10 @@ export function TransactionFormModal({ open, onClose, transaction }: Props) {
   });
 
   const handleAddAsset = () => {
+    if (!isAdmin) {
+      setError("Apenas administradores podem cadastrar novos ativos.");
+      return;
+    }
     if (!newAsset.ticker.trim() || !newAsset.name.trim()) {
       setError("Preencha ticker e nome do ativo.");
       return;
@@ -157,18 +248,24 @@ export function TransactionFormModal({ open, onClose, transaction }: Props) {
     if (!form.asset_id) { setError("Selecione um ativo."); return; }
 
     const { showQuantity, showFactor, showPrice, showFees } = getFields(form.transaction_type);
-    if (showQuantity && !form.quantity) { setError("Informe a quantidade."); return; }
-    if (showPrice && !form.price) { setError("Informe o preço."); return; }
-    if (showFactor && !form.factor) { setError("Informe o fator."); return; }
+    const quantity = showQuantity ? parseLocaleNumber(form.quantity) : 0;
+    const price = showPrice ? parseLocaleNumber(form.price) : 0;
+    const fees = showFees ? parseLocaleNumber(form.fees || "0") : 0;
+    const factor = showFactor ? parseLocaleNumber(form.factor || "1") : 1;
+
+    if (showQuantity && (!form.quantity || Number.isNaN(quantity))) { setError("Informe uma quantidade válida."); return; }
+    if (showPrice && (!form.price || Number.isNaN(price))) { setError("Informe um preço válido."); return; }
+    if (showFactor && (!form.factor || Number.isNaN(factor))) { setError("Informe um fator válido."); return; }
+    if (showFees && Number.isNaN(fees)) { setError("Informe taxas válidas."); return; }
 
     const payload: CreateTransactionPayload = {
       asset_id: form.asset_id,
       transaction_type: form.transaction_type,
       date: form.date,
-      quantity: showQuantity ? parseFloat(form.quantity) : 0,
-      price: showPrice ? parseFloat(form.price) : 0,
-      fees: showFees ? parseFloat(form.fees || "0") : 0,
-      factor: showFactor ? parseFloat(form.factor || "1") : 1,
+      quantity,
+      price,
+      fees,
+      factor,
       broker_id: form.broker_id || null,
       notes: form.notes,
     };
@@ -182,8 +279,47 @@ export function TransactionFormModal({ open, onClose, transaction }: Props) {
     save.mutate({ ...pendingPayload, force: true });
   };
 
+  const prefillPriceFromAsset = (assetId: string) => {
+    const showPrice = getFields(form.transaction_type).showPrice;
+    if (!showPrice) return;
+
+    const selectedPosition = portfolioSummary.data?.positions.find((position) => position.asset_id === assetId);
+    const currentPrice = Number(selectedPosition?.current_price);
+    if (!Number.isFinite(currentPrice) || currentPrice <= 0) return;
+
+    set("price", formatMoneyFromNumber(currentPrice));
+  };
+
+  const adjustQuantity = (delta: number) => {
+    const current = parseLocaleNumber(form.quantity || "0");
+    const safeCurrent = Number.isFinite(current) ? current : 0;
+    const next = Math.max(0, safeCurrent + delta);
+    set("quantity", formatDecimalForInput(next));
+  };
+
   const fields = getFields(form.transaction_type);
   const isPending = save.isPending;
+  const search = normalizeText(assetSearch.trim());
+  const assetTypeFilter = detectAssetTypeFilter(search);
+  const filteredAssets = assetsList
+    .filter((asset) => {
+      if (!search) return true;
+      const searchable = normalizeText(`${asset.ticker} ${asset.name} ${asset.asset_type} ${asset.asset_type_display}`);
+      if (assetTypeFilter && asset.asset_type === assetTypeFilter) return true;
+      return searchable.includes(search);
+    })
+    .sort((a, b) => {
+      if (!search) return a.ticker.localeCompare(b.ticker);
+      const aTicker = normalizeText(a.ticker);
+      const bTicker = normalizeText(b.ticker);
+      const aName = normalizeText(a.name);
+      const bName = normalizeText(b.name);
+      const aStarts = aTicker.startsWith(search) || aName.startsWith(search);
+      const bStarts = bTicker.startsWith(search) || bName.startsWith(search);
+      if (aStarts && !bStarts) return -1;
+      if (!aStarts && bStarts) return 1;
+      return a.ticker.localeCompare(b.ticker);
+    });
 
   return (
     <Modal open={open} onClose={onClose} title={isEditing ? "Editar Movimentação" : "Nova Movimentação"}>
@@ -192,28 +328,66 @@ export function TransactionFormModal({ open, onClose, transaction }: Props) {
         {/* Ativo */}
         <div>
           <label className={LABEL}>Ativo *</label>
-          <select
-            className={INPUT}
-            value={showNewAsset ? "__new__" : form.asset_id}
-            onChange={e => {
-              if (e.target.value === "__new__") {
-                setShowNewAsset(true);
-                set("asset_id", "");
-              } else {
+          <div className="relative">
+            <input
+              className={INPUT}
+              placeholder="Digite ticker ou nome do ativo..."
+              value={assetSearch}
+              onFocus={() => setAssetMenuOpen(true)}
+              onBlur={() => window.setTimeout(() => setAssetMenuOpen(false), 120)}
+              onChange={(e) => {
+                setAssetSearch(e.target.value);
+                setAssetMenuOpen(true);
                 setShowNewAsset(false);
-                set("asset_id", e.target.value);
-              }
-            }}
-          >
-            <option value="">Selecione um ativo...</option>
-            {assets.data?.map(a => (
-              <option key={a.id} value={a.id}>{a.ticker} — {a.name}</option>
-            ))}
-            <option value="__new__">+ Cadastrar novo ativo</option>
-          </select>
+                if (form.asset_id) set("asset_id", "");
+              }}
+            />
+
+            {assetMenuOpen && (
+              <div className="absolute z-30 mt-1 w-full rounded-lg border border-haveres-border bg-haveres-card shadow-xl max-h-56 overflow-y-auto">
+                {filteredAssets.slice(0, 30).map((asset) => (
+                  <button
+                    key={asset.id}
+                    type="button"
+                    className="w-full text-left px-3 py-2 text-sm text-white hover:bg-secondary/70 transition-colors"
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() => {
+                      set("asset_id", asset.id);
+                      setAssetSearch(assetLabel(asset));
+                      prefillPriceFromAsset(asset.id);
+                      setAssetMenuOpen(false);
+                      setShowNewAsset(false);
+                    }}
+                  >
+                    <span className="font-mono font-medium">{asset.ticker}</span>
+                    <span className="text-muted-foreground"> - {asset.name}</span>
+                  </button>
+                ))}
+
+                {!filteredAssets.length && (
+                  <p className="px-3 py-2 text-xs text-muted-foreground">Nenhum ativo encontrado.</p>
+                )}
+
+                {isAdmin && (
+                  <button
+                    type="button"
+                    className="w-full text-left px-3 py-2 text-xs text-haveres-blue border-t border-haveres-border hover:bg-secondary/70 transition-colors"
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() => {
+                      setShowNewAsset(true);
+                      set("asset_id", "");
+                      setAssetMenuOpen(false);
+                    }}
+                  >
+                    + Cadastrar novo ativo
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
-        {showNewAsset && (
+        {isAdmin && showNewAsset && (
           <div className="bg-secondary/40 border border-haveres-border rounded-lg p-4 space-y-3">
             <p className="text-xs font-semibold text-haveres-blue">Cadastrar ativo</p>
             <div className="grid grid-cols-2 gap-3">
@@ -293,25 +467,45 @@ export function TransactionFormModal({ open, onClose, transaction }: Props) {
             {fields.showQuantity && (
               <div>
                 <label className={LABEL}>Quantidade *</label>
-                <input
-                  type="number" step="0.00000001" min="0"
-                  className={INPUT}
-                  placeholder="0"
-                  value={form.quantity}
-                  onChange={e => set("quantity", e.target.value)}
-                  required
-                />
+                <div className="flex items-stretch gap-2">
+                  <button
+                    type="button"
+                    onClick={() => adjustQuantity(-1)}
+                    className="px-3 rounded-lg border border-haveres-border bg-secondary text-white hover:border-white/30 transition-colors"
+                    aria-label="Diminuir quantidade"
+                  >
+                    -
+                  </button>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    className={`${INPUT} text-center`}
+                    placeholder="Ex: 1 ou 1,001"
+                    value={form.quantity}
+                    onChange={e => set("quantity", sanitizeDecimalInput(e.target.value))}
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => adjustQuantity(1)}
+                    className="px-3 rounded-lg border border-haveres-border bg-secondary text-white hover:border-white/30 transition-colors"
+                    aria-label="Aumentar quantidade"
+                  >
+                    +
+                  </button>
+                </div>
               </div>
             )}
             {fields.showPrice && (
               <div>
                 <label className={LABEL}>Preço unitário (R$) *</label>
                 <input
-                  type="number" step="0.01" min="0"
+                  type="text"
+                  inputMode="numeric"
                   className={INPUT}
                   placeholder="0,00"
                   value={form.price}
-                  onChange={e => set("price", e.target.value)}
+                  onChange={e => set("price", maskMoneyInput(e.target.value))}
                   required
                 />
               </div>
@@ -339,7 +533,7 @@ export function TransactionFormModal({ open, onClose, transaction }: Props) {
             <span className="text-muted-foreground">Total estimado</span>
             <span className="font-numeric text-white font-medium">
               {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(
-                parseFloat(form.quantity || "0") * parseFloat(form.price || "0") + parseFloat(form.fees || "0")
+                (parseLocaleNumber(form.quantity || "0") || 0) * (parseLocaleNumber(form.price || "0") || 0) + (parseLocaleNumber(form.fees || "0") || 0)
               )}
             </span>
           </div>

@@ -18,16 +18,32 @@ Variável obrigatória: `VITE_API_URL=http://localhost:8000/api` (copiar de `.en
 
 | Pasta | Conteúdo |
 |---|---|
-| `src/api/` | Funções Axios por domínio: auth, portfolio, transactions, dividends, system |
+| `src/api/` | Funções Axios por domínio: auth, portfolio, transactions, dividends, assets, imports, quotes, system |
 | `src/config/api.ts` | Instância Axios com interceptor JWT + refresh automático em 401 |
 | `src/stores/` | authStore (Zustand+persist: tokens + user), uiStore (sidebar) |
-| `src/types/` | Interfaces TypeScript: portfolio, transaction, dividend, asset |
+| `src/types/` | Interfaces TypeScript: portfolio, transaction, dividend, asset, quote |
 | `src/utils/format.ts` | `formatCurrency`, `formatPercent`, `formatDate`, `plClass` |
 | `src/utils/cn.ts` | `cn()` = clsx + tailwind-merge |
+| `src/components/layout/` | AppLayout, Header, Sidebar |
 | `src/components/charts/` | PatrimonyChart (area), DividendsChart (bar), AllocationChart (donut) |
 | `src/components/tables/` | PositionsTable com TanStack Table + sort |
 | `src/components/cards/` | StatCard, PLCard |
+| `src/components/forms/` | DividendFormModal, TransactionFormModal |
 | `src/components/common/` | LoadingState, SkeletonCard, ErrorState, EmptyState |
+
+## Páginas
+
+| Página | Rota | Descrição |
+|---|---|---|
+| `DashboardPage` | `/dashboard` | Visão geral: patrimônio, P&L, gráficos |
+| `PortfolioPage` | `/portfolio` | Posições abertas com tabela e alocação |
+| `AssetDetailPage` | `/assets/:id` | Detalhe de ativo: histórico, dividendos |
+| `TransactionsPage` | `/transactions` | Lista e criação de transações |
+| `DividendsPage` | `/dividends` | Proventos recebidos |
+| `ImportsPage` | `/imports` | Upload e preview de CSV/Excel |
+| `OpenFinancePage` | `/open-finance` | Conexões bancárias Open Finance |
+| `SettingsPage` | `/settings` | Configurações do usuário |
+| `SystemPage` | `/system` | Health check e status de integrações |
 
 ## Identidade visual (imutável)
 
