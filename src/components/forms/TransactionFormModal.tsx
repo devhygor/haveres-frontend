@@ -218,7 +218,7 @@ export function TransactionFormModal({ open, onClose, transaction }: Props) {
             <p className="text-xs font-semibold text-haveres-blue">Cadastrar ativo</p>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className={LABEL}>Ticker *</label>
+                <label className={LABEL}>Código *</label>
                 <input
                   className={INPUT}
                   placeholder="Ex: PETR4"

@@ -30,7 +30,7 @@ function numericSorting<TData>(rowA: Row<TData>, rowB: Row<TData>, columnId: str
 const columns: ColumnDef<Position>[] = [
   {
     accessorKey: "ticker",
-    header: "Ticker",
+    header: "Código",
     cell: ({ row }) => (
       <div className="flex items-center gap-2">
         <AssetLogo logoUrl={row.original.logo_url} ticker={row.original.ticker} />

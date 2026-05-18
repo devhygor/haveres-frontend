@@ -340,7 +340,7 @@ export function ImportsPage() {
                       <thead className="sticky top-0 bg-haveres-card border-b border-haveres-border">
                         <tr className="text-muted-foreground">
                           <th className="text-left px-3 py-2 font-medium">#</th>
-                          <th className="text-left px-3 py-2 font-medium">Ticker</th>
+                          <th className="text-left px-3 py-2 font-medium">Código</th>
                           <th className="text-left px-3 py-2 font-medium">Tipo</th>
                           <th className="text-left px-3 py-2 font-medium">Data</th>
                           <th className="text-right px-3 py-2 font-medium">Qtd</th>

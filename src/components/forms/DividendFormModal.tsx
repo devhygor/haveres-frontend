@@ -175,7 +175,7 @@ export function DividendFormModal({ open, onClose, dividend }: Props) {
             <p className="text-xs font-semibold text-haveres-blue">Cadastrar ativo</p>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className={LABEL}>Ticker *</label>
+                <label className={LABEL}>Código *</label>
                 <input
                   className={INPUT}
                   placeholder="Ex: KNRI11"
