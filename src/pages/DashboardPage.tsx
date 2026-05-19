@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Wallet, TrendingUp, CalendarDays, PieChart, Activity } from "lucide-react";
 import { portfolioApi } from "@/api/portfolio";
@@ -7,7 +7,6 @@ import { StatCard, PLCard } from "@/components/cards/StatCard";
 import { DividendsChart } from "@/components/charts/DividendsChart";
 import { AllocationChart } from "@/components/charts/AllocationChart";
 import { BenchmarkChart } from "@/components/charts/BenchmarkChart";
-import { PositionsTable } from "@/components/tables/PositionsTable";
 import { CurrencyWidget } from "@/components/cards/CurrencyWidget";
 import { MacroWidget } from "@/components/cards/MacroWidget";
 import { CryptoWidget } from "@/components/cards/CryptoWidget";
@@ -18,8 +17,6 @@ import { formatCurrency } from "@/utils/format";
 import { TermTooltip } from "@/components/common/TermTooltip";
 
 export function DashboardPage() {
-  const [selectedType, setSelectedType] = useState<string | null>(null);
-
   const summary = useQuery({
     queryKey: ["portfolio", "summary"],
     queryFn: () => portfolioApi.getSummary().then((r) => r.data),
@@ -48,16 +45,6 @@ export function DashboardPage() {
 
   const data = summary.data;
 
-  const positions = useMemo(() => {
-    return Array.isArray(data?.positions) ? data.positions : [];
-  }, [data?.positions]);
-
-  const selectedTypeLabel = useMemo(() => {
-    if (!selectedType || !allocationByType.data) return null;
-    const item = allocationByType.data.find((entry) => entry.type === selectedType);
-    return item?.type_display || selectedType;
-  }, [allocationByType.data, selectedType]);
-
   const upcomingTotal = useMemo(() => {
     return (upcomingDividends.data ?? []).reduce((s, d) => s + Number(d.expected_amount), 0);
   }, [upcomingDividends.data]);
@@ -81,24 +68,6 @@ export function DashboardPage() {
       .map(([month, upcoming]) => ({ month, paid: 0, upcoming }));
     return [...historical, ...projectedPoints].sort((a, b) => a.month.localeCompare(b.month));
   }, [dividendsEvolution.data, upcomingDividends.data]);
-
-  const filteredPositions = useMemo(() => {
-    if (!selectedType) return positions;
-    return positions.filter((position) => position.asset_type === selectedType);
-  }, [positions, selectedType]);
-
-  useEffect(() => {
-    if (!selectedType) return;
-    if (!allocationByType.data?.some((entry) => entry.type === selectedType)) {
-      setSelectedType(null);
-    }
-  }, [allocationByType.data, selectedType]);
-
-  const clearTypeFilter = () => {
-    setSelectedType(null);
-  };
-
-  const hasActiveTypeFilter = Boolean(selectedType);
 
   if (summary.isLoading) {
     return (
@@ -180,8 +149,6 @@ export function DashboardPage() {
               data={allocationByType.data}
               labelKey="type_display"
               valueKey="type"
-              selectedValue={selectedType}
-              onSelectValue={setSelectedType}
             />
           ) : (
             <p className="text-sm text-muted-foreground py-8 text-center">Sem dados de alocação</p>
@@ -213,45 +180,6 @@ export function DashboardPage() {
           <BenchmarkChart data={benchmark.data} />
         </div>
       )}
-
-      {/* Posições */}
-      <div className="card-haveres">
-        <div className="flex flex-wrap items-center gap-2 p-4 sm:p-5 border-b border-haveres-border">
-          <Wallet size={18} className="text-haveres-blue" />
-          <h2 className="text-sm font-semibold text-white">Posições</h2>
-          <span className="text-xs text-muted-foreground">
-            {filteredPositions.length} ativos
-            {hasActiveTypeFilter ? ` de ${positions.length}` : ""}
-          </span>
-          {selectedTypeLabel && (
-            <span className="text-xs px-2 py-0.5 rounded bg-secondary text-muted-foreground">
-              Classe: {selectedTypeLabel}
-            </span>
-          )}
-          {hasActiveTypeFilter && (
-            <button
-              type="button"
-              onClick={clearTypeFilter}
-              className="sm:ml-auto text-xs px-2 py-1 rounded bg-secondary text-muted-foreground hover:text-white transition-colors"
-            >
-              Limpar filtro
-            </button>
-          )}
-        </div>
-        {positions.length > 0 ? (
-          filteredPositions.length > 0 ? (
-            <PositionsTable positions={filteredPositions} />
-          ) : (
-            <p className="text-sm text-muted-foreground py-8 text-center">
-              Nenhuma posição para o filtro selecionado.
-            </p>
-          )
-        ) : (
-          <p className="text-sm text-muted-foreground py-8 text-center">
-            Nenhuma posição. Cadastre movimentações para começar.
-          </p>
-        )}
-      </div>
 
       {/* Câmbio + Indicadores macro + Criptomoedas */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
