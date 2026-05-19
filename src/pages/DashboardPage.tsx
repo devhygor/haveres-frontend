@@ -11,6 +11,7 @@ import { BenchmarkChart } from "@/components/charts/BenchmarkChart";
 import { PositionsTable } from "@/components/tables/PositionsTable";
 import { CurrencyWidget } from "@/components/cards/CurrencyWidget";
 import { MacroWidget } from "@/components/cards/MacroWidget";
+import { CryptoWidget } from "@/components/cards/CryptoWidget";
 import { LoadingState, SkeletonCard } from "@/components/common/LoadingState";
 import { ErrorState } from "@/components/common/ErrorState";
 import { formatCurrency } from "@/utils/format";
@@ -161,10 +162,11 @@ export function DashboardPage() {
         />
       </div>
 
-      {/* Câmbio + Indicadores macro */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      {/* Câmbio + Indicadores macro + Criptomoedas */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <CurrencyWidget />
         <MacroWidget />
+        <CryptoWidget />
       </div>
 
       {/* Evolução patrimonial */}

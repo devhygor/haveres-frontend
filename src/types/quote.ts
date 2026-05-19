@@ -30,6 +30,20 @@ export interface BenchmarkPoint {
   cdi_return: number;
 }
 
+export interface CryptoQuoteItem {
+  ticker: string;
+  coin_name: string;
+  logo_url: string;
+  date: string;
+  currency: string;
+  price: number;
+  change: number | null;
+  change_percent: number | null;
+  day_low: number | null;
+  day_high: number | null;
+  market_cap: number | null;
+}
+
 export interface FIIDetailData {
   fii_type: string;
   fii_sector: string;
