@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Wallet, TrendingUp, CalendarDays, BarChart3, PieChart, Activity } from "lucide-react";
+import { Wallet, TrendingUp, CalendarDays, PieChart, Activity } from "lucide-react";
 import { portfolioApi } from "@/api/portfolio";
 import { quotesApi } from "@/api/quotes";
 import { StatCard, PLCard } from "@/components/cards/StatCard";
-import { PatrimonyChart } from "@/components/charts/PatrimonyChart";
 import { DividendsChart } from "@/components/charts/DividendsChart";
 import { AllocationChart } from "@/components/charts/AllocationChart";
 import { BenchmarkChart } from "@/components/charts/BenchmarkChart";
@@ -29,11 +28,6 @@ export function DashboardPage() {
   const allocationByType = useQuery({
     queryKey: ["portfolio", "allocation", "type"],
     queryFn: () => portfolioApi.getAllocationByType().then((r) => r.data),
-  });
-
-  const patrimonyEvolution = useQuery({
-    queryKey: ["portfolio", "evolution", "patrimony"],
-    queryFn: () => portfolioApi.getPatrimonyEvolution(12).then((r) => r.data),
   });
 
   const dividendsEvolution = useQuery({
@@ -170,27 +164,6 @@ export function DashboardPage() {
           iconColor="text-haveres-blue"
           subtitle={upcomingDividends.data ? `${upcomingDividends.data.length} proventos` : "—"}
         />
-      </div>
-
-      {/* Evolução patrimonial */}
-      <div className="card-haveres p-4 sm:p-5">
-        <div className="flex items-center gap-2 mb-4">
-          <BarChart3 size={18} className="text-haveres-blue" />
-          <h2 className="text-sm font-semibold text-white">Evolução Patrimonial</h2>
-        </div>
-        {patrimonyEvolution.isLoading ? (
-          <LoadingState />
-        ) : patrimonyEvolution.isError ? (
-          <ErrorState onRetry={() => patrimonyEvolution.refetch()} />
-        ) : patrimonyEvolution.data && patrimonyEvolution.data.length > 0 ? (
-          <PatrimonyChart data={patrimonyEvolution.data} />
-        ) : (
-          <div className="h-64 flex items-center justify-center">
-            <p className="text-sm text-muted-foreground">
-              Sem histórico ainda. Os dados aparecerão após o primeiro snapshot diário.
-            </p>
-          </div>
-        )}
       </div>
 
       {/* Alocação + Dividendos */}
