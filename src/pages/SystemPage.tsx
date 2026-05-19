@@ -43,12 +43,38 @@ function StatusRow({ icon: Icon, label, status, detail }: {
 }
 
 const SYNC_LABELS: Record<string, string> = {
+  // Fase 1 — Catálogos
   assets_catalog: "Catálogo de Ativos",
-  quotes: "Cotações",
+  fii_details: "Catálogo FII",
+  // Fase 2 — Cotações
+  quotes: "Preços de Ativos",
+  currencies: "Câmbio (Spot)",
+  fii_dividends: "Proventos FII",
+  macro_indicators: "Indicadores Macro",
+  // Fase 3 — Fundamentos
+  asset_fundamentals: "Fundamentos dos Ativos",
+  // Fase 4 — Histórico
+  currency_history: "Histórico PTAX",
+  fii_indicator_history: "Histórico Indicadores FII",
+  fii_reports: "Relatórios CVM FII",
+  // Fase 5 — Econômicos
+  inflation: "Inflação",
+  prime_rate: "Taxa Básica (SELIC)",
+  // Fase 6 — Portfólio
   portfolio_history: "Histórico de Preços",
   portfolio_snapshots: "Snapshots de Portfólio",
-  fii_details: "Detalhes FII (v2)",
 };
+
+type SyncPhaseName = "Catálogos" | "Cotações" | "Fundamentos" | "Histórico" | "Econômicos" | "Portfólio";
+
+const SYNC_PHASES: { label: SyncPhaseName; keys: string[] }[] = [
+  { label: "Catálogos",   keys: ["assets_catalog", "fii_details"] },
+  { label: "Cotações",    keys: ["quotes", "currencies", "fii_dividends", "macro_indicators"] },
+  { label: "Fundamentos", keys: ["asset_fundamentals"] },
+  { label: "Histórico",   keys: ["currency_history", "fii_indicator_history", "fii_reports"] },
+  { label: "Econômicos",  keys: ["inflation", "prime_rate"] },
+  { label: "Portfólio",   keys: ["portfolio_history", "portfolio_snapshots"] },
+];
 
 function ProgressRow({ label, item, lastTs, onSync, syncing }: {
   label: string;
@@ -291,17 +317,44 @@ export function SystemPage() {
         </div>
 
         {sp && ss !== undefined && (
-          <div>
-            {(Object.keys(sp) as Array<keyof typeof sp>).map((key) => (
-              <ProgressRow
-                key={key}
-                label={key}
-                item={sp[key]}
-                lastTs={ss?.[key] ?? null}
-                onSync={() => triggerOne(key)}
-                syncing={syncingOne === key}
-              />
-            ))}
+          <div className="space-y-4">
+            {SYNC_PHASES.map((phase) => {
+              const phaseKeys = phase.keys.filter((k) => k in sp);
+              const runningCount = phaseKeys.filter((k) => sp[k as keyof typeof sp]?.status === "running").length;
+              const doneCount = phaseKeys.filter((k) => sp[k as keyof typeof sp]?.status === "done").length;
+              const allDone = doneCount === phaseKeys.length && phaseKeys.length > 0;
+              return (
+                <div key={phase.label} className="rounded-lg border border-haveres-border overflow-hidden">
+                  <div className={cn(
+                    "flex items-center justify-between px-4 py-2.5",
+                    allDone ? "bg-gain/5" : runningCount > 0 ? "bg-haveres-blue/5" : "bg-haveres-dark"
+                  )}>
+                    <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                      {phase.label}
+                    </span>
+                    <span className={cn("text-xs font-medium", {
+                      "text-gain": allDone,
+                      "text-haveres-blue": runningCount > 0 && !allDone,
+                      "text-muted-foreground": !allDone && runningCount === 0,
+                    })}>
+                      {allDone ? "✓ Concluído" : runningCount > 0 ? `${runningCount} em andamento` : `${doneCount}/${phaseKeys.length}`}
+                    </span>
+                  </div>
+                  <div className="px-4">
+                    {phaseKeys.map((key) => (
+                      <ProgressRow
+                        key={key}
+                        label={key}
+                        item={sp[key as keyof typeof sp]}
+                        lastTs={ss?.[key as keyof typeof ss] ?? null}
+                        onSync={() => triggerOne(key)}
+                        syncing={syncingOne === key}
+                      />
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
 

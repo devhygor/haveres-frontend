@@ -15,19 +15,49 @@ export interface UserMetrics {
   new_users_last_7_days: number; new_users_last_30_days: number;
   users_with_transactions: number; users_with_open_finance: number;
 }
+export type SyncName =
+  | "assets_catalog" | "fii_details" | "crypto_catalog"
+  | "quotes" | "currencies" | "fii_dividends" | "macro_indicators" | "crypto_quotes"
+  | "asset_fundamentals"
+  | "currency_history" | "fii_indicator_history" | "fii_reports"
+  | "inflation" | "prime_rate"
+  | "portfolio_history" | "portfolio_snapshots";
+
 export interface SyncStatus {
   assets_catalog: string | null;
+  fii_details: string | null;
+  crypto_catalog: string | null;
   quotes: string | null;
+  currencies: string | null;
+  fii_dividends: string | null;
+  macro_indicators: string | null;
+  crypto_quotes: string | null;
+  asset_fundamentals: string | null;
+  currency_history: string | null;
+  fii_indicator_history: string | null;
+  fii_reports: string | null;
+  inflation: string | null;
+  prime_rate: string | null;
   portfolio_history: string | null;
   portfolio_snapshots: string | null;
-  fii_details: string | null;
 }
 export interface SyncAllResult {
   assets_catalog: string;
+  fii_details: string;
+  crypto_catalog: string;
   quotes: string;
+  currencies: string;
+  fii_dividends: string;
+  macro_indicators: string;
+  crypto_quotes: string;
+  asset_fundamentals: string;
+  currency_history: string;
+  fii_indicator_history: string;
+  fii_reports: string;
+  inflation: string;
+  prime_rate: string;
   portfolio_history: string;
   portfolio_snapshots: string;
-  fii_details: string;
 }
 export interface SyncProgressItem {
   status: "idle" | "running" | "done" | "error";
@@ -36,13 +66,7 @@ export interface SyncProgressItem {
   started_at: string | null;
   finished_at: string | null;
 }
-export interface SyncProgress {
-  assets_catalog: SyncProgressItem;
-  quotes: SyncProgressItem;
-  portfolio_history: SyncProgressItem;
-  portfolio_snapshots: SyncProgressItem;
-  fii_details: SyncProgressItem;
-}
+export type SyncProgress = Record<SyncName, SyncProgressItem>;
 export interface AdminUser {
   id: number; email: string; display_name: string; first_name: string; last_name: string;
 }
