@@ -73,6 +73,22 @@ export interface FinancialStatementItem {
   free_cash_flow: number | null;
 }
 
+export interface OptionContract {
+  expiration_date: string;
+  option_type: "CALL" | "PUT";
+  strike: number;
+  contract_symbol: string;
+  last_price: number | null;
+  bid: number | null;
+  ask: number | null;
+  change: number | null;
+  change_percent: number | null;
+  volume: number | null;
+  open_interest: number | null;
+  implied_volatility: number | null;
+  in_the_money: boolean;
+}
+
 export interface FIIDetailData {
   fii_type: string;
   fii_sector: string;

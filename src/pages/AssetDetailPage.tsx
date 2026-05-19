@@ -5,6 +5,7 @@ import { portfolioApi } from "@/api/portfolio";
 import { FundamentalsCard } from "@/components/cards/FundamentalsCard";
 import { FIIDetailCard } from "@/components/cards/FIIDetailCard";
 import { FinancialStatementsCard } from "@/components/cards/FinancialStatementsCard";
+import OptionsChainCard from "@/components/cards/OptionsChainCard";
 import { PriceHistoryChart } from "@/components/charts/PriceHistoryChart";
 import { LoadingState } from "@/components/common/LoadingState";
 import { ErrorState } from "@/components/common/ErrorState";
@@ -93,6 +94,11 @@ export function AssetDetailPage() {
       {/* Demonstrações financeiras (ações, ETFs, BDRs — não FII/CRYPTO) */}
       {position.asset_type !== "FII" && position.asset_type !== "CRYPTO" && (
         <FinancialStatementsCard ticker={position.ticker} />
+      )}
+
+      {/* Cadeia de opções (apenas ações) */}
+      {position.asset_type === "STOCK" && (
+        <OptionsChainCard ticker={position.ticker} />
       )}
     </div>
   );

@@ -67,9 +67,11 @@ const SYNC_LABELS: Record<string, string> = {
   // Fase 6 — Portfólio
   portfolio_history: "Histórico de Preços",
   portfolio_snapshots: "Snapshots de Portfólio",
+  // Fase 7 — Derivativos
+  options_chain: "Cadeia de Opções",
 };
 
-type SyncPhaseName = "Catálogos" | "Cotações" | "Fundamentos" | "Histórico" | "Econômicos" | "Portfólio";
+type SyncPhaseName = "Catálogos" | "Cotações" | "Fundamentos" | "Histórico" | "Econômicos" | "Portfólio" | "Derivativos";
 
 const SYNC_PHASES: { label: SyncPhaseName; keys: string[] }[] = [
   { label: "Catálogos",   keys: ["assets_catalog", "fii_details", "crypto_catalog"] },
@@ -78,6 +80,7 @@ const SYNC_PHASES: { label: SyncPhaseName; keys: string[] }[] = [
   { label: "Histórico",   keys: ["currency_history", "fii_indicator_history", "fii_reports"] },
   { label: "Econômicos",  keys: ["inflation", "prime_rate"] },
   { label: "Portfólio",   keys: ["portfolio_history", "portfolio_snapshots"] },
+  { label: "Derivativos", keys: ["options_chain"] },
 ];
 
 function ProgressRow({ label, item, lastTs, onSync, syncing }: {

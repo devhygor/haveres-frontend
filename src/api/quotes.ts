@@ -1,5 +1,5 @@
 import { api } from "@/config/api";
-import type { HistoricalQuote, CurrencyQuote, MacroIndicator, BenchmarkPoint, FIIDetailData, CryptoQuoteItem, FinancialStatementItem } from "@/types/quote";
+import type { HistoricalQuote, CurrencyQuote, MacroIndicator, BenchmarkPoint, FIIDetailData, CryptoQuoteItem, FinancialStatementItem, OptionContract } from "@/types/quote";
 
 export const quotesApi = {
   getHistory: (ticker: string, range = "1y") =>
@@ -26,5 +26,10 @@ export const quotesApi = {
   getFinancials: (ticker: string, statementType = "INCOME", periodType = "ANNUAL") =>
     api.get<FinancialStatementItem[]>(`/quotes/${ticker}/financials`, {
       params: { statement_type: statementType, period_type: periodType },
+    }),
+
+  getOptions: (ticker: string, expirationDate?: string) =>
+    api.get<OptionContract[]>(`/quotes/${ticker}/options`, {
+      params: expirationDate ? { expiration_date: expirationDate } : undefined,
     }),
 };
