@@ -3,13 +3,13 @@ import { useQuery } from "@tanstack/react-query";
 import { portfolioApi } from "@/api/portfolio";
 import { PositionsTable } from "@/components/tables/PositionsTable";
 import { AllocationChart } from "@/components/charts/AllocationChart";
-import { PatrimonyChart } from "@/components/charts/PatrimonyChart";
+import { BenchmarkChart } from "@/components/charts/BenchmarkChart";
 import { LoadingState } from "@/components/common/LoadingState";
 import { ErrorState } from "@/components/common/ErrorState";
 import { EmptyState } from "@/components/common/EmptyState";
 import { ReferenceTimeHint } from "@/components/common/ReferenceTimeHint";
 import { formatCurrency, formatPercent, plClass } from "@/utils/format";
-import { Briefcase, PieChart, BarChart3 } from "lucide-react";
+import { Briefcase, PieChart } from "lucide-react";
 import { cn } from "@/utils/cn";
 import { TermTooltip } from "@/components/common/TermTooltip";
 
@@ -28,10 +28,6 @@ export function PortfolioPage() {
   const allocationBySector = useQuery({
     queryKey: ["portfolio", "allocation", "sector"],
     queryFn: () => portfolioApi.getAllocationBySector().then((r) => r.data),
-  });
-  const patrimonyEvolution = useQuery({
-    queryKey: ["portfolio", "evolution", "patrimony"],
-    queryFn: () => portfolioApi.getPatrimonyEvolution(12).then((r) => r.data),
   });
 
   const positions = Array.isArray(summary.data?.positions) ? summary.data!.positions : [];
@@ -119,23 +115,9 @@ export function PortfolioPage() {
         ))}
       </div>
 
-      {/* Evolução Patrimonial */}
+      {/* Rentabilidade Comparada */}
       <div className="card-haveres p-4 sm:p-5">
-        <div className="flex items-center gap-2 mb-4">
-          <BarChart3 size={18} className="text-haveres-blue" />
-          <h2 className="text-sm font-semibold text-white">Evolução Patrimonial (12 meses)</h2>
-        </div>
-        {patrimonyEvolution.isLoading ? (
-          <LoadingState />
-        ) : patrimonyEvolution.isError ? (
-          <ErrorState onRetry={() => patrimonyEvolution.refetch()} />
-        ) : patrimonyEvolution.data?.length ? (
-          <PatrimonyChart data={patrimonyEvolution.data} />
-        ) : (
-          <p className="text-sm text-muted-foreground py-8 text-center">
-            Sem histórico. Os dados aparecerão após o primeiro snapshot diário.
-          </p>
-        )}
+        <BenchmarkChart />
       </div>
 
       {/* Alocação por Classe + por Setor */}
