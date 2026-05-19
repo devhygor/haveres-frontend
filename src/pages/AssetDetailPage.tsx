@@ -4,6 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import { portfolioApi } from "@/api/portfolio";
 import { FundamentalsCard } from "@/components/cards/FundamentalsCard";
 import { FIIDetailCard } from "@/components/cards/FIIDetailCard";
+import { FinancialStatementsCard } from "@/components/cards/FinancialStatementsCard";
 import { PriceHistoryChart } from "@/components/charts/PriceHistoryChart";
 import { LoadingState } from "@/components/common/LoadingState";
 import { ErrorState } from "@/components/common/ErrorState";
@@ -87,6 +88,11 @@ export function AssetDetailPage() {
       {/* Fundamentalistas (ações, ETFs, BDRs) */}
       {position.asset_type !== "FII" && (
         <FundamentalsCard position={position} />
+      )}
+
+      {/* Demonstrações financeiras (ações, ETFs, BDRs — não FII/CRYPTO) */}
+      {position.asset_type !== "FII" && position.asset_type !== "CRYPTO" && (
+        <FinancialStatementsCard ticker={position.ticker} />
       )}
     </div>
   );

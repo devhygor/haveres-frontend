@@ -55,6 +55,8 @@ const SYNC_LABELS: Record<string, string> = {
   crypto_quotes: "Cotações Cripto",
   // Fase 3 — Fundamentos
   asset_fundamentals: "Fundamentos dos Ativos",
+  asset_profiles: "Perfis de Empresas",
+  financial_statements: "Demonstrações Financeiras",
   // Fase 4 — Histórico
   currency_history: "Histórico PTAX",
   fii_indicator_history: "Histórico Indicadores FII",
@@ -72,7 +74,7 @@ type SyncPhaseName = "Catálogos" | "Cotações" | "Fundamentos" | "Histórico" 
 const SYNC_PHASES: { label: SyncPhaseName; keys: string[] }[] = [
   { label: "Catálogos",   keys: ["assets_catalog", "fii_details", "crypto_catalog"] },
   { label: "Cotações",    keys: ["quotes", "currencies", "fii_dividends", "macro_indicators", "crypto_quotes"] },
-  { label: "Fundamentos", keys: ["asset_fundamentals"] },
+  { label: "Fundamentos", keys: ["asset_fundamentals", "asset_profiles", "financial_statements"] },
   { label: "Histórico",   keys: ["currency_history", "fii_indicator_history", "fii_reports"] },
   { label: "Econômicos",  keys: ["inflation", "prime_rate"] },
   { label: "Portfólio",   keys: ["portfolio_history", "portfolio_snapshots"] },

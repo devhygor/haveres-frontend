@@ -44,6 +44,35 @@ export interface CryptoQuoteItem {
   market_cap: number | null;
 }
 
+export interface FinancialStatementItem {
+  statement_type: string;
+  period_type: string;
+  period_end_date: string;
+  // Income Statement
+  total_revenue: number | null;
+  cost_of_revenue: number | null;
+  gross_profit: number | null;
+  ebit: number | null;
+  ebitda: number | null;
+  net_income: number | null;
+  interest_expense: number | null;
+  income_tax_expense: number | null;
+  // Balance Sheet
+  total_assets: number | null;
+  total_liabilities: number | null;
+  total_equity: number | null;
+  cash_and_equivalents: number | null;
+  short_term_debt: number | null;
+  long_term_debt: number | null;
+  retained_earnings: number | null;
+  // Cash Flow Statement
+  operating_cash_flow: number | null;
+  investing_cash_flow: number | null;
+  financing_cash_flow: number | null;
+  capital_expenditures: number | null;
+  free_cash_flow: number | null;
+}
+
 export interface FIIDetailData {
   fii_type: string;
   fii_sector: string;

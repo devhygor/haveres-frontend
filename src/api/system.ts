@@ -18,7 +18,7 @@ export interface UserMetrics {
 export type SyncName =
   | "assets_catalog" | "fii_details" | "crypto_catalog"
   | "quotes" | "currencies" | "fii_dividends" | "macro_indicators" | "crypto_quotes"
-  | "asset_fundamentals"
+  | "asset_fundamentals" | "asset_profiles" | "financial_statements"
   | "currency_history" | "fii_indicator_history" | "fii_reports"
   | "inflation" | "prime_rate"
   | "portfolio_history" | "portfolio_snapshots";
@@ -33,6 +33,8 @@ export interface SyncStatus {
   macro_indicators: string | null;
   crypto_quotes: string | null;
   asset_fundamentals: string | null;
+  asset_profiles: string | null;
+  financial_statements: string | null;
   currency_history: string | null;
   fii_indicator_history: string | null;
   fii_reports: string | null;
@@ -51,6 +53,8 @@ export interface SyncAllResult {
   macro_indicators: string;
   crypto_quotes: string;
   asset_fundamentals: string;
+  asset_profiles: string;
+  financial_statements: string;
   currency_history: string;
   fii_indicator_history: string;
   fii_reports: string;
