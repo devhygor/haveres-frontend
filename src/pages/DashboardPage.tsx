@@ -64,7 +64,7 @@ export function DashboardPage() {
   }, [allocationByType.data, selectedType]);
 
   const upcomingTotal = useMemo(() => {
-    return (upcomingDividends.data ?? []).reduce((s, d) => s + d.expected_amount, 0);
+    return (upcomingDividends.data ?? []).reduce((s, d) => s + Number(d.expected_amount), 0);
   }, [upcomingDividends.data]);
 
   const dividendChartData = useMemo(() => {
@@ -78,7 +78,7 @@ export function DashboardPage() {
     projected.forEach((d) => {
       if (!d.expected_date) return;
       const key = d.expected_date.slice(0, 7) + "-01";
-      byMonth[key] = (byMonth[key] ?? 0) + d.expected_amount;
+      byMonth[key] = (byMonth[key] ?? 0) + Number(d.expected_amount);
     });
     const existingMonths = new Set(historical.map((h) => h.month));
     const projectedPoints = Object.entries(byMonth)
@@ -162,13 +162,6 @@ export function DashboardPage() {
         />
       </div>
 
-      {/* Câmbio + Indicadores macro + Criptomoedas */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        <CurrencyWidget />
-        <MacroWidget />
-        <CryptoWidget />
-      </div>
-
       {/* Evolução patrimonial */}
       <div className="card-haveres p-4 sm:p-5">
         <div className="flex items-center gap-2 mb-4">
@@ -189,17 +182,6 @@ export function DashboardPage() {
           </div>
         )}
       </div>
-
-      {/* Carteira vs CDI */}
-      {benchmark.data && benchmark.data.length > 0 && (
-        <div className="card-haveres p-5">
-          <div className="flex items-center gap-2 mb-4">
-            <Activity size={18} className="text-haveres-blue" />
-            <h2 className="text-sm font-semibold text-white">Carteira vs CDI (12 meses)</h2>
-          </div>
-          <BenchmarkChart data={benchmark.data} />
-        </div>
-      )}
 
       {/* Alocação + Dividendos */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -238,6 +220,17 @@ export function DashboardPage() {
         </div>
       </div>
 
+      {/* Carteira vs CDI */}
+      {benchmark.data && benchmark.data.length > 0 && (
+        <div className="card-haveres p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <Activity size={18} className="text-haveres-blue" />
+            <h2 className="text-sm font-semibold text-white">Carteira vs CDI (12 meses)</h2>
+          </div>
+          <BenchmarkChart data={benchmark.data} />
+        </div>
+      )}
+
       {/* Posições */}
       <div className="card-haveres">
         <div className="flex flex-wrap items-center gap-2 p-4 sm:p-5 border-b border-haveres-border">
@@ -275,6 +268,13 @@ export function DashboardPage() {
             Nenhuma posição. Cadastre movimentações para começar.
           </p>
         )}
+      </div>
+
+      {/* Câmbio + Indicadores macro + Criptomoedas */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <CurrencyWidget />
+        <MacroWidget />
+        <CryptoWidget />
       </div>
     </div>
   );
