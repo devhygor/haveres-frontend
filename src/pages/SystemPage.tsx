@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { systemApi, type SyncProgressItem } from "@/api/system";
+import { systemApi, type SyncProgressItem, type SyncProgress } from "@/api/system";
 import { assetsApi } from "@/api/assets";
 import { LoadingState } from "@/components/common/LoadingState";
 import { AssetsAdminTab } from "@/components/admin/AssetsAdminTab";
@@ -42,38 +42,36 @@ function StatusRow({ icon: Icon, label, status, detail }: {
   );
 }
 
+const SYNC_MANUAL_ONLY: Record<string, string> = {
+  crypto_catalog: "Semanal — não disparado no Sincronizar Tudo para evitar uso excessivo da API.",
+  fii_indicator_history: "Mensal — processamento pesado (~horas). Dispare manualmente quando necessário.",
+  fii_reports: "Mensal — busca relatórios CVM de todos os FIIs. Dispare manualmente quando necessário.",
+  financial_statements: "Mensal — demonstrações financeiras de todas as empresas. Processamento muito pesado.",
+};
+
 const SYNC_LABELS: Record<string, string> = {
-  // Fase 1 — Catálogos
   assets_catalog: "Catálogo de Ativos",
   fii_details: "Catálogo FII",
   crypto_catalog: "Catálogo Cripto",
-  // Fase 2 — Cotações
   quotes: "Preços de Ativos",
   currencies: "Câmbio (Spot)",
   fii_dividends: "Proventos FII",
   macro_indicators: "Indicadores Macro",
   crypto_quotes: "Cotações Cripto",
-  // Fase 3 — Fundamentos
   asset_fundamentals: "Fundamentos dos Ativos",
   asset_profiles: "Perfis de Empresas",
   financial_statements: "Demonstrações Financeiras",
-  // Fase 4 — Histórico
   currency_history: "Histórico PTAX",
   fii_indicator_history: "Histórico Indicadores FII",
   fii_reports: "Relatórios CVM FII",
-  // Fase 5 — Econômicos
   inflation: "Inflação",
   prime_rate: "Taxa Básica (SELIC)",
-  // Fase 6 — Portfólio
   portfolio_history: "Histórico de Preços",
   portfolio_snapshots: "Snapshots de Portfólio",
-  // Fase 7 — Derivativos
   options_chain: "Cadeia de Opções",
 };
 
-type SyncPhaseName = "Catálogos" | "Cotações" | "Fundamentos" | "Histórico" | "Econômicos" | "Portfólio" | "Derivativos";
-
-const SYNC_PHASES: { label: SyncPhaseName; keys: string[] }[] = [
+const SYNC_PHASES: { label: string; keys: string[] }[] = [
   { label: "Catálogos",   keys: ["assets_catalog", "fii_details", "crypto_catalog"] },
   { label: "Cotações",    keys: ["quotes", "currencies", "fii_dividends", "macro_indicators", "crypto_quotes"] },
   { label: "Fundamentos", keys: ["asset_fundamentals", "asset_profiles", "financial_statements"] },
@@ -82,6 +80,84 @@ const SYNC_PHASES: { label: SyncPhaseName; keys: string[] }[] = [
   { label: "Portfólio",   keys: ["portfolio_history", "portfolio_snapshots"] },
   { label: "Derivativos", keys: ["options_chain"] },
 ];
+
+function calcProgress(keys: string[], sp: SyncProgress): { done: number; total: number; pct: number; anyRunning: boolean } {
+  let done = 0;
+  let total = keys.length;
+  let anyRunning = false;
+
+  for (const k of keys) {
+    const item = sp[k as keyof SyncProgress];
+    if (!item) continue;
+    if (item.status === "done") {
+      done += 1;
+    } else if (item.status === "running") {
+      anyRunning = true;
+      if (item.total > 0) {
+        done += item.done / item.total;
+      }
+    }
+  }
+
+  return { done: Math.floor(done), total, pct: total > 0 ? Math.round((done / total) * 100) : 0, anyRunning };
+}
+
+function OverallProgressBar({ sp }: { sp: SyncProgress }) {
+  const allKeys = SYNC_PHASES.flatMap((p) => p.keys).filter((k) => !SYNC_MANUAL_ONLY[k]);
+  const { total, pct, anyRunning } = calcProgress(allKeys, sp);
+  const doneExact = allKeys.filter((k) => sp[k as keyof SyncProgress]?.status === "done").length;
+
+  return (
+    <div className="flex-1 min-w-0">
+      <div className="flex items-center justify-between mb-1">
+        <span className="text-xs text-muted-foreground">
+          {anyRunning ? "Sincronizando…" : `${doneExact} de ${total} concluídos`}
+        </span>
+        <span className={cn("text-xs font-numeric font-semibold", {
+          "text-haveres-blue": anyRunning,
+          "text-gain": !anyRunning && pct === 100,
+          "text-muted-foreground": !anyRunning && pct < 100,
+        })}>
+          {pct}%
+        </span>
+      </div>
+      <div className="h-2 bg-haveres-dark rounded-full overflow-hidden">
+        <div
+          className={cn("h-full rounded-full transition-all duration-700", {
+            "bg-haveres-blue": anyRunning,
+            "bg-gain": !anyRunning && pct > 0,
+            "bg-haveres-border": pct === 0,
+          })}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function GroupProgressBar({ keys, sp }: { keys: string[]; sp: SyncProgress }) {
+  const { pct, anyRunning } = calcProgress(keys, sp);
+  const allDone = keys.every((k) => sp[k as keyof SyncProgress]?.status === "done");
+  const hasError = keys.some((k) => sp[k as keyof SyncProgress]?.status === "error");
+
+  return (
+    <div className="h-1 bg-haveres-dark rounded-full overflow-hidden">
+      {anyRunning && pct === 0 ? (
+        <div className="h-full w-1/3 rounded-full bg-haveres-blue animate-pulse" />
+      ) : (
+        <div
+          className={cn("h-full rounded-full transition-all duration-500", {
+            "bg-gain": allDone,
+            "bg-haveres-blue": anyRunning && !allDone,
+            "bg-loss": hasError && !anyRunning && !allDone,
+            "bg-haveres-border": pct === 0 && !anyRunning,
+          })}
+          style={{ width: `${Math.min(pct, 100)}%` }}
+        />
+      )}
+    </div>
+  );
+}
 
 function ProgressRow({ label, item, lastTs, onSync, syncing }: {
   label: string;
@@ -99,7 +175,17 @@ function ProgressRow({ label, item, lastTs, onSync, syncing }: {
   return (
     <div className="py-3 border-b border-haveres-border last:border-0">
       <div className="flex items-center justify-between mb-1.5">
-        <p className="text-sm font-medium text-white">{SYNC_LABELS[label] ?? label}</p>
+        <div className="flex items-center gap-1.5">
+          <p className="text-sm font-medium text-white">{SYNC_LABELS[label] ?? label}</p>
+          {SYNC_MANUAL_ONLY[label] && (
+            <span
+              title={SYNC_MANUAL_ONLY[label]}
+              className="cursor-help text-[10px] font-medium px-1.5 py-0.5 rounded bg-amber-400/10 text-amber-400 leading-none"
+            >
+              Manual
+            </span>
+          )}
+        </div>
         <div className="flex items-center gap-2">
           {isRunning && item.total > 0 && (
             <span className="text-xs text-haveres-blue font-medium font-numeric">
@@ -202,6 +288,8 @@ export function SystemPage() {
     queryFn: () => systemApi.listAdmins().then((r) => r.data),
   });
 
+  const [confirmSyncAll, setConfirmSyncAll] = useState(false);
+
   const syncAll = useMutation({
     mutationFn: () => systemApi.syncAll(),
     onSuccess: () => {
@@ -212,6 +300,16 @@ export function SystemPage() {
     },
   });
 
+  const handleSyncAll = async (includeManual: boolean) => {
+    setConfirmSyncAll(false);
+    syncAll.mutate();
+    if (includeManual) {
+      await Promise.allSettled(
+        Object.keys(SYNC_MANUAL_ONLY).map((k) => systemApi.triggerSync(k))
+      );
+    }
+  };
+
   const [syncingOne, setSyncingOne] = useState<string | null>(null);
   const triggerOne = async (name: string) => {
     if (syncingOne) return;
@@ -220,6 +318,19 @@ export function SystemPage() {
       await systemApi.triggerSync(name);
     } finally {
       setSyncingOne(null);
+    }
+  };
+
+  const [syncingGroup, setSyncingGroup] = useState<string | null>(null);
+  const triggerGroup = async (phaseLabel: string, keys: string[], sp: SyncProgress) => {
+    if (syncingGroup) return;
+    const runnable = keys.filter((k) => sp[k as keyof SyncProgress]?.status !== "running");
+    if (runnable.length === 0) return;
+    setSyncingGroup(phaseLabel);
+    try {
+      await Promise.allSettled(runnable.map((k) => systemApi.triggerSync(k)));
+    } finally {
+      setSyncingGroup(null);
     }
   };
 
@@ -306,47 +417,97 @@ export function SystemPage() {
         )}
       </div>
 
-      {/* Sincronizar Tudo */}
+      {/* Sincronização */}
       <div className="card-haveres p-5">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <RefreshCw size={18} className="text-haveres-blue" />
-            <h2 className="text-sm font-semibold text-white">Sincronização</h2>
-          </div>
-          <button
-            onClick={() => syncAll.mutate()}
-            disabled={syncAll.isPending}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-haveres-blue hover:bg-blue-600 text-white transition-colors disabled:opacity-50"
-          >
-            <RefreshCw size={12} className={syncAll.isPending ? "animate-spin" : ""} />
-            Sincronizar Tudo
-          </button>
+        {/* Header com barra de progresso geral */}
+        <div className="flex items-center gap-3 mb-2">
+          <RefreshCw size={18} className="text-haveres-blue shrink-0" />
+          <h2 className="text-sm font-semibold text-white shrink-0">Sincronização</h2>
+          {sp && (
+            <OverallProgressBar sp={sp} />
+          )}
+          {confirmSyncAll ? (
+            <div className="shrink-0 flex items-center gap-1.5 bg-haveres-dark border border-haveres-border rounded-lg px-3 py-1.5">
+              <span className="text-xs text-amber-400 font-medium mr-1">Incluir itens pesados?</span>
+              <button
+                onClick={() => handleSyncAll(false)}
+                className="text-xs px-2 py-0.5 rounded bg-haveres-blue/10 text-haveres-blue hover:bg-haveres-blue/20 font-medium transition-colors"
+              >
+                Só automáticos
+              </button>
+              <button
+                onClick={() => handleSyncAll(true)}
+                className="text-xs px-2 py-0.5 rounded bg-amber-400/10 text-amber-400 hover:bg-amber-400/20 font-medium transition-colors"
+              >
+                Incluir todos
+              </button>
+              <button
+                onClick={() => setConfirmSyncAll(false)}
+                className="text-xs text-muted-foreground hover:text-white ml-1 transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setConfirmSyncAll(true)}
+              disabled={syncAll.isPending}
+              className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-haveres-blue hover:bg-blue-600 text-white transition-colors disabled:opacity-50"
+            >
+              <RefreshCw size={12} className={syncAll.isPending ? "animate-spin" : ""} />
+              Sincronizar Tudo
+            </button>
+          )}
         </div>
 
         {sp && ss !== undefined && (
-          <div className="space-y-4">
+          <div className="space-y-3 mt-4">
             {SYNC_PHASES.map((phase) => {
               const phaseKeys = phase.keys.filter((k) => k in sp);
-              const runningCount = phaseKeys.filter((k) => sp[k as keyof typeof sp]?.status === "running").length;
+              const { pct: groupPct, anyRunning: groupRunning } = calcProgress(phaseKeys, sp);
               const doneCount = phaseKeys.filter((k) => sp[k as keyof typeof sp]?.status === "done").length;
               const allDone = doneCount === phaseKeys.length && phaseKeys.length > 0;
+              const isGroupSyncing = syncingGroup === phase.label;
+
               return (
                 <div key={phase.label} className="rounded-lg border border-haveres-border overflow-hidden">
+                  {/* Cabeçalho do grupo */}
                   <div className={cn(
-                    "flex items-center justify-between px-4 py-2.5",
-                    allDone ? "bg-gain/5" : runningCount > 0 ? "bg-haveres-blue/5" : "bg-haveres-dark"
+                    "px-4 pt-2.5 pb-2",
+                    allDone ? "bg-gain/5" : groupRunning ? "bg-haveres-blue/5" : "bg-haveres-dark"
                   )}>
-                    <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                      {phase.label}
-                    </span>
-                    <span className={cn("text-xs font-medium", {
-                      "text-gain": allDone,
-                      "text-haveres-blue": runningCount > 0 && !allDone,
-                      "text-muted-foreground": !allDone && runningCount === 0,
-                    })}>
-                      {allDone ? "✓ Concluído" : runningCount > 0 ? `${runningCount} em andamento` : `${doneCount}/${phaseKeys.length}`}
-                    </span>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                        {phase.label}
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className={cn("text-xs font-numeric font-medium", {
+                          "text-gain": allDone,
+                          "text-haveres-blue": groupRunning && !allDone,
+                          "text-muted-foreground": !allDone && !groupRunning,
+                        })}>
+                          {allDone ? "✓ Concluído" : groupRunning ? `${groupPct}%` : `${doneCount}/${phaseKeys.length}`}
+                        </span>
+                        <button
+                          onClick={() => triggerGroup(phase.label, phaseKeys, sp)}
+                          disabled={isGroupSyncing || groupRunning}
+                          className={cn(
+                            "flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-colors",
+                            groupRunning || isGroupSyncing
+                              ? "text-haveres-blue/50 cursor-not-allowed"
+                              : "bg-haveres-blue/10 text-haveres-blue hover:bg-haveres-blue/20"
+                          )}
+                        >
+                          <RefreshCw size={10} className={isGroupSyncing || groupRunning ? "animate-spin" : ""} />
+                          Sincronizar {phase.label}
+                        </button>
+                      </div>
+                    </div>
+                    {/* Barra de progresso do grupo */}
+                    <GroupProgressBar keys={phaseKeys} sp={sp} />
                   </div>
+
+                  {/* Itens do grupo */}
                   <div className="px-4">
                     {phaseKeys.map((key) => (
                       <ProgressRow
