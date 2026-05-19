@@ -7,6 +7,7 @@ import { PatrimonyChart } from "@/components/charts/PatrimonyChart";
 import { LoadingState } from "@/components/common/LoadingState";
 import { ErrorState } from "@/components/common/ErrorState";
 import { EmptyState } from "@/components/common/EmptyState";
+import { ReferenceTimeHint } from "@/components/common/ReferenceTimeHint";
 import { formatCurrency, formatPercent, plClass } from "@/utils/format";
 import { Briefcase, PieChart, BarChart3 } from "lucide-react";
 import { cn } from "@/utils/cn";
@@ -87,7 +88,21 @@ export function PortfolioPage() {
       {/* Resumo */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { label: "Valor Atual", value: formatCurrency(data.total_value), highlight: true },
+          {
+            label: (
+              <span className="inline-flex items-center gap-1.5">
+                Valor Atual
+                <ReferenceTimeHint
+                  asOf={data.valuation_reference_at}
+                  rangeStart={data.valuation_reference_min_at}
+                  rangeEnd={data.valuation_reference_max_at}
+                />
+              </span>
+            ),
+            key: "Valor Atual",
+            value: formatCurrency(data.total_value),
+            highlight: true,
+          },
           { label: "Total Investido", value: formatCurrency(data.total_invested) },
           { label: <TermTooltip term="P&L Absoluto" />, key: "P&L Absoluto", value: formatCurrency(data.pl_absolute), colored: data.pl_absolute },
           { label: <TermTooltip term="P&L %" />, key: "P&L %", value: formatPercent(data.pl_percent, true), colored: data.pl_percent },

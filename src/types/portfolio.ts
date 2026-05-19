@@ -40,6 +40,7 @@ export interface Position {
   week_52_low?: number | null;
   logo_url?: string;
   fii_detail?: FIIDetail | null;
+  pricing_reference_at?: string | null;
 }
 
 export interface PortfolioSummary {
@@ -50,6 +51,9 @@ export interface PortfolioSummary {
   dividends_month: number;
   dividends_year: number;
   positions_count: number;
+  valuation_reference_at?: string | null;
+  valuation_reference_min_at?: string | null;
+  valuation_reference_max_at?: string | null;
   positions: Position[];
 }
 

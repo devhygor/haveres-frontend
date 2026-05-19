@@ -14,6 +14,7 @@ import { MacroWidget } from "@/components/cards/MacroWidget";
 import { CryptoWidget } from "@/components/cards/CryptoWidget";
 import { LoadingState, SkeletonCard } from "@/components/common/LoadingState";
 import { ErrorState } from "@/components/common/ErrorState";
+import { ReferenceTimeHint } from "@/components/common/ReferenceTimeHint";
 import { formatCurrency } from "@/utils/format";
 import { TermTooltip } from "@/components/common/TermTooltip";
 
@@ -129,7 +130,16 @@ export function DashboardPage() {
       {/* Cards principais */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <StatCard
-          title="Patrimônio Total"
+          title={(
+            <span className="inline-flex items-center gap-1.5">
+              Patrimônio Total
+              <ReferenceTimeHint
+                asOf={data.valuation_reference_at}
+                rangeStart={data.valuation_reference_min_at}
+                rangeEnd={data.valuation_reference_max_at}
+              />
+            </span>
+          )}
           value={formatCurrency(data.total_value)}
           icon={Wallet}
           iconColor="text-haveres-blue"

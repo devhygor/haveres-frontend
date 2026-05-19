@@ -4,7 +4,7 @@ import { cn } from "@/utils/cn";
 import { formatCurrency, formatPercent, plClass } from "@/utils/format";
 
 interface StatCardProps {
-  title: string;
+  title: ReactNode;
   value: string | number;
   isCurrency?: boolean;
   change?: number;

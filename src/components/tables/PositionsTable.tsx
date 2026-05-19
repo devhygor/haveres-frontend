@@ -11,6 +11,7 @@ import type { Position } from "@/types/portfolio";
 import { ASSET_TYPE_LABELS } from "@/types/asset";
 import { AssetLogo } from "@/components/common/AssetLogo";
 import { TermTooltip } from "@/components/common/TermTooltip";
+import { ReferenceTimeHint } from "@/components/common/ReferenceTimeHint";
 
 function toNumber(value: unknown): number {
   if (typeof value === "number") return Number.isFinite(value) ? value : 0;
@@ -96,10 +97,13 @@ const columns: ColumnDef<Position>[] = [
     accessorKey: "current_value",
     header: "Valor Atual",
     sortingFn: numericSorting,
-    cell: ({ getValue }) => (
-      <span className="font-mono text-sm text-white font-medium">
-        {formatCurrency(getValue() as number)}
-      </span>
+    cell: ({ row }) => (
+      <div className="flex items-center gap-1.5">
+        <span className="font-mono text-sm text-white font-medium">
+          {formatCurrency(row.original.current_value)}
+        </span>
+        <ReferenceTimeHint compact asOf={row.original.pricing_reference_at} />
+      </div>
     ),
   },
   {

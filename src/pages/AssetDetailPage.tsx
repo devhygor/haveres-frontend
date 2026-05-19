@@ -14,6 +14,7 @@ import { plClass } from "@/utils/format";
 import { cn } from "@/utils/cn";
 import { AssetLogo } from "@/components/common/AssetLogo";
 import { TermTooltip } from "@/components/common/TermTooltip";
+import { ReferenceTimeHint } from "@/components/common/ReferenceTimeHint";
 
 export function AssetDetailPage() {
   const { ticker } = useParams<{ ticker: string }>();
@@ -69,7 +70,16 @@ export function AssetDetailPage() {
           { label: "Qtd", value: position.quantity },
           { label: <TermTooltip term="Preço Médio" />, key: "Preço Médio", value: formatCurrency(position.average_price) },
           { label: <TermTooltip term="Investido" />, key: "Investido", value: formatCurrency(position.total_invested) },
-          { label: "Valor Atual", value: formatCurrency(position.current_value) },
+          {
+            label: (
+              <span className="inline-flex items-center gap-1.5">
+                Valor Atual
+                <ReferenceTimeHint asOf={position.pricing_reference_at} />
+              </span>
+            ),
+            key: "Valor Atual",
+            value: formatCurrency(position.current_value),
+          },
         ].map(({ label, key, value }) => (
           <div key={key ?? String(label)} className="card-haveres p-4">
             <p className="text-xs text-muted-foreground mb-1">{label}</p>
