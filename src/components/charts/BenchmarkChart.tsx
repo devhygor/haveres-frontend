@@ -12,6 +12,8 @@ import { ErrorState } from "@/components/common/ErrorState";
 import { cn } from "@/utils/cn";
 
 const PERIODS = [
+  { label: "1M",    months: 1 },
+  { label: "6M",    months: 6 },
   { label: "12M",   months: 12 },
   { label: "2A",    months: 24 },
   { label: "5A",    months: 60 },
