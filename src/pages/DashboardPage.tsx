@@ -1,8 +1,7 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Wallet, TrendingUp, CalendarDays, PieChart, Activity } from "lucide-react";
+import { Wallet, TrendingUp, CalendarDays, PieChart } from "lucide-react";
 import { portfolioApi } from "@/api/portfolio";
-import { quotesApi } from "@/api/quotes";
 import { StatCard, PLCard } from "@/components/cards/StatCard";
 import { DividendsChart } from "@/components/charts/DividendsChart";
 import { AllocationChart } from "@/components/charts/AllocationChart";
@@ -30,11 +29,6 @@ export function DashboardPage() {
   const dividendsEvolution = useQuery({
     queryKey: ["portfolio", "evolution", "dividends"],
     queryFn: () => portfolioApi.getDividendsEvolution(12).then((r) => r.data),
-  });
-
-  const benchmark = useQuery({
-    queryKey: ["quotes", "benchmark"],
-    queryFn: () => quotesApi.getBenchmark(12).then((r) => r.data),
   });
 
   const upcomingDividends = useQuery({
@@ -170,16 +164,10 @@ export function DashboardPage() {
         </div>
       </div>
 
-      {/* Carteira vs CDI */}
-      {benchmark.data && benchmark.data.length > 0 && (
-        <div className="card-haveres p-5">
-          <div className="flex items-center gap-2 mb-4">
-            <Activity size={18} className="text-haveres-blue" />
-            <h2 className="text-sm font-semibold text-white">Carteira vs CDI (12 meses)</h2>
-          </div>
-          <BenchmarkChart data={benchmark.data} />
-        </div>
-      )}
+      {/* Rentabilidade Comparada */}
+      <div className="card-haveres p-4 sm:p-5">
+        <BenchmarkChart />
+      </div>
 
       {/* Câmbio + Indicadores macro + Criptomoedas */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

@@ -14,8 +14,8 @@ export const quotesApi = {
   getMacro: () =>
     api.get<MacroIndicator[]>("/quotes/macro"),
 
-  getBenchmark: (months = 12) =>
-    api.get<BenchmarkPoint[]>("/quotes/benchmark", { params: { months } }),
+  getBenchmark: (months = 12, assetType = "ALL") =>
+    api.get<BenchmarkPoint[]>("/quotes/benchmark", { params: { months, asset_type: assetType } }),
 
   getFIIDetail: (ticker: string) =>
     api.get<FIIDetailData>(`/quotes/${ticker}/fii-detail`),

@@ -28,6 +28,12 @@ export interface BenchmarkPoint {
   date: string;
   portfolio_return: number;
   cdi_return: number;
+  ipca_return: number | null;
+  ibov_return: number | null;
+  ifix_return: number | null;
+  smll_return: number | null;
+  idiv_return: number | null;
+  ivvb11_return: number | null;
 }
 
 export interface CryptoQuoteItem {
