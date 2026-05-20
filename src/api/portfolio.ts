@@ -9,6 +9,8 @@ import type {
   SaveTargetAllocationResult,
   SaveMaxBuyPricePayload,
   SaveMaxBuyPriceResult,
+  ContributionSimulationPayload,
+  ContributionSimulationResult,
 } from "@/types/portfolio";
 
 export const portfolioApi = {
@@ -28,4 +30,6 @@ export const portfolioApi = {
     api.put<SaveTargetAllocationResult>("/portfolio/target-allocation", payload),
   saveMaxBuyPrice: (payload: SaveMaxBuyPricePayload) =>
     api.put<SaveMaxBuyPriceResult>("/portfolio/max-buy-price", payload),
+  simulateContributionPlan: (payload: ContributionSimulationPayload) =>
+    api.post<ContributionSimulationResult>("/portfolio/contribution-plan", payload),
 };

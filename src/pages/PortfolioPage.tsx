@@ -9,9 +9,10 @@ import { ErrorState } from "@/components/common/ErrorState";
 import { EmptyState } from "@/components/common/EmptyState";
 import { ReferenceTimeHint } from "@/components/common/ReferenceTimeHint";
 import { formatCurrency, formatPercent, plClass } from "@/utils/format";
-import { Briefcase, PieChart, Wallet, TrendingUp, TrendingDown } from "lucide-react";
+import { Briefcase, PieChart, Wallet, TrendingUp, TrendingDown, Calculator } from "lucide-react";
 import { cn } from "@/utils/cn";
 import { TermTooltip } from "@/components/common/TermTooltip";
+import type { ContributionSimulationResult } from "@/types/portfolio";
 
 function toFinite(value: unknown): number {
   const parsed = typeof value === "number" ? value : Number(value);
@@ -112,6 +113,18 @@ function formatMoneyInput(value: number | string | null | undefined): string {
   }).format(parsed);
 }
 
+function formatSuggestedQuantity(value: unknown): string {
+  const quantity = toFinite(value);
+  if (Math.abs(quantity - Math.trunc(quantity)) < 0.0001) {
+    return String(Math.trunc(quantity));
+  }
+
+  return new Intl.NumberFormat("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(quantity);
+}
+
 function parseApiError(error: unknown, fallback: string): string {
   if (error && typeof error === "object") {
     const maybeError = error as {
@@ -142,6 +155,9 @@ export function PortfolioPage() {
   const [targetSuccess, setTargetSuccess] = useState("");
   const [maxBuyError, setMaxBuyError] = useState("");
   const [maxBuySuccess, setMaxBuySuccess] = useState("");
+  const [contributionInput, setContributionInput] = useState("");
+  const [contributionError, setContributionError] = useState("");
+  const [contributionResult, setContributionResult] = useState<ContributionSimulationResult | null>(null);
 
   const summary = useQuery({
     queryKey: ["portfolio", "summary"],
@@ -185,6 +201,18 @@ export function PortfolioPage() {
     onError: (error) => {
       setMaxBuySuccess("");
       setMaxBuyError(parseApiError(error, "Não foi possível salvar os preços máximos. Tente novamente."));
+    },
+  });
+
+  const simulateContributionPlan = useMutation({
+    mutationFn: (amount: number) => portfolioApi.simulateContributionPlan({ amount }),
+    onSuccess: (response) => {
+      setContributionError("");
+      setContributionResult(response.data);
+    },
+    onError: (error) => {
+      setContributionResult(null);
+      setContributionError(parseApiError(error, "Não foi possível simular o aporte. Tente novamente."));
     },
   });
 
@@ -493,6 +521,19 @@ export function PortfolioPage() {
     saveMaxBuyPrice.mutate(items);
   };
 
+  const handleSimulateContribution = () => {
+    setContributionError("");
+
+    const parsed = parseMoneyInput(contributionInput);
+    if (!parsed.valid || parsed.value == null || parsed.value <= 0) {
+      setContributionResult(null);
+      setContributionError("Informe um valor de aporte válido e maior que zero.");
+      return;
+    }
+
+    simulateContributionPlan.mutate(parsed.value);
+  };
+
   if (summary.isLoading) return <LoadingState />;
   if (summary.isError) return <ErrorState onRetry={() => summary.refetch()} />;
   if (!summary.data) return <ErrorState message="Não foi possível carregar os dados da carteira." onRetry={() => summary.refetch()} />;
@@ -637,6 +678,117 @@ export function PortfolioPage() {
             <EmptyState title="Sem dados de setor" />
           )}
         </div>
+      </div>
+
+      {/* Planejador de Aporte */}
+      <div className="card-haveres p-4 sm:p-5 space-y-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <Calculator size={18} className="text-haveres-blue" />
+          <h2 className="text-sm font-semibold text-white">Planejador de Aporte</h2>
+          <span className="text-xs text-muted-foreground">
+            Simula a compra de cotas para aproximar sua carteira da meta de alocação.
+          </span>
+        </div>
+
+        {(hasUnsavedTargetChanges || hasUnsavedMaxBuyChanges) && (
+          <p className="text-xs text-muted-foreground">
+            A simulação considera as metas e preços máximos já salvos.
+          </p>
+        )}
+
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative w-full sm:w-[220px]">
+            <span className="absolute left-2 top-2 text-xs text-muted-foreground pointer-events-none">R$</span>
+            <input
+              type="text"
+              value={contributionInput}
+              inputMode="numeric"
+              onChange={(event) => setContributionInput(maskMoneyInput(event.target.value))}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  handleSimulateContribution();
+                }
+              }}
+              className="w-full bg-secondary border border-haveres-border rounded pl-8 pr-3 py-2 text-sm font-mono text-white focus:outline-none focus:ring-1 focus:ring-haveres-blue"
+              placeholder="1.000,00"
+            />
+          </div>
+
+          <button
+            type="button"
+            onClick={handleSimulateContribution}
+            disabled={simulateContributionPlan.isPending}
+            className="px-3 py-2 rounded text-xs font-medium bg-haveres-blue text-white hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {simulateContributionPlan.isPending ? "Simulando..." : "Simular aporte"}
+          </button>
+        </div>
+
+        {contributionError && <p className="text-xs text-loss">{contributionError}</p>}
+
+        {contributionResult && (
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              <span className="px-2 py-1 rounded bg-secondary text-muted-foreground font-numeric">
+                Aporte: {formatCurrency(toFinite(contributionResult.amount))}
+              </span>
+              <span className="px-2 py-1 rounded bg-secondary text-muted-foreground font-numeric">
+                Alocado: {formatCurrency(toFinite(contributionResult.allocated_amount))}
+              </span>
+              <span className="px-2 py-1 rounded bg-secondary text-muted-foreground font-numeric">
+                Saldo: {formatCurrency(toFinite(contributionResult.leftover_amount))}
+              </span>
+            </div>
+
+            {contributionResult.recommendations.length > 0 ? (
+              <div className="overflow-x-auto rounded-lg border border-haveres-border/70">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-haveres-border/70 text-xs uppercase tracking-wider text-muted-foreground">
+                      <th className="text-left px-3 py-2">Ativo</th>
+                      <th className="text-right px-3 py-2">Qtd</th>
+                      <th className="text-right px-3 py-2">Preço</th>
+                      <th className="text-right px-3 py-2">Aporte</th>
+                      <th className="text-right px-3 py-2">Aloc. proj.</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {contributionResult.recommendations.map((item) => (
+                      <tr key={item.asset_id} className="border-b border-haveres-border/40 last:border-b-0">
+                        <td className="px-3 py-2">
+                          <p className="font-mono text-haveres-blue text-sm">{item.ticker}</p>
+                          <p className="text-xs text-muted-foreground truncate max-w-[240px]">{item.name}</p>
+                        </td>
+                        <td className="px-3 py-2 text-right font-mono text-white">{formatSuggestedQuantity(item.quantity_to_buy)}</td>
+                        <td className="px-3 py-2 text-right font-mono text-white">{formatCurrency(toFinite(item.current_price))}</td>
+                        <td className="px-3 py-2 text-right font-mono text-white">{formatCurrency(toFinite(item.amount_to_buy))}</td>
+                        <td className="px-3 py-2 text-right font-mono text-white">{formatPercent(toFinite(item.projected_allocation_percent))}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground">Nenhuma compra sugerida com o valor informado.</p>
+            )}
+
+            {contributionResult.blocked_assets.length > 0 && (
+              <div className="space-y-1">
+                <p className="text-xs text-loss">
+                  Ativos abaixo da meta, mas bloqueados pelo preço máximo:
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {contributionResult.blocked_assets.map((item) => (
+                    <span key={item.asset_id} className="text-xs px-2 py-1 rounded bg-loss/10 text-loss font-mono">
+                      {item.ticker} (máx {formatCurrency(toFinite(item.max_buy_price))})
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Posições */}

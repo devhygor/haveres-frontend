@@ -99,6 +99,48 @@ export interface SaveMaxBuyPriceResult {
   positions_count: number;
 }
 
+export interface ContributionSimulationPayload {
+  amount: number;
+}
+
+export interface ContributionRecommendation {
+  asset_id: string;
+  ticker: string;
+  name: string;
+  current_price: number;
+  quantity_to_buy: number;
+  amount_to_buy: number;
+  target_allocation_percent: number;
+  current_allocation_percent: number;
+  projected_allocation_percent: number;
+  target_gap_value_before: number;
+  target_gap_value_after: number;
+  max_buy_price: number | null;
+  has_max_buy_rule: boolean;
+  is_within_max_buy_price: boolean;
+}
+
+export interface ContributionBlockedAsset {
+  asset_id: string;
+  ticker: string;
+  name: string;
+  current_price: number;
+  max_buy_price: number | null;
+  target_gap_value_before: number;
+  reason: string;
+}
+
+export interface ContributionSimulationResult {
+  amount: number;
+  allocated_amount: number;
+  leftover_amount: number;
+  projected_total_value: number;
+  considered_assets_count: number;
+  buyable_assets_count: number;
+  recommendations: ContributionRecommendation[];
+  blocked_assets: ContributionBlockedAsset[];
+}
+
 export interface ProjectedDividend {
   ticker: string;
   name: string;
