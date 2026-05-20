@@ -81,7 +81,8 @@ export function BenchmarkChart() {
     if (!data?.length) return new Set();
     const available = new Set<string>();
     INDICES.forEach(({ key, field }) => {
-      if (data.some((d) => d[field] != null)) available.add(key);
+      const points = data.filter((d) => d[field] != null).length;
+      if (points >= 2) available.add(key);
     });
     return available;
   }, [data]);
@@ -157,7 +158,7 @@ export function BenchmarkChart() {
               key={key}
               type="button"
               onClick={() => hasData && toggleIndex(key)}
-              title={!hasData ? "Sem dados — sincronize o ticker no sistema" : undefined}
+              title={!hasData ? "Sem histórico suficiente — sincronize histórico do índice" : undefined}
               disabled={!hasData}
               className={cn(
                 "inline-flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-md font-medium border transition-all",
