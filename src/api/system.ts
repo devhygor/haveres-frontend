@@ -22,7 +22,8 @@ export type SyncName =
   | "currency_history" | "fii_indicator_history" | "fii_reports"
   | "inflation" | "prime_rate"
   | "portfolio_history" | "portfolio_snapshots"
-  | "options_chain" | "treasury_bonds" | "treasury_benchmark_repair";
+  | "options_chain" | "treasury_bonds" | "treasury_benchmark_repair"
+  | "all_dividend_history";
 
 export interface SyncStatus {
   assets_catalog: string | null;
