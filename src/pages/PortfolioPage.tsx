@@ -14,6 +14,9 @@ import { cn } from "@/utils/cn";
 import { TermTooltip } from "@/components/common/TermTooltip";
 import type { ContributionSimulationResult } from "@/types/portfolio";
 
+type ContributionSortKey = "asset" | "quantity" | "price" | "amount" | "projected_allocation";
+type SortDirection = "asc" | "desc";
+
 function toFinite(value: unknown): number {
   const parsed = typeof value === "number" ? value : Number(value);
   return Number.isFinite(parsed) ? parsed : 0;
@@ -155,9 +158,14 @@ export function PortfolioPage() {
   const [targetSuccess, setTargetSuccess] = useState("");
   const [maxBuyError, setMaxBuyError] = useState("");
   const [maxBuySuccess, setMaxBuySuccess] = useState("");
+  const [positionSearch, setPositionSearch] = useState("");
   const [contributionInput, setContributionInput] = useState("");
   const [contributionError, setContributionError] = useState("");
   const [contributionResult, setContributionResult] = useState<ContributionSimulationResult | null>(null);
+  const [contributionSort, setContributionSort] = useState<{ key: ContributionSortKey; direction: SortDirection }>({
+    key: "amount",
+    direction: "desc",
+  });
 
   const summary = useQuery({
     queryKey: ["portfolio", "summary"],
@@ -301,12 +309,18 @@ export function PortfolioPage() {
   }, [filteredSectorData, selectedSector]);
 
   const filteredPositions = useMemo(() => {
+    const normalizedSearch = positionSearch.trim().toLowerCase();
+
     return positions.filter((position) => {
       const typeMatches = !selectedType || position.asset_type === selectedType;
       const sectorMatches = !selectedSector || position.sector === selectedSector;
-      return typeMatches && sectorMatches;
+      const searchMatches = !normalizedSearch
+        || position.ticker.toLowerCase().includes(normalizedSearch)
+        || position.name.toLowerCase().includes(normalizedSearch);
+
+      return typeMatches && sectorMatches && searchMatches;
     });
-  }, [positions, selectedSector, selectedType]);
+  }, [positionSearch, positions, selectedSector, selectedType]);
 
   const invalidTargetAssetIds = useMemo(() => {
     const invalid = new Set<string>();
@@ -451,12 +465,63 @@ export function PortfolioPage() {
     }
   }, [filteredSectorData, selectedSector]);
 
-  const hasActiveFilters = Boolean(selectedType || selectedSector);
+  const hasActiveFilters = Boolean(selectedType || selectedSector || positionSearch.trim());
 
   const clearFilters = () => {
     setSelectedType(null);
     setSelectedSector(null);
+    setPositionSearch("");
   };
+
+  const handleContributionSort = (key: ContributionSortKey) => {
+    setContributionSort((previous) => {
+      if (previous.key === key) {
+        return {
+          key,
+          direction: previous.direction === "asc" ? "desc" : "asc",
+        };
+      }
+
+      return {
+        key,
+        direction: key === "asset" ? "asc" : "desc",
+      };
+    });
+  };
+
+  const sortedContributionRecommendations = useMemo(() => {
+    const list = [...(contributionResult?.recommendations ?? [])];
+
+    list.sort((a, b) => {
+      let comparison = 0;
+
+      if (contributionSort.key === "asset") {
+        const labelA = a.asset_type === "TREASURY" ? a.name : a.ticker;
+        const labelB = b.asset_type === "TREASURY" ? b.name : b.ticker;
+        comparison = labelA.localeCompare(labelB, "pt-BR");
+      }
+
+      if (contributionSort.key === "quantity") {
+        comparison = toFinite(a.quantity_to_buy) - toFinite(b.quantity_to_buy);
+      }
+
+      if (contributionSort.key === "price") {
+        comparison = toFinite(a.current_price) - toFinite(b.current_price);
+      }
+
+      if (contributionSort.key === "amount") {
+        comparison = toFinite(a.amount_to_buy) - toFinite(b.amount_to_buy);
+      }
+
+      if (contributionSort.key === "projected_allocation") {
+        comparison = toFinite(a.projected_allocation_percent) - toFinite(b.projected_allocation_percent);
+      }
+
+      return contributionSort.direction === "asc" ? comparison : -comparison;
+    });
+
+    return list;
+  }, [contributionResult?.recommendations, contributionSort]);
 
   const handleTargetCommit = (assetId: string, rawValue: string) => {
     setTargetSuccess("");
@@ -680,117 +745,6 @@ export function PortfolioPage() {
         </div>
       </div>
 
-      {/* Planejador de Aporte */}
-      <div className="card-haveres p-4 sm:p-5 space-y-4">
-        <div className="flex flex-wrap items-center gap-2">
-          <Calculator size={18} className="text-haveres-blue" />
-          <h2 className="text-sm font-semibold text-white">Planejador de Aporte</h2>
-          <span className="text-xs text-muted-foreground">
-            Simula a compra de cotas para aproximar sua carteira da meta de alocação.
-          </span>
-        </div>
-
-        {(hasUnsavedTargetChanges || hasUnsavedMaxBuyChanges) && (
-          <p className="text-xs text-muted-foreground">
-            A simulação considera as metas e preços máximos já salvos.
-          </p>
-        )}
-
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="relative w-full sm:w-[220px]">
-            <span className="absolute left-2 top-2 text-xs text-muted-foreground pointer-events-none">R$</span>
-            <input
-              type="text"
-              value={contributionInput}
-              inputMode="numeric"
-              onChange={(event) => setContributionInput(maskMoneyInput(event.target.value))}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                  event.preventDefault();
-                  handleSimulateContribution();
-                }
-              }}
-              className="w-full bg-secondary border border-haveres-border rounded pl-8 pr-3 py-2 text-sm font-mono text-white focus:outline-none focus:ring-1 focus:ring-haveres-blue"
-              placeholder="1.000,00"
-            />
-          </div>
-
-          <button
-            type="button"
-            onClick={handleSimulateContribution}
-            disabled={simulateContributionPlan.isPending}
-            className="px-3 py-2 rounded text-xs font-medium bg-haveres-blue text-white hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {simulateContributionPlan.isPending ? "Simulando..." : "Simular aporte"}
-          </button>
-        </div>
-
-        {contributionError && <p className="text-xs text-loss">{contributionError}</p>}
-
-        {contributionResult && (
-          <div className="space-y-3">
-            <div className="flex flex-wrap items-center gap-2 text-xs">
-              <span className="px-2 py-1 rounded bg-secondary text-muted-foreground font-numeric">
-                Aporte: {formatCurrency(toFinite(contributionResult.amount))}
-              </span>
-              <span className="px-2 py-1 rounded bg-secondary text-muted-foreground font-numeric">
-                Alocado: {formatCurrency(toFinite(contributionResult.allocated_amount))}
-              </span>
-              <span className="px-2 py-1 rounded bg-secondary text-muted-foreground font-numeric">
-                Saldo: {formatCurrency(toFinite(contributionResult.leftover_amount))}
-              </span>
-            </div>
-
-            {contributionResult.recommendations.length > 0 ? (
-              <div className="overflow-x-auto rounded-lg border border-haveres-border/70">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-haveres-border/70 text-xs uppercase tracking-wider text-muted-foreground">
-                      <th className="text-left px-3 py-2">Ativo</th>
-                      <th className="text-right px-3 py-2">Qtd</th>
-                      <th className="text-right px-3 py-2">Preço</th>
-                      <th className="text-right px-3 py-2">Aporte</th>
-                      <th className="text-right px-3 py-2">Aloc. proj.</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {contributionResult.recommendations.map((item) => (
-                      <tr key={item.asset_id} className="border-b border-haveres-border/40 last:border-b-0">
-                        <td className="px-3 py-2">
-                          <p className="font-mono text-haveres-blue text-sm">{item.ticker}</p>
-                          <p className="text-xs text-muted-foreground truncate max-w-[240px]">{item.name}</p>
-                        </td>
-                        <td className="px-3 py-2 text-right font-mono text-white">{formatSuggestedQuantity(item.quantity_to_buy)}</td>
-                        <td className="px-3 py-2 text-right font-mono text-white">{formatCurrency(toFinite(item.current_price))}</td>
-                        <td className="px-3 py-2 text-right font-mono text-white">{formatCurrency(toFinite(item.amount_to_buy))}</td>
-                        <td className="px-3 py-2 text-right font-mono text-white">{formatPercent(toFinite(item.projected_allocation_percent))}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <p className="text-xs text-muted-foreground">Nenhuma compra sugerida com o valor informado.</p>
-            )}
-
-            {contributionResult.blocked_assets.length > 0 && (
-              <div className="space-y-1">
-                <p className="text-xs text-loss">
-                  Ativos abaixo da meta, mas bloqueados pelo preço máximo:
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {contributionResult.blocked_assets.map((item) => (
-                    <span key={item.asset_id} className="text-xs px-2 py-1 rounded bg-loss/10 text-loss font-mono">
-                      {item.ticker} (máx {formatCurrency(toFinite(item.max_buy_price))})
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-
       {/* Posições */}
       <div className="card-haveres">
         <div className="flex flex-wrap items-center gap-2 p-4 sm:p-5 border-b border-haveres-border">
@@ -812,12 +766,19 @@ export function PortfolioPage() {
               <button
                 type="button"
                 onClick={clearFilters}
-                className="sm:ml-auto text-xs px-2 py-1 rounded bg-secondary text-muted-foreground hover:text-white transition-colors"
+                className="text-xs px-2 py-1 rounded bg-secondary text-muted-foreground hover:text-white transition-colors"
               >
                 Limpar filtros
               </button>
             </>
           )}
+          <input
+            type="text"
+            value={positionSearch}
+            onChange={(event) => setPositionSearch(event.target.value)}
+            className="w-full sm:w-[220px] sm:ml-auto bg-secondary border border-haveres-border rounded px-3 py-1.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-haveres-blue"
+            placeholder="Buscar ativo da carteira"
+          />
         </div>
 
         {positions.length === 0 ? (
@@ -906,6 +867,136 @@ export function PortfolioPage() {
             </div>
             {maxBuyError && <p className="text-xs text-loss">{maxBuyError}</p>}
             {maxBuySuccess && <p className="text-xs text-gain">{maxBuySuccess}</p>}
+          </div>
+        )}
+      </div>
+
+      {/* Planejador de Aporte */}
+      <div className="card-haveres p-4 sm:p-5 space-y-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <Calculator size={18} className="text-haveres-blue" />
+          <h2 className="text-sm font-semibold text-white">Planejador de Aporte</h2>
+          <span className="text-xs text-muted-foreground">
+            Simula a compra de cotas para aproximar sua carteira da meta de alocação.
+          </span>
+        </div>
+
+        {(hasUnsavedTargetChanges || hasUnsavedMaxBuyChanges) && (
+          <p className="text-xs text-muted-foreground">
+            A simulação considera as metas e preços máximos já salvos.
+          </p>
+        )}
+
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative w-full sm:w-[220px]">
+            <span className="absolute left-2 top-2 text-xs text-muted-foreground pointer-events-none">R$</span>
+            <input
+              type="text"
+              value={contributionInput}
+              inputMode="numeric"
+              onChange={(event) => setContributionInput(maskMoneyInput(event.target.value))}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  handleSimulateContribution();
+                }
+              }}
+              className="w-full bg-secondary border border-haveres-border rounded pl-8 pr-3 py-2 text-sm font-mono text-white focus:outline-none focus:ring-1 focus:ring-haveres-blue"
+              placeholder="1.000,00"
+            />
+          </div>
+
+          <button
+            type="button"
+            onClick={handleSimulateContribution}
+            disabled={simulateContributionPlan.isPending}
+            className="px-3 py-2 rounded text-xs font-medium bg-haveres-blue text-white hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {simulateContributionPlan.isPending ? "Simulando..." : "Simular aporte"}
+          </button>
+        </div>
+
+        {contributionError && <p className="text-xs text-loss">{contributionError}</p>}
+
+        {contributionResult && (
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              <span className="px-2 py-1 rounded bg-secondary text-muted-foreground font-numeric">
+                Aporte: {formatCurrency(toFinite(contributionResult.amount))}
+              </span>
+              <span className="px-2 py-1 rounded bg-secondary text-muted-foreground font-numeric">
+                Alocado: {formatCurrency(toFinite(contributionResult.allocated_amount))}
+              </span>
+              <span className="px-2 py-1 rounded bg-secondary text-muted-foreground font-numeric">
+                Saldo: {formatCurrency(toFinite(contributionResult.leftover_amount))}
+              </span>
+            </div>
+
+            {sortedContributionRecommendations.length > 0 ? (
+              <div className="overflow-x-auto rounded-lg border border-haveres-border/70">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-haveres-border/70 text-xs uppercase tracking-wider text-muted-foreground">
+                      <th className="text-left px-3 py-2">
+                        <button type="button" className="hover:text-white" onClick={() => handleContributionSort("asset")}>Ativo {contributionSort.key === "asset" ? (contributionSort.direction === "asc" ? "↑" : "↓") : "↕"}</button>
+                      </th>
+                      <th className="text-right px-3 py-2">
+                        <button type="button" className="hover:text-white" onClick={() => handleContributionSort("quantity")}>Qtd {contributionSort.key === "quantity" ? (contributionSort.direction === "asc" ? "↑" : "↓") : "↕"}</button>
+                      </th>
+                      <th className="text-right px-3 py-2">
+                        <button type="button" className="hover:text-white" onClick={() => handleContributionSort("price")}>Preço {contributionSort.key === "price" ? (contributionSort.direction === "asc" ? "↑" : "↓") : "↕"}</button>
+                      </th>
+                      <th className="text-right px-3 py-2">
+                        <button type="button" className="hover:text-white" onClick={() => handleContributionSort("amount")}>Aporte {contributionSort.key === "amount" ? (contributionSort.direction === "asc" ? "↑" : "↓") : "↕"}</button>
+                      </th>
+                      <th className="text-right px-3 py-2">
+                        <button type="button" className="hover:text-white" onClick={() => handleContributionSort("projected_allocation")}>Aloc. proj. {contributionSort.key === "projected_allocation" ? (contributionSort.direction === "asc" ? "↑" : "↓") : "↕"}</button>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sortedContributionRecommendations.map((item) => (
+                      <tr key={item.asset_id} className="border-b border-haveres-border/40 last:border-b-0">
+                        <td className="px-3 py-1.5 align-top max-w-[360px]">
+                          {item.asset_type === "TREASURY" ? (
+                            <>
+                              <p className="text-haveres-blue text-[13px] whitespace-normal break-normal leading-tight">{item.name}</p>
+                              <p className="text-[11px] text-muted-foreground whitespace-normal break-normal leading-tight">{item.ticker}</p>
+                            </>
+                          ) : (
+                            <>
+                              <p className="font-mono text-haveres-blue text-[13px] whitespace-normal break-normal leading-tight">{item.ticker}</p>
+                              <p className="text-[11px] text-muted-foreground whitespace-normal break-normal leading-tight">{item.name}</p>
+                            </>
+                          )}
+                        </td>
+                        <td className="px-3 py-1.5 text-right font-mono text-white align-top">{formatSuggestedQuantity(item.quantity_to_buy)}</td>
+                        <td className="px-3 py-1.5 text-right font-mono text-white align-top">{formatCurrency(toFinite(item.current_price))}</td>
+                        <td className="px-3 py-1.5 text-right font-mono text-white align-top">{formatCurrency(toFinite(item.amount_to_buy))}</td>
+                        <td className="px-3 py-1.5 text-right font-mono text-white align-top">{formatPercent(toFinite(item.projected_allocation_percent))}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground">Nenhuma compra sugerida com o valor informado.</p>
+            )}
+
+            {contributionResult.blocked_assets.length > 0 && (
+              <div className="space-y-1">
+                <p className="text-xs text-loss">
+                  Ativos abaixo da meta, mas bloqueados pelo preço máximo:
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {contributionResult.blocked_assets.map((item) => (
+                    <span key={item.asset_id} className="text-xs px-2 py-1 rounded bg-loss/10 text-loss font-mono">
+                      {item.ticker} (máx {formatCurrency(toFinite(item.max_buy_price))})
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

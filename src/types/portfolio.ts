@@ -107,6 +107,7 @@ export interface ContributionRecommendation {
   asset_id: string;
   ticker: string;
   name: string;
+  asset_type: string;
   current_price: number;
   quantity_to_buy: number;
   amount_to_buy: number;
