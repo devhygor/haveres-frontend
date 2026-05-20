@@ -9,6 +9,7 @@ import { quotesApi } from "@/api/quotes";
 import type { BenchmarkPoint } from "@/types/quote";
 import { LoadingState } from "@/components/common/LoadingState";
 import { ErrorState } from "@/components/common/ErrorState";
+import { TermTooltip } from "@/components/common/TermTooltip";
 import { cn } from "@/utils/cn";
 
 const PERIODS = [
@@ -108,7 +109,7 @@ export function BenchmarkChart() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <Activity size={18} className="text-haveres-blue" />
-          <h2 className="text-sm font-semibold text-white">Rentabilidade Comparada</h2>
+          <h2 className="text-sm font-semibold text-white"><TermTooltip term="Rentabilidade Comparada" /></h2>
         </div>
         <div className="flex gap-1">
           {PERIODS.map(({ label, months: m }) => (
@@ -178,7 +179,7 @@ export function BenchmarkChart() {
                 className="w-2 h-2 rounded-full flex-shrink-0 transition-colors"
                 style={{ backgroundColor: isActive && hasData ? color : "#4a5568" }}
               />
-              {label}
+              <TermTooltip term={label} className="inline-flex items-center" />
             </button>
           );
         })}

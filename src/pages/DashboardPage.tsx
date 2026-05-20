@@ -85,7 +85,7 @@ export function DashboardPage() {
         <div className="card-haveres p-4 sm:p-5">
           <div className="flex items-start justify-between gap-3 mb-3">
             <div className="inline-flex items-center gap-1.5 text-sm text-muted-foreground font-medium">
-              Patrimônio Total
+              <TermTooltip term="Patrimônio Total" />
               <ReferenceTimeHint
                 asOf={data.valuation_reference_at}
                 rangeStart={data.valuation_reference_min_at}
@@ -110,7 +110,7 @@ export function DashboardPage() {
           </div>
 
           <div className="mt-3 pt-3 border-t border-haveres-border/70">
-            <p className="text-xs text-muted-foreground">Valor investido</p>
+            <p className="text-xs text-muted-foreground"><TermTooltip term="Valor investido" /></p>
             <p className="text-base font-semibold text-white font-numeric">{formatCurrency(totalInvested)}</p>
           </div>
         </div>
@@ -131,13 +131,13 @@ export function DashboardPage() {
 
           <div className="mt-3 pt-3 border-t border-haveres-border/70 grid grid-cols-2 gap-3">
             <div>
-              <p className="text-xs text-muted-foreground">Ganho de Capital</p>
+              <p className="text-xs text-muted-foreground"><TermTooltip term="Ganho de Capital" /></p>
               <p className={cn("text-sm font-semibold font-numeric", plClass(plAbsolute))}>
                 {formatCurrency(plAbsolute)}
               </p>
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">Dividendos Recebidos</p>
+              <p className="text-xs text-muted-foreground"><TermTooltip term="Dividendos Recebidos" /></p>
               <p className={cn("text-sm font-semibold font-numeric", plClass(dividendsYear))}>
                 {formatCurrency(dividendsYear)}
               </p>
@@ -147,7 +147,7 @@ export function DashboardPage() {
 
         <div className="card-haveres p-4 sm:p-5">
           <div className="flex items-start justify-between gap-3 mb-3">
-            <p className="text-sm text-muted-foreground font-medium">Proventos Recebidos (Ano)</p>
+            <p className="text-sm text-muted-foreground font-medium"><TermTooltip term="Proventos Recebidos (Ano)" /></p>
             <div className="p-2 rounded-lg bg-secondary/50">
               <CalendarDays size={16} className="text-gain" />
             </div>
@@ -157,11 +157,11 @@ export function DashboardPage() {
 
           <div className="mt-3 pt-3 border-t border-haveres-border/70 grid grid-cols-2 gap-3">
             <div>
-              <p className="text-xs text-muted-foreground">No mês</p>
+              <p className="text-xs text-muted-foreground"><TermTooltip term="Proventos no mês">No mês</TermTooltip></p>
               <p className="text-sm font-semibold text-white font-numeric">{formatCurrency(dividendsMonth)}</p>
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">A receber</p>
+              <p className="text-xs text-muted-foreground"><TermTooltip term="A receber" /></p>
               <p className="text-sm font-semibold text-haveres-blue font-numeric">{formatCurrency(upcomingTotal)}</p>
             </div>
           </div>
@@ -169,7 +169,7 @@ export function DashboardPage() {
 
         <div className="card-haveres p-4 sm:p-5">
           <div className="flex items-start justify-between gap-3 mb-3">
-            <p className="text-sm text-muted-foreground font-medium">Variação e Rentabilidade</p>
+            <p className="text-sm text-muted-foreground font-medium"><TermTooltip term="Variação e Rentabilidade" /></p>
             <div className="p-2 rounded-lg bg-secondary/50">
               <ReturnTrendIcon size={16} className={cn(plClass(totalReturnPercent))} />
             </div>
@@ -177,7 +177,7 @@ export function DashboardPage() {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <p className="text-xs text-muted-foreground">Variação</p>
+              <p className="text-xs text-muted-foreground"><TermTooltip term="Variação" /></p>
               <p className={cn("text-2xl font-bold font-numeric", plClass(plPercent))}>
                 {formatPercent(plPercent, true)}
               </p>
@@ -186,7 +186,7 @@ export function DashboardPage() {
               </p>
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">Rentabilidade</p>
+              <p className="text-xs text-muted-foreground"><TermTooltip term="Rentabilidade" /></p>
               <p className={cn("text-2xl font-bold font-numeric", plClass(totalReturnPercent))}>
                 {formatPercent(totalReturnPercent, true)}
               </p>

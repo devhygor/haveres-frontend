@@ -17,7 +17,7 @@ const LABEL: Record<string, string> = {
   IBC_BR: "IBC-Br",
   PIB_MENSAL: "PIB Mensal",
   DESEMPREGO: "Desemprego",
-  POUPANCA: "Poupanca",
+  POUPANCA: "Poupança",
   USD_PTAX: "USD PTAX",
   EUR_PTAX: "EUR PTAX",
 };
@@ -106,7 +106,7 @@ function MarketIndexRow({ ticker, price, changePercent }: { ticker: string; pric
   const isPositive = (changePercent ?? 0) >= 0;
   return (
     <div className="flex items-center justify-between py-2">
-      <span className="text-sm font-medium text-white font-mono">{ticker}</span>
+      <TermTooltip term={ticker} className="text-sm font-medium text-white font-mono" />
       <div className="flex items-center gap-2">
         <span className="font-mono text-sm text-white font-semibold">
           {price.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -151,7 +151,9 @@ export function MacroWidget() {
 
   return (
     <div className="card-haveres p-4">
-      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Indicadores</p>
+      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">
+        <TermTooltip term="Indicadores">Indicadores</TermTooltip>
+      </p>
       {sorted.length > 0 && (
         <div className="divide-y divide-haveres-border/50">
           {sorted.map((m) => (
@@ -168,7 +170,9 @@ export function MacroWidget() {
 
       {sortedMarketIndices.length > 0 && (
         <div className={cn("divide-y divide-haveres-border/50", sorted.length > 0 && "mt-3 pt-3 border-t border-haveres-border/50")}>
-          <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-1">Indices de Mercado</p>
+          <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-1">
+            <TermTooltip term="Índices de Mercado">Índices de Mercado</TermTooltip>
+          </p>
           {sortedMarketIndices.map((item) => (
             <MarketIndexRow
               key={item.ticker}
