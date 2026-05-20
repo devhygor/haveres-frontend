@@ -48,6 +48,8 @@ const SYNC_MANUAL_ONLY: Record<string, string> = {
   fii_reports: "Mensal — busca relatórios CVM de todos os FIIs. Dispare manualmente quando necessário.",
   financial_statements: "Mensal — demonstrações financeiras de todas as empresas. Processamento muito pesado.",
   treasury_benchmark_repair: "Manutenção corretiva — execute manualmente para reconstruir histórico/snapshots do benchmark com Tesouro.",
+  asset_profiles: "Semestral — bio, setor e dados cadastrais raramente mudam. Dispare manualmente.",
+  options_chain: "Sob demanda — cadeia de opções. Dispare manualmente quando necessário.",
 };
 
 const SYNC_LABELS: Record<string, string> = {
