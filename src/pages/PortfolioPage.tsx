@@ -50,11 +50,11 @@ export function PortfolioPage() {
     if (!selectedType) return allocationBySector.data ?? [];
     const typePositions = positions.filter((p) => p.asset_type === selectedType);
     if (!typePositions.length) return [];
-    const total = typePositions.reduce((sum, p) => sum + p.current_value, 0);
+    const total = typePositions.reduce((sum, p) => sum + Number(p.current_value), 0);
     if (total === 0) return [];
     const bySector = new Map<string, number>();
     for (const p of typePositions) {
-      bySector.set(p.sector, (bySector.get(p.sector) ?? 0) + p.current_value);
+      bySector.set(p.sector, (bySector.get(p.sector) ?? 0) + Number(p.current_value));
     }
     return Array.from(bySector.entries())
       .map(([sector, value]) => ({
