@@ -12,15 +12,19 @@ function Row({ label, value, valueClass }: { label: React.ReactNode; value: stri
   );
 }
 
-function fmtPct(v: number | null, decimals = 2) {
-  return v !== null ? `${v.toFixed(decimals)}%` : "—";
+function fmtPct(v: number | string | null, decimals = 2) {
+  if (v === null || v === undefined) return "—";
+  const n = Number(v);
+  return isNaN(n) ? "—" : `${n.toFixed(decimals)}%`;
 }
 
-function fmtBig(v: number | null) {
-  if (v === null) return "—";
-  if (v >= 1e9) return `R$ ${(v / 1e9).toFixed(2)}B`;
-  if (v >= 1e6) return `R$ ${(v / 1e6).toFixed(2)}M`;
-  return formatCurrency(v);
+function fmtBig(v: number | string | null) {
+  if (v === null || v === undefined) return "—";
+  const n = Number(v);
+  if (isNaN(n)) return "—";
+  if (n >= 1e9) return `R$ ${(n / 1e9).toFixed(2)}B`;
+  if (n >= 1e6) return `R$ ${(n / 1e6).toFixed(2)}M`;
+  return formatCurrency(n);
 }
 
 interface Props {
@@ -67,17 +71,17 @@ export function FIIDetailCard({ data }: Props) {
         />
         <Row
           label={<TermTooltip term="P/VP" />}
-          value={data.pvp !== null ? data.pvp.toFixed(2) : "—"}
+          value={data.pvp !== null ? Number(data.pvp).toFixed(2) : "—"}
           valueClass={pvpClass}
         />
         <Row
           label="Último Dividendo"
-          value={data.last_dividend !== null ? formatCurrency(data.last_dividend) : "—"}
+          value={data.last_dividend !== null ? formatCurrency(Number(data.last_dividend)) : "—"}
         />
         <Row label="Patrimônio Líquido" value={fmtBig(data.net_worth)} />
         <Row
           label="VP por Cota"
-          value={data.net_worth_per_share !== null ? formatCurrency(data.net_worth_per_share) : "—"}
+          value={data.net_worth_per_share !== null ? formatCurrency(Number(data.net_worth_per_share)) : "—"}
         />
         <Row label="Liquidez Diária" value={fmtBig(data.daily_liquidity)} />
         <Row
@@ -92,7 +96,7 @@ export function FIIDetailCard({ data }: Props) {
           <Row label="Nº de Ativos" value={String(data.num_assets)} />
         )}
         {data.total_investors !== null && (
-          <Row label="Cotistas" value={data.total_investors.toLocaleString("pt-BR")} />
+          <Row label="Cotistas" value={Number(data.total_investors).toLocaleString("pt-BR")} />
         )}
       </div>
 
