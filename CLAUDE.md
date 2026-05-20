@@ -33,17 +33,20 @@ Variável obrigatória: `VITE_API_URL=http://localhost:8000/api` (copiar de `.en
 
 ## Páginas
 
-| Página | Rota | Descrição |
-|---|---|---|
-| `DashboardPage` | `/dashboard` | Visão geral: patrimônio, P&L, gráficos |
-| `PortfolioPage` | `/portfolio` | Posições abertas com tabela e alocação |
-| `AssetDetailPage` | `/assets/:id` | Detalhe de ativo: histórico, dividendos |
-| `TransactionsPage` | `/transactions` | Lista e criação de transações |
-| `DividendsPage` | `/dividends` | Proventos recebidos |
-| `ImportsPage` | `/imports` | Upload e preview de CSV/Excel |
-| `OpenFinancePage` | `/open-finance` | Conexões bancárias Open Finance |
-| `SettingsPage` | `/settings` | Configurações do usuário |
-| `SystemPage` | `/system` | Health check e status de integrações |
+| Página | Rota | Pública | Descrição |
+|---|---|---|---|
+| `LandingPage` | `/` | ✅ | Landing page SEO — redireciona autenticado p/ `/dashboard` |
+| `LoginPage` | `/login` | ✅ | Autenticação |
+| `RegisterPage` | `/cadastro` | ✅ | Cadastro de nova conta |
+| `DashboardPage` | `/dashboard` | — | Visão geral: patrimônio, P&L, gráficos |
+| `PortfolioPage` | `/carteira` | — | Posições abertas com tabela e alocação |
+| `AssetDetailPage` | `/ativos/:ticker` | — | Detalhe de ativo: histórico, dividendos |
+| `TransactionsPage` | `/movimentacoes` | — | Lista e criação de transações |
+| `DividendsPage` | `/proventos` | — | Proventos recebidos |
+| `ImportsPage` | `/importacoes` | — | Upload e preview de CSV/Excel |
+| `OpenFinancePage` | `/open-finance` | — | Conexões bancárias Open Finance |
+| `SettingsPage` | `/configuracoes` | — | Configurações do usuário |
+| `SystemPage` | `/sistema` | — | Health check e status de integrações (admin) |
 
 ## Identidade visual (imutável)
 
@@ -64,6 +67,18 @@ Variável obrigatória: `VITE_API_URL=http://localhost:8000/api` (copiar de `.en
 - Dados financeiros: sempre `font-numeric` (`font-mono tabular-nums`)
 - Cards: classe utilitária `card-haveres` (`bg-haveres-card border border-haveres-border rounded-xl`)
 - Gráficos Recharts: hover com destaque sutil via `Tooltip cursor={{ fill: "rgba(160, 174, 192, 0.12)" }}` (evitar `cursor={false}`)
+
+## SEO
+
+`index.html` contém: title, description, keywords, canonical, Open Graph, Twitter Card e JSON-LD (`SoftwareApplication`).
+
+`public/robots.txt` — permite `/`, `/login`, `/cadastro`; bloqueia rotas protegidas.
+
+`public/sitemap.xml` — lista as 3 URLs públicas.
+
+**Domínio de produção:** `https://haveres.app` — atualizar canonical, OG, sitemap e robots ao mudar domínio.
+
+`LandingPage` é a única página indexável pelo Google. Toda copy é keyword-rich (ações, FIIs, preço médio, proventos, Open Finance).
 
 ## Auth flow
 

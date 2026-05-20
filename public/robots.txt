@@ -1,0 +1,16 @@
+User-agent: *
+Allow: /
+Allow: /cadastro
+Allow: /login
+
+Disallow: /dashboard
+Disallow: /carteira
+Disallow: /movimentacoes
+Disallow: /proventos
+Disallow: /importacoes
+Disallow: /open-finance
+Disallow: /configuracoes
+Disallow: /sistema
+Disallow: /ativos/
+
+Sitemap: https://haveres.app/sitemap.xml

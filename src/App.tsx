@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { LoginPage } from "@/pages/auth/LoginPage";
 import { RegisterPage } from "@/pages/auth/RegisterPage";
+import { LandingPage } from "@/pages/LandingPage";
 import { DashboardPage } from "@/pages/DashboardPage";
 import { PortfolioPage } from "@/pages/PortfolioPage";
 import { TransactionsPage } from "@/pages/TransactionsPage";
@@ -12,6 +13,11 @@ import { SettingsPage } from "@/pages/SettingsPage";
 import { SystemPage } from "@/pages/SystemPage";
 import { AssetDetailPage } from "@/pages/AssetDetailPage";
 import { useAuthStore } from "@/stores/authStore";
+
+function HomeRoute() {
+  const token = useAuthStore((s) => s.accessToken);
+  return token ? <Navigate to="/dashboard" replace /> : <LandingPage />;
+}
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const token = useAuthStore((s) => s.accessToken);
@@ -28,17 +34,16 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
 export default function App() {
   return (
     <Routes>
+      <Route path="/" element={<HomeRoute />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/cadastro" element={<RegisterPage />} />
       <Route
-        path="/"
         element={
           <ProtectedRoute>
             <AppLayout />
           </ProtectedRoute>
         }
       >
-        <Route index element={<Navigate to="/dashboard" replace />} />
         <Route path="dashboard" element={<DashboardPage />} />
         <Route path="carteira" element={<PortfolioPage />} />
         <Route path="movimentacoes" element={<TransactionsPage />} />
@@ -49,7 +54,7 @@ export default function App() {
         <Route path="sistema" element={<AdminRoute><SystemPage /></AdminRoute>} />
         <Route path="ativos/:ticker" element={<AssetDetailPage />} />
       </Route>
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }
