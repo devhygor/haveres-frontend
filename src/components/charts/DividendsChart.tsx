@@ -114,8 +114,8 @@ export function DividendsChart({ data, selectedMonth = null, onMonthSelect }: Pr
     return selectedMonth === monthKey ? 1 : 0.35;
   };
 
-  const handleBarClick = (entry: any) => {
-    const monthKey = entry?.payload?.month_key || entry?.month_key;
+  const handleChartClick = (state: any) => {
+    const monthKey = state?.activeLabel ?? state?.activePayload?.[0]?.payload?.month_key;
     if (!monthKey || !onMonthSelect) return;
     onMonthSelect(monthKey);
   };
@@ -130,7 +130,10 @@ export function DividendsChart({ data, selectedMonth = null, onMonthSelect }: Pr
     return (
       <g
         transform={`translate(${x},${y})`}
-        onClick={() => onMonthSelect?.(monthKey)}
+        onClick={(event) => {
+          event.stopPropagation();
+          onMonthSelect?.(monthKey);
+        }}
         style={{ cursor: onMonthSelect ? "pointer" : "default" }}
       >
         <text
@@ -150,7 +153,12 @@ export function DividendsChart({ data, selectedMonth = null, onMonthSelect }: Pr
 
   return (
     <ResponsiveContainer width="100%" height={200}>
-      <BarChart data={formatted} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
+      <BarChart
+        data={formatted}
+        margin={{ top: 5, right: 10, left: 10, bottom: 5 }}
+        onClick={handleChartClick}
+        style={{ cursor: onMonthSelect ? "pointer" : "default" }}
+      >
         <CartesianGrid strokeDasharray="3 3" stroke="#2d3748" vertical={false} />
         <XAxis
           dataKey="month_key"
@@ -168,7 +176,6 @@ export function DividendsChart({ data, selectedMonth = null, onMonthSelect }: Pr
           fill="#22c55e"
           radius={[0, 0, 0, 0]}
           maxBarSize={32}
-          onClick={handleBarClick}
         >
           {formatted.map((item) => (
             <Cell
@@ -185,7 +192,6 @@ export function DividendsChart({ data, selectedMonth = null, onMonthSelect }: Pr
           fill="#86efac"
           radius={[4, 4, 0, 0]}
           maxBarSize={32}
-          onClick={handleBarClick}
         >
           {formatted.map((item) => (
             <Cell

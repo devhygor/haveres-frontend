@@ -34,6 +34,7 @@ export function TransactionsPage() {
   const [editing, setEditing] = useState<Transaction | undefined>();
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [assetSearch, setAssetSearch] = useState("");
+  const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["transactions"],
@@ -53,11 +54,11 @@ export function TransactionsPage() {
   const openEdit = (t: Transaction) => { setEditing(t); setModalOpen(true); };
 
   const monthlyVolume = useMemo(() => {
-    const map: Record<string, { month: string; compra: number; venda: number }> = {};
+    const map: Record<string, { monthKey: string; month: string; compra: number; venda: number }> = {};
     (data ?? []).forEach(t => {
       if (!["BUY", "SELL"].includes(t.transaction_type)) return;
       const m = t.date.slice(0, 7);
-      if (!map[m]) map[m] = { month: format(parseISO(m + "-01"), "MMM/yy", { locale: ptBR }), compra: 0, venda: 0 };
+      if (!map[m]) map[m] = { monthKey: m, month: format(parseISO(m + "-01"), "MMM/yy", { locale: ptBR }), compra: 0, venda: 0 };
       if (t.transaction_type === "BUY") map[m].compra += Number(t.total_value);
       if (t.transaction_type === "SELL") map[m].venda += Number(t.total_value);
     });
@@ -67,17 +68,68 @@ export function TransactionsPage() {
       .map(([, v]) => v);
   }, [data]);
 
+  const selectedMonthLabel = useMemo(() => {
+    if (!selectedMonth) return null;
+    const inChart = monthlyVolume.find((item) => item.monthKey === selectedMonth);
+    if (inChart) return inChart.month;
+    return format(parseISO(`${selectedMonth}-01`), "MMM/yy", { locale: ptBR });
+  }, [monthlyVolume, selectedMonth]);
+
+  const hasActiveMonthFilter = Boolean(selectedMonth);
+
+  const handleSelectMonth = (monthKey: string) => {
+    setSelectedMonth((current) => (current === monthKey ? null : monthKey));
+  };
+
+  const handleMonthlyChartClick = (state: any) => {
+    const monthKey = state?.activeLabel ?? state?.activePayload?.[0]?.payload?.monthKey;
+    if (!monthKey) return;
+    handleSelectMonth(monthKey);
+  };
+
+  const renderMonthTick = (props: any) => {
+    const { x = 0, y = 0, payload } = props;
+    const monthKey = String(payload?.value ?? "");
+    if (!monthKey) return <g />;
+
+    const monthLabel = monthlyVolume.find((item) => item.monthKey === monthKey)?.month ?? monthKey;
+    const isSelected = monthKey === selectedMonth;
+
+    return (
+      <g
+        transform={`translate(${x},${y})`}
+        onClick={(event) => {
+          event.stopPropagation();
+          handleSelectMonth(monthKey);
+        }}
+        style={{ cursor: "pointer" }}
+      >
+        <text
+          x={0}
+          y={0}
+          dy={16}
+          textAnchor="middle"
+          fill={isSelected ? "#e2e8f0" : "#718096"}
+          fontSize={11}
+          fontWeight={isSelected ? 600 : 400}
+        >
+          {monthLabel}
+        </text>
+      </g>
+    );
+  };
+
   const filteredTransactions = useMemo(() => {
     const search = assetSearch.trim().toLowerCase();
 
-    if (!search) return data ?? [];
-
     return (data ?? []).filter((transaction) => {
+      if (selectedMonth && !transaction.date.startsWith(selectedMonth)) return false;
       const ticker = transaction.asset_ticker?.toLowerCase() ?? "";
       const name = transaction.asset_name?.toLowerCase() ?? "";
+      if (!search) return true;
       return ticker.includes(search) || name.includes(search);
     });
-  }, [data, assetSearch]);
+  }, [data, assetSearch, selectedMonth]);
 
   if (isLoading) return <LoadingState />;
   if (isError) return <ErrorState onRetry={refetch} />;
@@ -87,14 +139,33 @@ export function TransactionsPage() {
       {/* Volume mensal de compras/vendas */}
       {monthlyVolume.length > 0 && (
         <div className="card-haveres p-4 sm:p-5 mb-6">
-          <div className="flex items-center gap-2 mb-4">
+          <div className="flex flex-wrap items-center gap-2 mb-4">
             <BarChart3 size={18} className="text-haveres-blue" />
             <h2 className="text-sm font-semibold text-white">Volume Mensal (compras / vendas)</h2>
+            {hasActiveMonthFilter && selectedMonthLabel ? (
+              <>
+                <span className="text-xs px-2 py-0.5 rounded bg-secondary text-muted-foreground">
+                  Mês: {selectedMonthLabel}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setSelectedMonth(null)}
+                  className="text-xs px-2 py-1 rounded bg-secondary text-muted-foreground hover:text-white transition-colors"
+                >
+                  Limpar mês
+                </button>
+              </>
+            ) : null}
           </div>
           <ResponsiveContainer width="100%" height={220}>
-            <BarChart data={monthlyVolume} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
+            <BarChart
+              data={monthlyVolume}
+              margin={{ top: 5, right: 10, left: 10, bottom: 5 }}
+              onClick={handleMonthlyChartClick}
+              style={{ cursor: "pointer" }}
+            >
               <CartesianGrid strokeDasharray="3 3" stroke="#2d3748" vertical={false} />
-              <XAxis dataKey="month" tick={{ fill: "#718096", fontSize: 11 }} axisLine={false} tickLine={false} />
+              <XAxis dataKey="monthKey" tick={renderMonthTick} axisLine={false} tickLine={false} />
               <YAxis tick={{ fill: "#718096", fontSize: 11 }} axisLine={false} tickLine={false}
                 tickFormatter={(v) => formatCurrency(v, true)} width={65} />
               <Tooltip
@@ -119,8 +190,20 @@ export function TransactionsPage() {
                 wrapperStyle={{ fontSize: 12 }}
                 formatter={(v) => <span style={{ color: "#a0aec0" }}>{v}</span>}
               />
-              <Bar dataKey="compra" name="Compras" fill="#3b82f6" radius={[4, 4, 0, 0]} maxBarSize={28} />
-              <Bar dataKey="venda" name="Vendas" fill="#ef4444" radius={[4, 4, 0, 0]} maxBarSize={28} />
+              <Bar
+                dataKey="compra"
+                name="Compras"
+                fill="#3b82f6"
+                radius={[4, 4, 0, 0]}
+                maxBarSize={28}
+              />
+              <Bar
+                dataKey="venda"
+                name="Vendas"
+                fill="#ef4444"
+                radius={[4, 4, 0, 0]}
+                maxBarSize={28}
+              />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -130,8 +213,13 @@ export function TransactionsPage() {
         <div className="flex flex-wrap items-center gap-2 p-4 sm:p-5 border-b border-haveres-border">
           <ArrowLeftRight size={18} className="text-haveres-blue" />
           <h2 className="text-sm font-semibold text-white">Movimentações ({filteredTransactions.length})</h2>
-          {assetSearch.trim() && (
+          {(assetSearch.trim() || hasActiveMonthFilter) && (
             <span className="text-xs text-muted-foreground">de {data?.length ?? 0} registros</span>
+          )}
+          {hasActiveMonthFilter && selectedMonthLabel && (
+            <span className="text-xs px-2 py-0.5 rounded bg-secondary text-muted-foreground">
+              Mês: {selectedMonthLabel}
+            </span>
           )}
           <div className="w-full sm:w-auto sm:ml-auto flex items-center gap-2">
             <input
