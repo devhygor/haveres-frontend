@@ -2,7 +2,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useNavigate, Link } from "react-router-dom";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { authApi } from "@/api/auth";
 
 const schema = z.object({
@@ -32,16 +32,39 @@ const inputClass = "w-full bg-secondary border border-haveres-border rounded-lg 
 export function RegisterPage() {
   const navigate = useNavigate();
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [isRedirecting, setIsRedirecting] = useState(false);
+  const redirectTimeoutRef = useRef<number | null>(null);
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
   });
 
+  useEffect(() => {
+    return () => {
+      if (redirectTimeoutRef.current) {
+        window.clearTimeout(redirectTimeoutRef.current);
+      }
+    };
+  }, []);
+
   async function onSubmit(data: FormData) {
     setError("");
+    setSuccess("");
+    setIsRedirecting(false);
+    if (redirectTimeoutRef.current) {
+      window.clearTimeout(redirectTimeoutRef.current);
+      redirectTimeoutRef.current = null;
+    }
+
     try {
       await authApi.register(data);
-      navigate("/login", { state: { registered: true } });
+      setSuccess("Cadastro realizado com sucesso! Redirecionando para o login...");
+      setIsRedirecting(true);
+      redirectTimeoutRef.current = window.setTimeout(() => {
+        navigate("/login", { state: { registered: true } });
+      }, 1400);
     } catch (e: any) {
+      setIsRedirecting(false);
       setError(e?.response?.data?.detail || "Erro ao criar conta. Tente novamente.");
     }
   }
@@ -50,9 +73,11 @@ export function RegisterPage() {
     <div className="min-h-screen bg-haveres-dark flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-br from-haveres-blue to-haveres-green flex items-center justify-center mb-4 shadow-lg shadow-haveres-blue/20">
-            <span className="text-white font-bold text-2xl">H</span>
-          </div>
+          <img
+            src="/static/android-chrome-192x192.png"
+            alt="Haveres"
+            className="w-14 h-14 mx-auto rounded-2xl mb-4 shadow-lg shadow-haveres-blue/20"
+          />
           <h1 className="text-xl sm:text-2xl font-bold text-white">Haveres</h1>
           <p className="text-muted-foreground text-sm mt-1">Crie sua conta</p>
         </div>
@@ -79,12 +104,18 @@ export function RegisterPage() {
               </div>
             )}
 
+            {success && (
+              <div className="bg-gain/10 border border-gain/30 rounded-lg px-3 py-2">
+                <p className="text-sm text-gain">{success}</p>
+              </div>
+            )}
+
             <button
               type="submit"
-              disabled={isSubmitting}
+              disabled={isSubmitting || isRedirecting}
               className="w-full bg-haveres-blue hover:bg-haveres-blue-dark text-white font-medium py-2.5 rounded-lg transition-colors disabled:opacity-50 mt-2"
             >
-              {isSubmitting ? "Criando conta..." : "Criar conta"}
+              {isSubmitting ? "Criando conta..." : isRedirecting ? "Cadastro concluído" : "Criar conta"}
             </button>
           </form>
 

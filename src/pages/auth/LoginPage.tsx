@@ -1,7 +1,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useLocation } from "react-router-dom";
 import { useState } from "react";
 import { authApi } from "@/api/auth";
 import { useAuthStore } from "@/stores/authStore";
@@ -14,8 +14,14 @@ type FormData = z.infer<typeof schema>;
 
 export function LoginPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { setTokens, setUser } = useAuthStore();
   const [error, setError] = useState("");
+  const [registrationSuccessMessage] = useState(() =>
+    (location.state as { registered?: boolean } | null)?.registered
+      ? "Cadastro realizado com sucesso. Faça login para continuar."
+      : ""
+  );
 
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -39,15 +45,23 @@ export function LoginPage() {
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-br from-haveres-blue to-haveres-green flex items-center justify-center mb-4 shadow-lg shadow-haveres-blue/20">
-            <span className="text-white font-bold text-2xl">H</span>
-          </div>
+          <img
+            src="/static/android-chrome-192x192.png"
+            alt="Haveres"
+            className="w-14 h-14 mx-auto rounded-2xl mb-4 shadow-lg shadow-haveres-blue/20"
+          />
           <h1 className="text-xl sm:text-2xl font-bold text-white">Haveres</h1>
           <p className="text-muted-foreground text-sm mt-1">Controle de patrimônio pessoal</p>
         </div>
 
         <div className="card-haveres p-5 sm:p-8">
           <h2 className="text-lg font-semibold text-white mb-6">Entrar na conta</h2>
+
+          {registrationSuccessMessage && (
+            <div className="bg-gain/10 border border-gain/30 rounded-lg px-3 py-2 mb-4">
+              <p className="text-sm text-gain">{registrationSuccessMessage}</p>
+            </div>
+          )}
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div>

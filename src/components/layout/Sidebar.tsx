@@ -53,9 +53,11 @@ export function Sidebar() {
         sidebarOpen ? "justify-between" : "justify-center")}>
         {sidebarOpen && (
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-haveres-blue to-haveres-green flex items-center justify-center">
-              <span className="text-white font-bold text-sm">H</span>
-            </div>
+            <img
+              src="/static/favicon-32x32.png"
+              alt="Haveres"
+              className="w-8 h-8 rounded-lg"
+            />
             <span className="font-bold text-lg text-white tracking-tight">Haveres</span>
           </div>
         )}
