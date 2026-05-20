@@ -90,7 +90,7 @@ export function PatrimonyChart({ data }: Props) {
           tickLine={false}
         />
         <YAxis tick={{ fill: "#718096", fontSize: 11 }} axisLine={false} tickLine={false}
-          tickFormatter={(v) => formatCurrency(v, true)} width={70} />
+          tickFormatter={(v) => formatCurrency(v, true)} width={70} domain={["auto", "auto"]} />
         <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(160, 174, 192, 0.12)" }} />
         <Legend
           wrapperStyle={{ fontSize: 12, color: "#718096" }}

@@ -81,7 +81,8 @@ export function PriceHistoryChart({ ticker }: Props) {
             <CartesianGrid strokeDasharray="3 3" stroke="#2d3748" vertical={false} />
             <XAxis dataKey="date" tick={{ fill: "#718096", fontSize: 11 }} axisLine={false} tickLine={false} />
             <YAxis tick={{ fill: "#718096", fontSize: 11 }} axisLine={false} tickLine={false}
-              tickFormatter={(v) => formatCurrency(v, true)} width={65} />
+              tickFormatter={(v) => formatCurrency(v, true)} width={65}
+              domain={["auto", "auto"]} />
             <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(160, 174, 192, 0.12)" }} />
             <Area type="monotone" dataKey="price" stroke="#3b82f6" strokeWidth={2}
               fill="url(#gradPrice)" dot={false} />

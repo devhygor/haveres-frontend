@@ -212,6 +212,7 @@ export function BenchmarkChart() {
               tickLine={false}
               tickFormatter={(v) => `${v.toFixed(1)}%`}
               width={55}
+              domain={["auto", "auto"]}
             />
             <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(160, 174, 192, 0.12)" }} />
 
