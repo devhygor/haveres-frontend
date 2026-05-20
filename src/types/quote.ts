@@ -5,6 +5,7 @@ export interface HistoricalQuote {
   high_price: number | null;
   low_price: number | null;
   volume: number | null;
+  datetime_str: string | null;
 }
 
 export interface CurrencyQuote {

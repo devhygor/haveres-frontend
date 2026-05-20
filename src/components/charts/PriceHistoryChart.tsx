@@ -8,6 +8,7 @@ import { formatCurrency } from "@/utils/format";
 import { LoadingState } from "@/components/common/LoadingState";
 
 const RANGES = [
+  { label: "7D", value: "5d" },
   { label: "1M", value: "1mo" },
   { label: "3M", value: "3mo" },
   { label: "6M", value: "6mo" },
@@ -38,11 +39,17 @@ export function PriceHistoryChart({ ticker }: Props) {
     queryFn: () => quotesApi.getHistory(ticker, range).then((r) => r.data),
   });
 
+  const isIntraday = range === "5d";
+
   const formatted = (data ?? [])
     .slice()
-    .sort((a, b) => a.date.localeCompare(b.date))
+    .sort((a, b) => {
+      const keyA = a.datetime_str ?? a.date;
+      const keyB = b.datetime_str ?? b.date;
+      return keyA.localeCompare(keyB);
+    })
     .map((d) => ({
-      date: d.date.slice(0, 10),
+      date: isIntraday && d.datetime_str ? d.datetime_str : d.date.slice(0, 10),
       price: Number(d.close_price),
     }));
 
@@ -79,7 +86,19 @@ export function PriceHistoryChart({ ticker }: Props) {
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="#2d3748" vertical={false} />
-            <XAxis dataKey="date" tick={{ fill: "#718096", fontSize: 11 }} axisLine={false} tickLine={false} />
+            <XAxis
+              dataKey="date"
+              tick={{ fill: "#718096", fontSize: 11 }}
+              axisLine={false}
+              tickLine={false}
+              interval={isIntraday ? "preserveStartEnd" : "preserveEnd"}
+              tickFormatter={isIntraday ? (v: string) => {
+                const [datePart, timePart] = v.split("T");
+                if (!datePart) return v;
+                const [, m, d] = datePart.split("-");
+                return timePart ? `${d}/${m} ${timePart.slice(0, 5)}` : `${d}/${m}`;
+              } : undefined}
+            />
             <YAxis tick={{ fill: "#718096", fontSize: 11 }} axisLine={false} tickLine={false}
               tickFormatter={(v) => formatCurrency(v, true)} width={65}
               domain={["auto", "auto"]} />
