@@ -1,5 +1,6 @@
 import { api } from "@/config/api";
 import type { HistoricalQuote, CurrencyQuote, MacroIndicator, BenchmarkPoint, FIIDetailData, CryptoQuoteItem, FinancialStatementItem, OptionContract, MarketIndexQuote } from "@/types/quote";
+import type { AssetPerformance, DividendHistoryItem, DistributionSummary, IndexComparison } from "@/types/assetDetail";
 
 export const quotesApi = {
   getHistory: (ticker: string, range = "1y") =>
@@ -35,4 +36,16 @@ export const quotesApi = {
     api.get<OptionContract[]>(`/quotes/${ticker}/options`, {
       params: expirationDate ? { expiration_date: expirationDate } : undefined,
     }),
+
+  getAssetPerformance: (ticker: string) =>
+    api.get<AssetPerformance>(`/quotes/${ticker}/performance`),
+
+  getDividendHistory: (ticker: string, months = 36) =>
+    api.get<DividendHistoryItem[]>(`/quotes/${ticker}/dividend-history`, { params: { months } }),
+
+  getDistributionSummary: (ticker: string) =>
+    api.get<DistributionSummary>(`/quotes/${ticker}/distribution-summary`),
+
+  getIndexComparison: (ticker: string, months = 24) =>
+    api.get<IndexComparison>(`/quotes/${ticker}/index-comparison`, { params: { months } }),
 };
