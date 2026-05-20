@@ -47,6 +47,7 @@ const SYNC_MANUAL_ONLY: Record<string, string> = {
   fii_indicator_history: "Mensal — processamento pesado (~horas). Dispare manualmente quando necessário.",
   fii_reports: "Mensal — busca relatórios CVM de todos os FIIs. Dispare manualmente quando necessário.",
   financial_statements: "Mensal — demonstrações financeiras de todas as empresas. Processamento muito pesado.",
+  treasury_benchmark_repair: "Manutenção corretiva — execute manualmente para reconstruir histórico/snapshots do benchmark com Tesouro.",
 };
 
 const SYNC_LABELS: Record<string, string> = {
@@ -81,7 +82,7 @@ const SYNC_PHASES: { label: string; keys: string[] }[] = [
   { label: "Econômicos",  keys: ["inflation", "prime_rate"] },
   { label: "Portfólio",   keys: ["portfolio_history", "portfolio_snapshots"] },
   { label: "Derivativos", keys: ["options_chain"] },
-  { label: "Tesouro", keys: ["treasury_bonds"] },
+  { label: "Tesouro", keys: ["treasury_bonds", "treasury_benchmark_repair"] },
 ];
 
 function calcProgress(keys: string[], sp: SyncProgress): { done: number; total: number; pct: number; anyRunning: boolean } {
@@ -357,18 +358,6 @@ export function SystemPage() {
     },
   });
 
-  const repairTreasuryBenchmark = useMutation({
-    mutationFn: () => systemApi.repairTreasuryBenchmark(),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["system", "sync-progress"] });
-      queryClient.invalidateQueries({ queryKey: ["system", "sync-status"] });
-      setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: ["system", "sync-progress"] });
-        queryClient.invalidateQueries({ queryKey: ["system", "sync-status"] });
-      }, 3000);
-    },
-  });
-
   if (health.isLoading) return <LoadingState />;
 
   const h = health.data;
@@ -377,9 +366,6 @@ export function SystemPage() {
   const s = syncCatalogStatus.data;
   const ss = syncStatus.data;
   const sp = syncProgressQuery.data;
-  const repairProgress = sp?.treasury_benchmark_repair;
-  const repairIsRunning = repairProgress?.status === "running";
-  const repairLastRun = ss?.treasury_benchmark_repair ?? null;
 
   const verifiedRate = m && m.total_users > 0
     ? Math.round((m.verified_users / m.total_users) * 100) : 0;
@@ -475,40 +461,6 @@ export function SystemPage() {
               <RefreshCw size={12} className={syncAll.isPending ? "animate-spin" : ""} />
               Sincronizar Tudo
             </button>
-          )}
-        </div>
-
-        <div className="mt-4 p-3 rounded-lg border border-amber-400/20 bg-amber-400/5">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div>
-              <p className="text-sm font-medium text-amber-400">Reparo de Benchmark do Tesouro</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Executa histórico completo do Tesouro Direto e reconstrói snapshots para corrigir a rentabilidade comparada.
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                {repairIsRunning
-                  ? "Processando reparo... acompanhe na barra de progresso abaixo."
-                  : repairLastRun
-                    ? `Última execução: ${formatDateTime(repairLastRun)}`
-                    : "Ainda não executado."}
-              </p>
-            </div>
-
-            <button
-              onClick={() => repairTreasuryBenchmark.mutate()}
-              disabled={repairTreasuryBenchmark.isPending || repairIsRunning}
-              className="shrink-0 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-amber-400/15 border border-amber-400/30 text-amber-400 hover:bg-amber-400/20 transition-colors disabled:opacity-50"
-            >
-              <RefreshCw size={12} className={repairTreasuryBenchmark.isPending || repairIsRunning ? "animate-spin" : ""} />
-              Reparar Benchmark Tesouro
-            </button>
-          </div>
-
-          {repairTreasuryBenchmark.isError && (
-            <p className="text-xs text-loss mt-2">Erro ao disparar reparo de benchmark.</p>
-          )}
-          {repairTreasuryBenchmark.isSuccess && !repairIsRunning && (
-            <p className="text-xs text-gain mt-2">Reparo disparado com sucesso.</p>
           )}
         </div>
 
