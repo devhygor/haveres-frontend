@@ -11,6 +11,7 @@ export interface HistoricalQuote {
 export interface CurrencyQuote {
   currency_pair: string;
   date: string;
+  updated_at: string;
   bid: number;
   ask: number;
   high: number | null;
