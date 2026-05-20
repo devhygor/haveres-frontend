@@ -127,25 +127,79 @@ export function DividendsPage() {
   }, [selectedDividendType, upcoming.data]);
 
   const chartData = useMemo(() => {
-    if (!filteredData.length) return [];
+    if (!filteredData.length && !filteredUpcoming.length) return [];
     const today = new Date().toISOString().split("T")[0];
-    const monthTotals: Record<string, { paid: number; upcoming: number }> = {};
+    const nextMonth = new Date();
+    nextMonth.setMonth(nextMonth.getMonth() + 1);
+    const fallbackUpcomingMonth = nextMonth.toISOString().slice(0, 7);
+
+    const monthTotals: Record<string, {
+      paid: number;
+      upcoming: number;
+      paidByType: Record<string, number>;
+      upcomingByType: Record<string, number>;
+    }> = {};
+
+    const typeDisplayMap: Record<string, string> = {};
+
+    const ensureMonth = (monthKey: string) => {
+      if (!monthTotals[monthKey]) {
+        monthTotals[monthKey] = {
+          paid: 0,
+          upcoming: 0,
+          paidByType: {},
+          upcomingByType: {},
+        };
+      }
+      return monthTotals[monthKey];
+    };
+
+    const buildTypeDetails = (typeTotals: Record<string, number>) => (
+      Object.entries(typeTotals)
+        .filter(([, amount]) => amount > 0)
+        .map(([type, amount]) => ({
+          type,
+          label: typeDisplayMap[type] ?? type,
+          amount,
+        }))
+        .sort((a, b) => b.amount - a.amount)
+    );
+
     filteredData.forEach((item) => {
+      typeDisplayMap[item.dividend_type] = item.dividend_type_display;
+      if (item.payment_date && item.payment_date >= today) {
+        return;
+      }
       const monthKey = (item.payment_date || item.ex_date).slice(0, 7);
       if (!monthKey) return;
-      if (!monthTotals[monthKey]) monthTotals[monthKey] = { paid: 0, upcoming: 0 };
-      if (item.payment_date && item.payment_date >= today) {
-        monthTotals[monthKey].upcoming += Number(item.net_amount);
-      } else {
-        monthTotals[monthKey].paid += Number(item.net_amount);
-      }
+      const month = ensureMonth(monthKey);
+      const amount = Number(item.net_amount);
+      month.paid += amount;
+      month.paidByType[item.dividend_type] = (month.paidByType[item.dividend_type] ?? 0) + amount;
     });
+
+    filteredUpcoming.forEach((item) => {
+      typeDisplayMap[item.dividend_type] = item.dividend_type_display;
+      const monthKey = (item.expected_date?.slice(0, 7) || fallbackUpcomingMonth);
+      if (!monthKey) return;
+      const month = ensureMonth(monthKey);
+      const amount = Number(item.expected_amount);
+      month.upcoming += amount;
+      month.upcomingByType[item.dividend_type] = (month.upcomingByType[item.dividend_type] ?? 0) + amount;
+    });
+
     const monthlyData = Object.entries(monthTotals)
       .sort(([a], [b]) => a.localeCompare(b))
-      .map(([month, values]) => ({ month: `${month}-01`, paid: values.paid, upcoming: values.upcoming }));
+      .map(([month, values]) => ({
+        month: `${month}-01`,
+        paid: values.paid,
+        upcoming: values.upcoming,
+        paid_details: buildTypeDetails(values.paidByType),
+        upcoming_details: buildTypeDetails(values.upcomingByType),
+      }));
     if (evolutionRangeMonths === 0) return monthlyData;
     return monthlyData.slice(-evolutionRangeMonths);
-  }, [filteredData, evolutionRangeMonths]);
+  }, [filteredData, filteredUpcoming, evolutionRangeMonths]);
 
   const selectedEvolutionRangeLabel = useMemo(() => {
     return EVOLUTION_RANGE_OPTIONS.find((option) => option.value === evolutionRangeMonths)?.label ?? "12 meses";
@@ -279,7 +333,7 @@ export function DividendsPage() {
         )}
 
         {/* Gráfico mensal */}
-        {filteredData.length > 0 ? (
+        {(filteredData.length > 0 || filteredUpcoming.length > 0) ? (
           <div className="card-haveres p-5">
             <div className="flex items-center gap-2 mb-4">
               <TrendingUp size={18} className="text-gain" />

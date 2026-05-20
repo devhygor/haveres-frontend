@@ -1,24 +1,54 @@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { formatCurrency, formatDateShort } from "@/utils/format";
 
+interface DividendTypeAmount {
+  type: string;
+  label: string;
+  amount: number;
+}
+
 export interface DividendChartPoint {
   month: string;
   paid: number;
   upcoming: number;
+  paid_details?: DividendTypeAmount[];
+  upcoming_details?: DividendTypeAmount[];
 }
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
-  const paid = payload.find((p: any) => p.dataKey === "paid")?.value ?? 0;
-  const upcoming = payload.find((p: any) => p.dataKey === "upcoming")?.value ?? 0;
+  const point = payload[0]?.payload as DividendChartPoint | undefined;
+  if (!point) return null;
+
+  const paid = point.paid ?? 0;
+  const upcoming = point.upcoming ?? 0;
+  const paidDetails = point.paid_details ?? [];
+  const upcomingDetails = point.upcoming_details ?? [];
+
   return (
-    <div className="bg-haveres-card border border-haveres-border rounded-lg p-3 shadow-xl text-xs space-y-1">
-      <p className="text-muted-foreground mb-1">{label}</p>
-      {paid > 0 && <p className="text-gain font-mono font-medium">{formatCurrency(paid)}</p>}
+    <div className="bg-haveres-card border border-haveres-border rounded-lg p-3 shadow-xl text-xs space-y-2 min-w-[210px]">
+      <p className="text-muted-foreground">{label}</p>
+      {paid > 0 && (
+        <div className="space-y-1">
+          <p className="text-gain font-mono font-medium">Recebido: {formatCurrency(paid)}</p>
+          {paidDetails.map((item) => (
+            <p key={`paid-${item.type}`} className="text-muted-foreground">
+              • {item.label}: <span className="font-mono text-white">{formatCurrency(item.amount)}</span>
+            </p>
+          ))}
+        </div>
+      )}
       {upcoming > 0 && (
-        <p className="font-mono font-medium" style={{ color: "#86efac" }}>
-          A receber: {formatCurrency(upcoming)}
-        </p>
+        <div className="space-y-1">
+          <p className="font-mono font-medium" style={{ color: "#86efac" }}>
+            A receber: {formatCurrency(upcoming)}
+          </p>
+          {upcomingDetails.map((item) => (
+            <p key={`upcoming-${item.type}`} className="text-muted-foreground">
+              • {item.label}: <span className="font-mono text-white">{formatCurrency(item.amount)}</span>
+            </p>
+          ))}
+        </div>
       )}
     </div>
   );
@@ -31,6 +61,8 @@ export function DividendsChart({ data }: Props) {
     month: formatDateShort(d.month),
     paid: d.paid,
     upcoming: d.upcoming,
+    paid_details: d.paid_details,
+    upcoming_details: d.upcoming_details,
   }));
 
   return (
