@@ -293,6 +293,7 @@ export function SystemPage() {
   });
 
   const [confirmSyncAll, setConfirmSyncAll] = useState(false);
+  const [cancelingAndRestarting, setCancelingAndRestarting] = useState(false);
 
   const syncAll = useMutation({
     mutationFn: () => systemApi.syncAll(),
@@ -311,6 +312,17 @@ export function SystemPage() {
       await Promise.allSettled(
         Object.keys(SYNC_MANUAL_ONLY).map((k) => systemApi.triggerSync(k))
       );
+    }
+  };
+
+  const handleCancelAndRestart = async () => {
+    setCancelingAndRestarting(true);
+    try {
+      await systemApi.cancelAll();
+      await queryClient.invalidateQueries({ queryKey: ["system", "sync-progress"] });
+      syncAll.mutate();
+    } finally {
+      setCancelingAndRestarting(false);
     }
   };
 
@@ -430,38 +442,57 @@ export function SystemPage() {
           {sp && (
             <OverallProgressBar sp={sp} />
           )}
-          {confirmSyncAll ? (
-            <div className="shrink-0 flex items-center gap-1.5 bg-haveres-dark border border-haveres-border rounded-lg px-3 py-1.5">
-              <span className="text-xs text-amber-400 font-medium mr-1">Incluir itens pesados?</span>
+          {(() => {
+            const anyRunning = sp && Object.values(sp).some((i) => i.status === "running");
+            const busy = syncAll.isPending || cancelingAndRestarting;
+            if (anyRunning && !confirmSyncAll) {
+              return (
+                <button
+                  onClick={handleCancelAndRestart}
+                  disabled={busy}
+                  className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-amber-500 hover:bg-amber-600 text-white transition-colors disabled:opacity-50"
+                >
+                  <RefreshCw size={12} className={busy ? "animate-spin" : ""} />
+                  Cancelar e Reiniciar
+                </button>
+              );
+            }
+            if (confirmSyncAll) {
+              return (
+                <div className="shrink-0 flex items-center gap-1.5 bg-haveres-dark border border-haveres-border rounded-lg px-3 py-1.5">
+                  <span className="text-xs text-amber-400 font-medium mr-1">Incluir itens pesados?</span>
+                  <button
+                    onClick={() => handleSyncAll(false)}
+                    className="text-xs px-2 py-0.5 rounded bg-haveres-blue/10 text-haveres-blue hover:bg-haveres-blue/20 font-medium transition-colors"
+                  >
+                    Só automáticos
+                  </button>
+                  <button
+                    onClick={() => handleSyncAll(true)}
+                    className="text-xs px-2 py-0.5 rounded bg-amber-400/10 text-amber-400 hover:bg-amber-400/20 font-medium transition-colors"
+                  >
+                    Incluir todos
+                  </button>
+                  <button
+                    onClick={() => setConfirmSyncAll(false)}
+                    className="text-xs text-muted-foreground hover:text-white ml-1 transition-colors"
+                  >
+                    ✕
+                  </button>
+                </div>
+              );
+            }
+            return (
               <button
-                onClick={() => handleSyncAll(false)}
-                className="text-xs px-2 py-0.5 rounded bg-haveres-blue/10 text-haveres-blue hover:bg-haveres-blue/20 font-medium transition-colors"
+                onClick={() => setConfirmSyncAll(true)}
+                disabled={busy}
+                className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-haveres-blue hover:bg-blue-600 text-white transition-colors disabled:opacity-50"
               >
-                Só automáticos
+                <RefreshCw size={12} className={busy ? "animate-spin" : ""} />
+                Sincronizar Tudo
               </button>
-              <button
-                onClick={() => handleSyncAll(true)}
-                className="text-xs px-2 py-0.5 rounded bg-amber-400/10 text-amber-400 hover:bg-amber-400/20 font-medium transition-colors"
-              >
-                Incluir todos
-              </button>
-              <button
-                onClick={() => setConfirmSyncAll(false)}
-                className="text-xs text-muted-foreground hover:text-white ml-1 transition-colors"
-              >
-                ✕
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={() => setConfirmSyncAll(true)}
-              disabled={syncAll.isPending}
-              className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-haveres-blue hover:bg-blue-600 text-white transition-colors disabled:opacity-50"
-            >
-              <RefreshCw size={12} className={syncAll.isPending ? "animate-spin" : ""} />
-              Sincronizar Tudo
-            </button>
-          )}
+            );
+          })()}
         </div>
 
         {sp && ss !== undefined && (

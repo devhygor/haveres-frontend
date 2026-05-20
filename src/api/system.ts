@@ -89,6 +89,7 @@ export const systemApi = {
   userMetrics: () => api.get<UserMetrics>("/system/users/metrics"),
   syncStatus: () => api.get<SyncStatus>("/system/sync-status"),
   syncAll: () => api.post<SyncAllResult>("/system/sync-all"),
+  cancelAll: () => api.post("/system/cancel-all"),
   listAdmins: () => api.get<AdminUser[]>("/system/admins"),
   setAdminStatus: (email: string, is_admin: boolean) =>
     api.post("/system/admins/set", { email, is_admin }),

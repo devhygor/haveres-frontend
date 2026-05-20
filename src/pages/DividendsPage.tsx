@@ -10,7 +10,6 @@ import { ErrorState } from "@/components/common/ErrorState";
 import { EmptyState } from "@/components/common/EmptyState";
 import { DividendFormModal } from "@/components/forms/DividendFormModal";
 import { formatCurrency, formatDate, formatDateShort } from "@/utils/format";
-import { cn } from "@/utils/cn";
 import { TrendingUp, Plus, Pencil, Trash2, RefreshCw, PieChart, BarChart3, CalendarDays } from "lucide-react";
 import { SourceBadge } from "@/components/common/SourceBadge";
 import { AssetLogo } from "@/components/common/AssetLogo";
@@ -514,15 +513,24 @@ export function DividendsPage() {
                   Limpar mês
                 </button>
               )}
-              <button
-                onClick={() => syncDividends.mutate()}
-                disabled={syncDividends.isPending}
-                className="w-full sm:w-auto justify-center flex items-center gap-1.5 px-3 py-1.5 bg-secondary text-muted-foreground text-xs font-medium rounded-lg hover:text-white transition-colors disabled:opacity-50"
-                title="Sincronizar proventos via Brapi"
-              >
-                <RefreshCw size={13} className={syncDividends.isPending ? "animate-spin" : ""} />
-                Sincronizar Proventos
-              </button>
+              <div className="w-full sm:w-auto flex items-center justify-center gap-2">
+                <button
+                  onClick={() => syncDividends.mutate()}
+                  disabled={syncDividends.isPending}
+                  className="flex-1 sm:flex-none justify-center flex items-center gap-1.5 px-3 py-1.5 bg-secondary text-muted-foreground text-xs font-medium rounded-lg hover:text-white transition-colors disabled:opacity-50"
+                  title="Sincronizar proventos via Brapi"
+                >
+                  <RefreshCw size={13} className={syncDividends.isPending ? "animate-spin" : ""} />
+                  Sincronizar Proventos
+                </button>
+                {dividendSync && dividendSync.status !== "idle" && (
+                  <span
+                    className={`text-xs font-medium font-numeric ${isDividendSyncRunning ? "text-haveres-blue" : "text-muted-foreground"}`}
+                  >
+                    {dividendSync.total > 0 ? `${Math.min(dividendSyncPct, 100)}%` : isDividendSyncRunning ? "0%" : "-"}
+                  </span>
+                )}
+              </div>
               <button
                 onClick={openCreate}
                 className="w-full sm:w-auto justify-center flex items-center gap-1.5 px-3 py-1.5 bg-haveres-blue text-white text-xs font-medium rounded-lg hover:bg-haveres-blue-dark transition-colors"
@@ -530,44 +538,6 @@ export function DividendsPage() {
                 <Plus size={13} /> Novo Provento
               </button>
             </div>
-
-            {dividendSync && dividendSync.status !== "idle" && (
-              <div className="w-full mt-2">
-                <div className="flex items-center justify-between text-xs mb-1">
-                  <span className="text-muted-foreground">
-                    {isDividendSyncRunning
-                      ? "Sincronizando proventos..."
-                      : dividendSync.status === "done"
-                        ? "Última sincronização concluída"
-                        : "Última sincronização com erro"}
-                  </span>
-                  <span className={cn("font-medium font-numeric", {
-                    "text-haveres-blue": isDividendSyncRunning,
-                    "text-gain": dividendSync.status === "done",
-                    "text-loss": dividendSync.status === "error",
-                  })}>
-                    {dividendSync.total > 0
-                      ? `${dividendSync.done}/${dividendSync.total} (${dividendSyncPct}%)`
-                      : isDividendSyncRunning
-                        ? "Iniciando..."
-                        : "-"}
-                  </span>
-                </div>
-                <div className="h-1.5 bg-haveres-dark rounded-full overflow-hidden">
-                  <div
-                    className={cn("h-full rounded-full transition-all duration-500", {
-                      "bg-haveres-blue": isDividendSyncRunning,
-                      "bg-gain": dividendSync.status === "done",
-                      "bg-loss": dividendSync.status === "error",
-                    })}
-                    style={{ width: dividendSync.status === "done" ? "100%" : `${Math.min(dividendSyncPct, 100)}%` }}
-                  />
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Criados: {dividendSync.created} · Ignorados: {dividendSync.skipped} · Erros: {dividendSync.errors}
-                </p>
-              </div>
-            )}
           </div>
 
           {!data.length ? (
