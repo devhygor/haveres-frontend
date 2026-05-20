@@ -22,6 +22,9 @@ export interface MacroIndicator {
   date: string;
   value: number;
   accumulated_12m: number | null;
+  unit: string | null;
+  frequency: string | null;
+  category: string | null;
 }
 
 export interface BenchmarkPoint {
