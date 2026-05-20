@@ -600,7 +600,7 @@ export function PositionsTable({
         })}
       </div>
 
-      <div className="hidden md:block overflow-x-auto">
+      <div className="hidden md:block relative max-h-[70vh] overflow-auto">
         <table className="w-full min-w-[1240px] text-sm">
           <thead>
             {table.getHeaderGroups().map((hg) => (
@@ -609,7 +609,7 @@ export function PositionsTable({
                   <th
                     key={header.id}
                     className={cn(
-                      "text-left py-3 px-3 text-xs font-medium text-muted-foreground uppercase tracking-wider cursor-pointer select-none hover:text-white transition-colors",
+                      "sticky top-0 z-20 bg-haveres-card text-left py-3 px-3 text-xs font-medium text-muted-foreground uppercase tracking-wider cursor-pointer select-none hover:text-white transition-colors",
                       COLUMN_WIDTH_CLASS[header.column.id],
                     )}
                     onClick={header.column.getToggleSortingHandler()}
