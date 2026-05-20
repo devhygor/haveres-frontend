@@ -21,7 +21,8 @@ export type SyncName =
   | "asset_fundamentals" | "asset_profiles" | "financial_statements"
   | "currency_history" | "fii_indicator_history" | "fii_reports"
   | "inflation" | "prime_rate"
-  | "portfolio_history" | "portfolio_snapshots";
+  | "portfolio_history" | "portfolio_snapshots"
+  | "options_chain" | "treasury_bonds" | "treasury_benchmark_repair";
 
 export interface SyncStatus {
   assets_catalog: string | null;
@@ -42,6 +43,9 @@ export interface SyncStatus {
   prime_rate: string | null;
   portfolio_history: string | null;
   portfolio_snapshots: string | null;
+  options_chain: string | null;
+  treasury_bonds: string | null;
+  treasury_benchmark_repair: string | null;
 }
 export interface SyncAllResult {
   assets_catalog: string;
@@ -62,6 +66,9 @@ export interface SyncAllResult {
   prime_rate: string;
   portfolio_history: string;
   portfolio_snapshots: string;
+  options_chain: string;
+  treasury_bonds: string;
+  treasury_benchmark_repair: string;
 }
 export interface SyncProgressItem {
   status: "idle" | "running" | "done" | "error";
@@ -87,4 +94,5 @@ export const systemApi = {
     api.post("/system/admins/set", { email, is_admin }),
   syncProgress: () => api.get<SyncProgress>("/system/sync-progress"),
   triggerSync: (name: string) => api.post(`/system/sync/${name}`),
+  repairTreasuryBenchmark: () => api.post("/system/portfolio/repair-treasury-benchmark"),
 };
