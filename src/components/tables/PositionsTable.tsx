@@ -27,6 +27,15 @@ function numericSorting<TData>(rowA: Row<TData>, rowB: Row<TData>, columnId: str
   return a - b;
 }
 
+const COLUMN_WIDTH_CLASS: Record<string, string> = {
+  ticker: "w-[164px] max-w-[164px]",
+  asset_type: "w-[88px] max-w-[88px]",
+  max_buy_price: "w-[118px]",
+  target_allocation_percent: "w-[108px]",
+  max_buy_gap_value: "w-[122px]",
+  target_gap_value: "w-[122px]",
+};
+
 interface Props {
   positions: Position[];
   targetInputs: Record<string, string>;
@@ -87,9 +96,10 @@ interface TargetPercentInputProps {
   value: string;
   invalid: boolean;
   onCommit: (assetId: string, rawValue: string) => void;
+  fullWidth?: boolean;
 }
 
-function TargetPercentInput({ assetId, value, invalid, onCommit }: TargetPercentInputProps) {
+function TargetPercentInput({ assetId, value, invalid, onCommit, fullWidth = false }: TargetPercentInputProps) {
   const [localValue, setLocalValue] = useState(value);
 
   useEffect(() => {
@@ -126,7 +136,7 @@ function TargetPercentInput({ assetId, value, invalid, onCommit }: TargetPercent
   };
 
   return (
-    <div className="w-[108px]">
+    <div className={cn("w-[98px] max-w-full", fullWidth && "w-full")}>
       <div className="relative">
         <input
           type="text"
@@ -163,9 +173,10 @@ interface MaxBuyPriceInputProps {
   value: string;
   invalid: boolean;
   onCommit: (assetId: string, rawValue: string) => void;
+  fullWidth?: boolean;
 }
 
-function MaxBuyPriceInput({ assetId, value, invalid, onCommit }: MaxBuyPriceInputProps) {
+function MaxBuyPriceInput({ assetId, value, invalid, onCommit, fullWidth = false }: MaxBuyPriceInputProps) {
   const [localValue, setLocalValue] = useState(value);
 
   useEffect(() => {
@@ -202,7 +213,7 @@ function MaxBuyPriceInput({ assetId, value, invalid, onCommit }: MaxBuyPriceInpu
   };
 
   return (
-    <div className="w-[120px]">
+    <div className={cn("w-[110px] max-w-full", fullWidth && "w-full")}>
       <div className="relative">
         <span className="absolute left-2 top-1.5 text-xs text-muted-foreground pointer-events-none">R$</span>
         <input
@@ -255,20 +266,20 @@ export function PositionsTable({
         const isTreasury = row.original.asset_type === "TREASURY";
 
         return (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 min-w-0">
             <AssetLogo logoUrl={row.original.logo_url} ticker={row.original.ticker} />
-            <div>
+            <div className="min-w-0">
               <Link
                 to={`/ativos/${row.original.ticker}`}
                 className={cn(
-                  "font-semibold text-haveres-blue hover:text-white text-sm transition-colors",
+                  "block truncate max-w-[118px] font-semibold text-haveres-blue hover:text-white text-sm transition-colors",
                   !isTreasury && "font-mono",
                 )}
                 title={isTreasury ? row.original.name : row.original.ticker}
               >
                 {isTreasury ? row.original.name : row.original.ticker}
               </Link>
-              <p className="text-xs text-muted-foreground truncate max-w-[160px]" title={isTreasury ? row.original.ticker : row.original.name}>
+              <p className="text-xs text-muted-foreground truncate max-w-[118px]" title={isTreasury ? row.original.ticker : row.original.name}>
                 {isTreasury ? row.original.ticker : row.original.name}
               </p>
             </div>
@@ -307,39 +318,19 @@ export function PositionsTable({
       ),
     },
     {
-      accessorKey: "current_price",
-      header: () => <TermTooltip term="Cotação" />,
-      sortingFn: numericSorting,
-      cell: ({ getValue }) => (
-        <span className="font-mono text-sm text-white">{formatCurrency(getValue() as number)}</span>
-      ),
-    },
-    {
-      id: "max_buy_price",
-      accessorFn: (row) => row.max_buy_price ?? 0,
-      header: () => <TermTooltip term="Preço Máximo de Compra" />,
-      sortingFn: numericSorting,
-      cell: ({ row }) => {
-        const assetId = row.original.asset_id;
-        const value = maxBuyInputs[assetId] ?? "";
-        const invalid = invalidMaxBuyAssetIds.has(assetId);
-
-        return (
-          <MaxBuyPriceInput
-            assetId={assetId}
-            value={value}
-            invalid={invalid}
-            onCommit={onMaxBuyCommit}
-          />
-        );
-      },
-    },
-    {
       accessorKey: "total_invested",
       header: () => <TermTooltip term="Investido" />,
       sortingFn: numericSorting,
       cell: ({ getValue }) => (
         <span className="font-mono text-sm">{formatCurrency(getValue() as number)}</span>
+      ),
+    },
+    {
+      accessorKey: "current_price",
+      header: () => <TermTooltip term="Cotação" />,
+      sortingFn: numericSorting,
+      cell: ({ getValue }) => (
+        <span className="font-mono text-sm text-white">{formatCurrency(getValue() as number)}</span>
       ),
     },
     {
@@ -368,37 +359,21 @@ export function PositionsTable({
       ),
     },
     {
-      accessorKey: "allocation",
-      header: () => <TermTooltip term="Alocação" />,
-      sortingFn: numericSorting,
-      cell: ({ getValue }) => {
-        const v = getValue() as number;
-        return (
-          <div className="flex items-center gap-2">
-            <div className="w-16 h-1.5 bg-secondary rounded-full overflow-hidden">
-              <div className="h-full bg-haveres-blue rounded-full" style={{ width: `${Math.min(v, 100)}%` }} />
-            </div>
-            <span className="font-mono text-xs text-muted-foreground">{formatPercent(v)}</span>
-          </div>
-        );
-      },
-    },
-    {
-      id: "target_allocation_percent",
-      accessorFn: (row) => row.target_allocation_percent,
-      header: () => <TermTooltip term="Meta de Alocação" />,
+      id: "max_buy_price",
+      accessorFn: (row) => row.max_buy_price ?? 0,
+      header: () => <TermTooltip term="Preço Máximo de Compra" />,
       sortingFn: numericSorting,
       cell: ({ row }) => {
         const assetId = row.original.asset_id;
-        const value = targetInputs[assetId] ?? "";
-        const invalid = invalidTargetAssetIds.has(assetId);
+        const value = maxBuyInputs[assetId] ?? "";
+        const invalid = invalidMaxBuyAssetIds.has(assetId);
 
         return (
-          <TargetPercentInput
+          <MaxBuyPriceInput
             assetId={assetId}
             value={value}
             invalid={invalid}
-            onCommit={onTargetCommit}
+            onCommit={onMaxBuyCommit}
           />
         );
       },
@@ -428,6 +403,42 @@ export function PositionsTable({
             <p className={cn("text-[11px] mt-0.5", isWithin ? "text-gain" : "text-loss")}>
               {isWithin ? "Dentro do preço" : "Acima do máximo"}
             </p>
+          </div>
+        );
+      },
+    },
+    {
+      id: "target_allocation_percent",
+      accessorFn: (row) => row.target_allocation_percent,
+      header: () => <TermTooltip term="Meta de Alocação" />,
+      sortingFn: numericSorting,
+      cell: ({ row }) => {
+        const assetId = row.original.asset_id;
+        const value = targetInputs[assetId] ?? "";
+        const invalid = invalidTargetAssetIds.has(assetId);
+
+        return (
+          <TargetPercentInput
+            assetId={assetId}
+            value={value}
+            invalid={invalid}
+            onCommit={onTargetCommit}
+          />
+        );
+      },
+    },
+    {
+      accessorKey: "allocation",
+      header: () => <TermTooltip term="Alocação" />,
+      sortingFn: numericSorting,
+      cell: ({ getValue }) => {
+        const v = getValue() as number;
+        return (
+          <div className="flex items-center gap-2">
+            <div className="w-16 h-1.5 bg-secondary rounded-full overflow-hidden">
+              <div className="h-full bg-haveres-blue rounded-full" style={{ width: `${Math.min(v, 100)}%` }} />
+            </div>
+            <span className="font-mono text-xs text-muted-foreground">{formatPercent(v)}</span>
           </div>
         );
       },
@@ -478,43 +489,158 @@ export function PositionsTable({
   });
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full min-w-[1520px] text-sm">
-        <thead>
-          {table.getHeaderGroups().map((hg) => (
-            <tr key={hg.id} className="border-b border-haveres-border">
-              {hg.headers.map((header) => (
-                <th
-                  key={header.id}
-                  className="text-left py-3 px-4 text-xs font-medium text-muted-foreground uppercase tracking-wider cursor-pointer select-none hover:text-white transition-colors"
-                  onClick={header.column.getToggleSortingHandler()}
-                >
-                  <div className="flex items-center gap-1">
-                    {flexRender(header.column.columnDef.header, header.getContext())}
-                    {header.column.getIsSorted() === "asc" ? <ArrowUp size={12} /> :
-                      header.column.getIsSorted() === "desc" ? <ArrowDown size={12} /> :
-                        <ArrowUpDown size={12} className="opacity-40" />}
+    <>
+      <div className="md:hidden space-y-3">
+        {table.getRowModel().rows.map((row) => {
+          const p = row.original;
+          const isTreasury = p.asset_type === "TREASURY";
+          const maxBuyDefined = p.max_buy_price != null;
+          const maxBuyGapValue = toNumber(p.max_buy_gap_value);
+          const maxBuyGapPercent = toNumber(p.max_buy_gap_percent);
+          const targetGapValue = toNumber(p.target_gap_value);
+          const targetGapPercent = toNumber(p.target_gap_percent);
+
+          return (
+            <div key={row.id} className="card-haveres p-3 space-y-3">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <AssetLogo logoUrl={p.logo_url} ticker={p.ticker} />
+                  <div className="min-w-0">
+                    <Link
+                      to={`/ativos/${p.ticker}`}
+                      className={cn(
+                        "block truncate max-w-[150px] font-semibold text-haveres-blue hover:text-white text-sm transition-colors",
+                        !isTreasury && "font-mono",
+                      )}
+                      title={isTreasury ? p.name : p.ticker}
+                    >
+                      {isTreasury ? p.name : p.ticker}
+                    </Link>
+                    <p className="text-xs text-muted-foreground truncate max-w-[170px]" title={isTreasury ? p.ticker : p.name}>
+                      {isTreasury ? p.ticker : p.name}
+                    </p>
                   </div>
-                </th>
-              ))}
-            </tr>
-          ))}
-        </thead>
-        <tbody>
-          {table.getRowModel().rows.map((row) => (
-            <tr
-              key={row.id}
-              className="border-b border-haveres-border/50 hover:bg-secondary/30 transition-colors"
-            >
-              {row.getVisibleCells().map((cell) => (
-                <td key={cell.id} className="py-3 px-4">
-                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+                </div>
+                <span className="text-[10px] px-2 py-0.5 rounded bg-secondary text-muted-foreground font-medium">
+                  {ASSET_TYPE_LABELS[p.asset_type] ?? p.asset_type}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <p className="text-[11px] text-muted-foreground">Qtd</p>
+                  <p className="font-mono text-sm text-white">{formatQuantity(toNumber(p.quantity))}</p>
+                </div>
+                <div>
+                  <p className="text-[11px] text-muted-foreground"><TermTooltip term="PM" /></p>
+                  <p className="font-mono text-sm text-white">{formatCurrency(toNumber(p.average_price))}</p>
+                </div>
+                <div>
+                  <p className="text-[11px] text-muted-foreground"><TermTooltip term="Investido" /></p>
+                  <p className="font-mono text-sm text-white">{formatCurrency(toNumber(p.total_invested))}</p>
+                </div>
+                <div>
+                  <p className="text-[11px] text-muted-foreground"><TermTooltip term="Cotação" /></p>
+                  <p className="font-mono text-sm text-white">{formatCurrency(toNumber(p.current_price))}</p>
+                </div>
+                <div>
+                  <p className="text-[11px] text-muted-foreground">Valor Atual</p>
+                  <p className="font-mono text-sm text-white">{formatCurrency(toNumber(p.current_value))}</p>
+                </div>
+                <div>
+                  <p className="text-[11px] text-muted-foreground"><TermTooltip term="P&L" /></p>
+                  <p className={cn("font-mono text-sm", plClass(toNumber(p.pl_absolute)))}>{formatCurrency(toNumber(p.pl_absolute))}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-2">
+                <div>
+                  <p className="text-[11px] text-muted-foreground mb-1"><TermTooltip term="Preço Máximo de Compra" /></p>
+                  <MaxBuyPriceInput
+                    assetId={p.asset_id}
+                    value={maxBuyInputs[p.asset_id] ?? ""}
+                    invalid={invalidMaxBuyAssetIds.has(p.asset_id)}
+                    onCommit={onMaxBuyCommit}
+                    fullWidth
+                  />
+                </div>
+                <div>
+                  <p className="text-[11px] text-muted-foreground mb-1"><TermTooltip term="Meta de Alocação" /></p>
+                  <TargetPercentInput
+                    assetId={p.asset_id}
+                    value={targetInputs[p.asset_id] ?? ""}
+                    invalid={invalidTargetAssetIds.has(p.asset_id)}
+                    onCommit={onTargetCommit}
+                    fullWidth
+                  />
+                  <p className="mt-1 text-[11px] text-muted-foreground">Alocação atual: {formatPercent(toNumber(p.allocation))}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 text-[11px]">
+                <div className="rounded border border-haveres-border p-2">
+                  <p className="text-muted-foreground mb-1"><TermTooltip term="Janela de Compra" /></p>
+                  {maxBuyDefined ? (
+                    <>
+                      <p className={cn("font-mono", plClass(maxBuyGapValue))}>{formatCurrency(maxBuyGapValue)}</p>
+                      <p className={cn("font-mono", plClass(maxBuyGapPercent))}>{formatPercent(maxBuyGapPercent, true)}</p>
+                    </>
+                  ) : (
+                    <p className="text-muted-foreground">Não definido</p>
+                  )}
+                </div>
+                <div className="rounded border border-haveres-border p-2">
+                  <p className="text-muted-foreground mb-1"><TermTooltip term="Desvio da Meta" /></p>
+                  <p className={cn("font-mono", plClass(targetGapValue))}>{formatCurrency(targetGapValue)}</p>
+                  <p className={cn("font-mono", plClass(targetGapPercent))}>{formatPercent(targetGapPercent, true)}</p>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="hidden md:block overflow-x-auto">
+        <table className="w-full min-w-[1240px] text-sm">
+          <thead>
+            {table.getHeaderGroups().map((hg) => (
+              <tr key={hg.id} className="border-b border-haveres-border">
+                {hg.headers.map((header) => (
+                  <th
+                    key={header.id}
+                    className={cn(
+                      "text-left py-3 px-3 text-xs font-medium text-muted-foreground uppercase tracking-wider cursor-pointer select-none hover:text-white transition-colors",
+                      COLUMN_WIDTH_CLASS[header.column.id],
+                    )}
+                    onClick={header.column.getToggleSortingHandler()}
+                  >
+                    <div className="flex items-center gap-1">
+                      {flexRender(header.column.columnDef.header, header.getContext())}
+                      {header.column.getIsSorted() === "asc" ? <ArrowUp size={12} /> :
+                        header.column.getIsSorted() === "desc" ? <ArrowDown size={12} /> :
+                          <ArrowUpDown size={12} className="opacity-40" />}
+                    </div>
+                  </th>
+                ))}
+              </tr>
+            ))}
+          </thead>
+          <tbody>
+            {table.getRowModel().rows.map((row) => (
+              <tr
+                key={row.id}
+                className="border-b border-haveres-border/50 hover:bg-secondary/30 transition-colors"
+              >
+                {row.getVisibleCells().map((cell) => (
+                  <td key={cell.id} className={cn("py-3 px-3", COLUMN_WIDTH_CLASS[cell.column.id])}>
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
   );
 }

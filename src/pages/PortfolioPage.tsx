@@ -102,12 +102,14 @@ function parseMoneyInput(value: string): { value: number | null; valid: boolean 
   return { value: parsed, valid: true };
 }
 
-function formatMoneyInput(value: number | null | undefined): string {
-  if (value == null || !Number.isFinite(value)) return "";
+function formatMoneyInput(value: number | string | null | undefined): string {
+  if (value == null) return "";
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return "";
   return new Intl.NumberFormat("pt-BR", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  }).format(value);
+  }).format(parsed);
 }
 
 function parseApiError(error: unknown, fallback: string): string {
@@ -349,11 +351,13 @@ export function PortfolioPage() {
 
   const hasUnsavedMaxBuyChanges = useMemo(() => {
     return positions.some((position) => {
-      const persisted = position.max_buy_price ?? null;
+      const persistedRaw = position.max_buy_price;
+      const persisted = persistedRaw == null ? null : Number(persistedRaw);
       const draft = draftMaxBuyByAssetId[position.asset_id] ?? null;
 
       if (persisted == null && draft == null) return false;
       if (persisted == null || draft == null) return true;
+      if (!Number.isFinite(persisted)) return true;
 
       return Math.abs(draft - persisted) >= 0.0001;
     });
