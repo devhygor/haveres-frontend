@@ -6,6 +6,7 @@ export interface ImportRowError {
 }
 
 export interface ImportRowParsed {
+  record_type?: "transaction" | "dividend";
   ticker?: string;
   transaction_type?: string;
   date?: string;
