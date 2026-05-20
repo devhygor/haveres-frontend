@@ -10,6 +10,7 @@ import { ErrorState } from "@/components/common/ErrorState";
 import { EmptyState } from "@/components/common/EmptyState";
 import { DividendFormModal } from "@/components/forms/DividendFormModal";
 import { formatCurrency, formatDate } from "@/utils/format";
+import { cn } from "@/utils/cn";
 import { TrendingUp, Plus, Pencil, Trash2, RefreshCw, PieChart, BarChart3, CalendarDays } from "lucide-react";
 import { SourceBadge } from "@/components/common/SourceBadge";
 import { AssetLogo } from "@/components/common/AssetLogo";
