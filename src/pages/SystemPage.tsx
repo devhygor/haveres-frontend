@@ -1,6 +1,12 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { systemApi, type SyncProgressItem, type SyncProgress } from "@/api/system";
+import {
+  systemApi,
+  type SyncProgressItem,
+  type SyncProgress,
+  type SyncScheduleItem,
+  type SyncScheduleUpdatePayload,
+} from "@/api/system";
 import { assetsApi } from "@/api/assets";
 import { LoadingState } from "@/components/common/LoadingState";
 import { AssetsAdminTab } from "@/components/admin/AssetsAdminTab";
@@ -166,18 +172,222 @@ function GroupProgressBar({ keys, sp }: { keys: string[]; sp: SyncProgress }) {
   );
 }
 
-function ProgressRow({ label, item, lastTs, onSync, syncing }: {
+type SyncScheduleForm = {
+  enabled: boolean;
+  minute: string;
+  hour: string;
+  day_of_week: string;
+  day_of_month: string;
+};
+
+type ScheduleMode = "hourly" | "daily" | "weekly" | "monthly" | "custom";
+
+function toScheduleForm(schedule: SyncScheduleItem | undefined): SyncScheduleForm {
+  return {
+    enabled: schedule?.enabled ?? true,
+    minute: schedule?.minute ?? "0",
+    hour: schedule?.hour ?? "*",
+    day_of_week: schedule?.day_of_week ?? "*",
+    day_of_month: schedule?.day_of_month ?? "*",
+  };
+}
+
+const WEEKDAY_LABELS = ["domingo", "segunda", "terça", "quarta", "quinta", "sexta", "sábado"];
+
+function pad2(v: string): string {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return v;
+  return String(n).padStart(2, "0");
+}
+
+function describeWeekdays(field: string): string | null {
+  if (field === "*") return null;
+  if (!/^\d+(,\d+)*$/.test(field)) return null;
+
+  const days = field
+    .split(",")
+    .map((item) => Number(item))
+    .filter((n) => Number.isInteger(n) && n >= 0 && n <= 6)
+    .map((n) => WEEKDAY_LABELS[n]);
+
+  if (days.length === 0) return null;
+  if (days.length === 1) return `Toda ${days[0]}`;
+  return `Toda semana (${days.join(", ")})`;
+}
+
+function formatNextRun(nextRunAt: string | null | undefined): string {
+  if (!nextRunAt) return "desativada";
+
+  const date = new Date(nextRunAt);
+  if (!Number.isFinite(date.getTime())) {
+    return formatDateTime(nextRunAt);
+  }
+
+  const weekday = new Intl.DateTimeFormat("pt-BR", { weekday: "long" }).format(date);
+  const dayMonthYear = new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(date);
+  const time = new Intl.DateTimeFormat("pt-BR", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(date);
+
+  return `${weekday}, ${dayMonthYear} às ${time}`;
+}
+
+function detectScheduleMode(form: SyncScheduleForm): ScheduleMode {
+  const hasNumericMinute = /^\d+$/.test(form.minute);
+  const hasNumericHour = /^\d+$/.test(form.hour);
+  const hasSimpleWeekday = /^\d$/.test(form.day_of_week);
+  const hasSimpleMonthDay = /^(?:[1-9]|[12]\d|3[01])$/.test(form.day_of_month);
+
+  if (form.hour === "*" && hasNumericMinute && form.day_of_week === "*" && form.day_of_month === "*") {
+    return "hourly";
+  }
+  if (hasNumericHour && hasNumericMinute && form.day_of_week === "*" && form.day_of_month === "*") {
+    return "daily";
+  }
+  if (hasNumericHour && hasNumericMinute && hasSimpleWeekday && form.day_of_month === "*") {
+    return "weekly";
+  }
+  if (hasNumericHour && hasNumericMinute && form.day_of_week === "*" && hasSimpleMonthDay) {
+    return "monthly";
+  }
+  return "custom";
+}
+
+function scheduleSummaryFromFields(
+  enabled: boolean,
+  minute: string,
+  hour: string,
+  dayOfWeek: string,
+  dayOfMonth: string,
+): string {
+  if (!enabled) return "Automação desativada.";
+
+  const hasFixedTime = /^\d+$/.test(minute) && /^\d+$/.test(hour);
+  const time = hasFixedTime ? `${pad2(hour)}:${pad2(minute)}` : null;
+  const weekdaysLabel = describeWeekdays(dayOfWeek);
+
+  if (hour === "*" && /^\d+$/.test(minute) && dayOfWeek === "*" && dayOfMonth === "*") {
+    return `A cada hora, no minuto ${pad2(minute)}.`;
+  }
+
+  if (/^\*\/\d+$/.test(minute) && hour === "*" && dayOfWeek === "*" && dayOfMonth === "*") {
+    return `A cada ${minute.replace("*/", "")} minutos.`;
+  }
+
+  if (dayOfWeek === "*" && dayOfMonth === "*" && time) {
+    return `Todos os dias às ${time}.`;
+  }
+
+  if (dayOfMonth === "*" && weekdaysLabel && time) {
+    return `${weekdaysLabel}, às ${time}.`;
+  }
+
+  if (dayOfWeek === "*" && /^\d+$/.test(dayOfMonth) && time) {
+    return `Todo dia ${dayOfMonth} do mês, às ${time}.`;
+  }
+
+  return `Agendamento personalizado: min ${minute}, hora ${hour}, semana ${dayOfWeek}, mês ${dayOfMonth}.`;
+}
+
+function scheduleSummary(schedule: SyncScheduleItem | undefined): string {
+  if (!schedule) return "Agenda automática indisponível.";
+  return scheduleSummaryFromFields(
+    schedule.enabled,
+    schedule.minute,
+    schedule.hour,
+    schedule.day_of_week,
+    schedule.day_of_month,
+  );
+}
+
+function ProgressRow({ label, item, lastTs, onSync, syncing, schedule, onSaveSchedule, savingSchedule, scheduleError }: {
   label: string;
   item: SyncProgressItem;
   lastTs: string | null;
   onSync: () => void;
   syncing: boolean;
+  schedule?: SyncScheduleItem;
+  onSaveSchedule: (name: string, payload: SyncScheduleUpdatePayload) => Promise<void>;
+  savingSchedule: boolean;
+  scheduleError?: string;
 }) {
   const pct = item.total > 0 ? Math.round((item.done / item.total) * 100) : 0;
   const isRunning = item.status === "running";
   const isDone = item.status === "done";
   const isError = item.status === "error";
   const isIndeterminate = isRunning && (item.total === 0 || item.done === 0);
+  const [isEditingSchedule, setIsEditingSchedule] = useState(false);
+  const [form, setForm] = useState<SyncScheduleForm>(() => toScheduleForm(schedule));
+  const [mode, setMode] = useState<ScheduleMode>(() => detectScheduleMode(toScheduleForm(schedule)));
+
+  useEffect(() => {
+    if (!isEditingSchedule) {
+      const next = toScheduleForm(schedule);
+      setForm(next);
+      setMode(detectScheduleMode(next));
+    }
+  }, [isEditingSchedule, schedule]);
+
+  const applyMode = (nextMode: ScheduleMode) => {
+    setMode(nextMode);
+    setForm((prev) => {
+      const next = { ...prev };
+      if (nextMode === "hourly") {
+        next.hour = "*";
+        next.day_of_week = "*";
+        next.day_of_month = "*";
+        if (!/^\d+$/.test(next.minute)) next.minute = "0";
+      }
+      if (nextMode === "daily") {
+        next.day_of_week = "*";
+        next.day_of_month = "*";
+        if (!/^\d+$/.test(next.hour)) next.hour = "8";
+        if (!/^\d+$/.test(next.minute)) next.minute = "0";
+      }
+      if (nextMode === "weekly") {
+        next.day_of_week = /^\d$/.test(next.day_of_week) ? next.day_of_week : "1";
+        next.day_of_month = "*";
+        if (!/^\d+$/.test(next.hour)) next.hour = "8";
+        if (!/^\d+$/.test(next.minute)) next.minute = "0";
+      }
+      if (nextMode === "monthly") {
+        next.day_of_week = "*";
+        next.day_of_month = /^(?:[1-9]|[12]\d|3[01])$/.test(next.day_of_month) ? next.day_of_month : "1";
+        if (!/^\d+$/.test(next.hour)) next.hour = "8";
+        if (!/^\d+$/.test(next.minute)) next.minute = "0";
+      }
+      return next;
+    });
+  };
+
+  const timeValue = `${pad2(/^\d+$/.test(form.hour) ? form.hour : "8")}:${pad2(/^\d+$/.test(form.minute) ? form.minute : "0")}`;
+
+  const updateTime = (value: string) => {
+    const [hh, mm] = value.split(":");
+    if (!hh || !mm) return;
+    setForm((prev) => ({
+      ...prev,
+      hour: String(Number(hh)),
+      minute: String(Number(mm)),
+    }));
+  };
+
+  const submitSchedule = async () => {
+    await onSaveSchedule(label, {
+      enabled: form.enabled,
+      minute: form.minute,
+      hour: form.hour,
+      day_of_week: form.day_of_week,
+      day_of_month: form.day_of_month,
+    });
+    setIsEditingSchedule(false);
+  };
 
   return (
     <div className="py-3 border-b border-haveres-border last:border-0">
@@ -219,6 +429,12 @@ function ProgressRow({ label, item, lastTs, onSync, syncing }: {
           >
             <RefreshCw size={12} className={syncing || isRunning ? "animate-spin" : ""} />
           </button>
+          <button
+            onClick={() => setIsEditingSchedule((v) => !v)}
+            className="px-2 py-1 rounded text-[11px] text-haveres-blue bg-haveres-blue/10 hover:bg-haveres-blue/20 transition-colors"
+          >
+            Agendar
+          </button>
         </div>
       </div>
       <div className="h-1.5 bg-haveres-dark rounded-full overflow-hidden">
@@ -245,6 +461,165 @@ function ProgressRow({ label, item, lastTs, onSync, syncing }: {
           ? `Última: ${formatDateTime(lastTs)}`
           : "Nunca sincronizado"}
       </p>
+      <p className="text-xs text-muted-foreground mt-0.5">{scheduleSummary(schedule)}</p>
+      <p className="text-xs text-muted-foreground mt-0.5">
+        Próxima automática: {formatNextRun(schedule?.next_run_at)}
+      </p>
+
+      {isEditingSchedule && (
+        <div className="mt-2 rounded-lg border border-haveres-border bg-haveres-dark p-3 space-y-2">
+          <label className="flex items-center gap-2 text-xs text-muted-foreground">
+            <input
+              type="checkbox"
+              checked={form.enabled}
+              onChange={(e) => setForm((prev) => ({ ...prev, enabled: e.target.checked }))}
+            />
+            Agendamento automático ativo
+          </label>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <label className="text-xs text-muted-foreground">
+              1. Recorrência
+              <select
+                value={mode}
+                onChange={(e) => applyMode(e.target.value as ScheduleMode)}
+                className="mt-1 w-full bg-haveres-card border border-haveres-border rounded px-2 py-1 text-xs text-white"
+              >
+                <option value="hourly">A cada hora</option>
+                <option value="daily">Todos os dias</option>
+                <option value="weekly">Semanal</option>
+                <option value="monthly">Mensal</option>
+                <option value="custom">Personalizado (cron)</option>
+              </select>
+            </label>
+
+            {(mode === "daily" || mode === "weekly" || mode === "monthly") && (
+              <label className="text-xs text-muted-foreground">
+                2. Horário
+                <input
+                  type="time"
+                  value={timeValue}
+                  onChange={(e) => updateTime(e.target.value)}
+                  className="mt-1 w-full bg-haveres-card border border-haveres-border rounded px-2 py-1 text-xs text-white"
+                />
+              </label>
+            )}
+
+            {mode === "hourly" && (
+              <label className="text-xs text-muted-foreground">
+                2. Minuto da hora
+                <input
+                  type="number"
+                  min={0}
+                  max={59}
+                  value={/^\d+$/.test(form.minute) ? form.minute : "0"}
+                  onChange={(e) => setForm((prev) => ({ ...prev, minute: e.target.value, hour: "*", day_of_week: "*", day_of_month: "*" }))}
+                  className="mt-1 w-full bg-haveres-card border border-haveres-border rounded px-2 py-1 text-xs text-white"
+                />
+              </label>
+            )}
+
+            {mode === "weekly" && (
+              <label className="text-xs text-muted-foreground">
+                3. Dia da semana
+                <select
+                  value={/^\d$/.test(form.day_of_week) ? form.day_of_week : "1"}
+                  onChange={(e) => setForm((prev) => ({ ...prev, day_of_week: e.target.value, day_of_month: "*" }))}
+                  className="mt-1 w-full bg-haveres-card border border-haveres-border rounded px-2 py-1 text-xs text-white"
+                >
+                  {WEEKDAY_LABELS.map((d, idx) => (
+                    <option key={d} value={String(idx)}>{d}</option>
+                  ))}
+                </select>
+              </label>
+            )}
+
+            {mode === "monthly" && (
+              <label className="text-xs text-muted-foreground">
+                3. Dia do mês
+                <input
+                  type="number"
+                  min={1}
+                  max={31}
+                  value={/^(?:[1-9]|[12]\d|3[01])$/.test(form.day_of_month) ? form.day_of_month : "1"}
+                  onChange={(e) => setForm((prev) => ({ ...prev, day_of_month: e.target.value, day_of_week: "*" }))}
+                  className="mt-1 w-full bg-haveres-card border border-haveres-border rounded px-2 py-1 text-xs text-white"
+                />
+              </label>
+            )}
+
+            {mode === "custom" && (
+              <>
+                <label className="text-xs text-muted-foreground">
+                  Minuto
+                  <input
+                    value={form.minute}
+                    onChange={(e) => setForm((prev) => ({ ...prev, minute: e.target.value }))}
+                    className="mt-1 w-full bg-haveres-card border border-haveres-border rounded px-2 py-1 text-xs text-white"
+                    placeholder="0"
+                  />
+                </label>
+                <label className="text-xs text-muted-foreground">
+                  Hora
+                  <input
+                    value={form.hour}
+                    onChange={(e) => setForm((prev) => ({ ...prev, hour: e.target.value }))}
+                    className="mt-1 w-full bg-haveres-card border border-haveres-border rounded px-2 py-1 text-xs text-white"
+                    placeholder="7 ou *"
+                  />
+                </label>
+                <label className="text-xs text-muted-foreground">
+                  Dia da semana
+                  <input
+                    value={form.day_of_week}
+                    onChange={(e) => setForm((prev) => ({ ...prev, day_of_week: e.target.value }))}
+                    className="mt-1 w-full bg-haveres-card border border-haveres-border rounded px-2 py-1 text-xs text-white"
+                    placeholder="* ou 1,3,5"
+                  />
+                </label>
+                <label className="text-xs text-muted-foreground">
+                  Dia do mês
+                  <input
+                    value={form.day_of_month}
+                    onChange={(e) => setForm((prev) => ({ ...prev, day_of_month: e.target.value }))}
+                    className="mt-1 w-full bg-haveres-card border border-haveres-border rounded px-2 py-1 text-xs text-white"
+                    placeholder="* ou 1,15"
+                  />
+                </label>
+              </>
+            )}
+          </div>
+
+          <p className="text-[11px] text-haveres-blue/90">
+            {scheduleSummaryFromFields(form.enabled, form.minute, form.hour, form.day_of_week, form.day_of_month)}
+          </p>
+
+          <p className="text-[11px] text-muted-foreground">
+            Aceita formato cron: *, listas (1,3,5), intervalos (1-5) e passos (*/15).
+          </p>
+
+          {scheduleError && <p className="text-xs text-loss">{scheduleError}</p>}
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={submitSchedule}
+              disabled={savingSchedule}
+              className="px-2 py-1 rounded text-xs bg-haveres-blue text-white hover:bg-blue-600 disabled:opacity-50"
+            >
+              {savingSchedule ? "Salvando..." : "Salvar agenda"}
+            </button>
+            <button
+              onClick={() => {
+                setForm(toScheduleForm(schedule));
+                setIsEditingSchedule(false);
+              }}
+              className="px-2 py-1 rounded text-xs border border-haveres-border text-muted-foreground hover:text-white"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -284,6 +659,11 @@ export function SystemPage() {
       const anyRunning = d && Object.values(d).some((i) => i.status === "running");
       return anyRunning ? 2000 : 10000;
     },
+  });
+  const syncSchedulesQuery = useQuery({
+    queryKey: ["system", "sync-schedules"],
+    queryFn: () => systemApi.syncSchedules().then((r) => r.data),
+    refetchInterval: 30000,
   });
   const syncCatalogStatus = useQuery({
     queryKey: ["assets", "sync-status"],
@@ -330,6 +710,17 @@ export function SystemPage() {
   };
 
   const [syncingOne, setSyncingOne] = useState<string | null>(null);
+  const [savingSchedule, setSavingSchedule] = useState<string | null>(null);
+  const [scheduleErrors, setScheduleErrors] = useState<Record<string, string>>({});
+
+  const updateSyncSchedule = useMutation({
+    mutationFn: ({ name, payload }: { name: string; payload: SyncScheduleUpdatePayload }) =>
+      systemApi.updateSyncSchedule(name, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["system", "sync-schedules"] });
+    },
+  });
+
   const triggerOne = async (name: string) => {
     if (syncingOne) return;
     setSyncingOne(name);
@@ -337,6 +728,20 @@ export function SystemPage() {
       await systemApi.triggerSync(name);
     } finally {
       setSyncingOne(null);
+    }
+  };
+
+  const saveSchedule = async (name: string, payload: SyncScheduleUpdatePayload) => {
+    setSavingSchedule(name);
+    setScheduleErrors((prev) => ({ ...prev, [name]: "" }));
+    try {
+      await updateSyncSchedule.mutateAsync({ name, payload });
+    } catch (e: any) {
+      const detail = e?.response?.data?.detail ?? "Não foi possível salvar a agenda.";
+      setScheduleErrors((prev) => ({ ...prev, [name]: detail }));
+      throw e;
+    } finally {
+      setSavingSchedule(null);
     }
   };
 
@@ -381,6 +786,7 @@ export function SystemPage() {
   const s = syncCatalogStatus.data;
   const ss = syncStatus.data;
   const sp = syncProgressQuery.data;
+  const schedulesByName = new Map((syncSchedulesQuery.data ?? []).map((row) => [row.name, row]));
 
   const verifiedRate = m && m.total_users > 0
     ? Math.round((m.verified_users / m.total_users) * 100) : 0;
@@ -498,6 +904,10 @@ export function SystemPage() {
           })()}
         </div>
 
+        {syncSchedulesQuery.isError && (
+          <p className="text-xs text-loss mb-2">Não foi possível carregar as agendas automáticas.</p>
+        )}
+
         {sp && ss !== undefined && (
           <div className="space-y-3 mt-4">
             {SYNC_PHASES.map((phase) => {
@@ -555,6 +965,10 @@ export function SystemPage() {
                         lastTs={ss?.[key as keyof typeof ss] ?? null}
                         onSync={() => triggerOne(key)}
                         syncing={syncingOne === key}
+                        schedule={schedulesByName.get(key as any)}
+                        onSaveSchedule={saveSchedule}
+                        savingSchedule={savingSchedule === key}
+                        scheduleError={scheduleErrors[key]}
                       />
                     ))}
                   </div>

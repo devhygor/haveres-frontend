@@ -84,6 +84,25 @@ export type SyncProgress = Record<SyncName, SyncProgressItem>;
 export interface AdminUser {
   id: number; email: string; display_name: string; first_name: string; last_name: string;
 }
+export interface SyncScheduleItem {
+  name: SyncName;
+  task: string;
+  enabled: boolean;
+  minute: string;
+  hour: string;
+  day_of_week: string;
+  day_of_month: string;
+  timezone: string;
+  next_run_at: string | null;
+  source: "default" | "custom";
+}
+export interface SyncScheduleUpdatePayload {
+  enabled?: boolean;
+  minute?: string;
+  hour?: string;
+  day_of_week?: string;
+  day_of_month?: string;
+}
 
 export const systemApi = {
   health: () => api.get<HealthStatus>("/system/health"),
@@ -97,6 +116,9 @@ export const systemApi = {
   setAdminStatus: (email: string, is_admin: boolean) =>
     api.post("/system/admins/set", { email, is_admin }),
   syncProgress: () => api.get<SyncProgress>("/system/sync-progress"),
+  syncSchedules: () => api.get<SyncScheduleItem[]>("/system/sync-schedules"),
+  updateSyncSchedule: (name: string, payload: SyncScheduleUpdatePayload) =>
+    api.post<SyncScheduleItem>(`/system/sync-schedules/${name}`, payload),
   triggerSync: (name: string) => api.post(`/system/sync/${name}`),
   repairTreasuryBenchmark: () => api.post("/system/portfolio/repair-treasury-benchmark"),
 };
