@@ -375,15 +375,21 @@ export function PortfolioPage() {
 
       const maxBuyGapValue = maxBuyPrice == null
         ? null
-        : maxBuyPrice - toFinite(position.current_price);
+        : maxBuyPrice === 0
+          ? 0
+          : maxBuyPrice - toFinite(position.current_price);
 
-      const maxBuyGapPercent = maxBuyPrice == null || maxBuyPrice <= 0
+      const maxBuyGapPercent = maxBuyPrice == null
         ? null
-        : (maxBuyGapValue! / maxBuyPrice) * 100;
+        : maxBuyPrice === 0
+          ? 0
+          : (maxBuyGapValue! / maxBuyPrice) * 100;
 
       const isWithinMaxBuyPrice = maxBuyPrice == null
         ? null
-        : toFinite(position.current_price) <= maxBuyPrice;
+        : maxBuyPrice === 0
+          ? true
+          : toFinite(position.current_price) <= maxBuyPrice;
 
       return {
         ...position,
