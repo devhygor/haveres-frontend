@@ -31,7 +31,10 @@ interface Props {
   positions: Position[];
   targetInputs: Record<string, string>;
   invalidTargetAssetIds: Set<string>;
+  maxBuyInputs: Record<string, string>;
+  invalidMaxBuyAssetIds: Set<string>;
   onTargetCommit: (assetId: string, rawValue: string) => void;
+  onMaxBuyCommit: (assetId: string, rawValue: string) => void;
 }
 
 function maskPercentInput(value: string): string {
@@ -66,6 +69,17 @@ function maskPercentInput(value: string): string {
   }
 
   return integerPart;
+}
+
+function maskMoneyInput(value: string): string {
+  const digits = value.replace(/\D/g, "");
+  if (!digits) return "";
+
+  const amount = Number(digits) / 100;
+  return new Intl.NumberFormat("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(amount);
 }
 
 interface TargetPercentInputProps {
@@ -144,11 +158,90 @@ function TargetPercentInput({ assetId, value, invalid, onCommit }: TargetPercent
   );
 }
 
+interface MaxBuyPriceInputProps {
+  assetId: string;
+  value: string;
+  invalid: boolean;
+  onCommit: (assetId: string, rawValue: string) => void;
+}
+
+function MaxBuyPriceInput({ assetId, value, invalid, onCommit }: MaxBuyPriceInputProps) {
+  const [localValue, setLocalValue] = useState(value);
+
+  useEffect(() => {
+    setLocalValue(value);
+  }, [value]);
+
+  const commit = () => {
+    onCommit(assetId, localValue);
+  };
+
+  const focusNextMaxBuyInput = (current: HTMLInputElement) => {
+    const allMaxBuyInputs = Array.from(
+      document.querySelectorAll<HTMLInputElement>('input[data-max-buy-price-input="true"]'),
+    );
+    const currentIndex = allMaxBuyInputs.indexOf(current);
+    if (currentIndex < 0) return;
+
+    const nextInput = allMaxBuyInputs[currentIndex + 1];
+    const nextAssetId = nextInput?.getAttribute("data-max-buy-price-asset-id");
+
+    if (nextAssetId) {
+      requestAnimationFrame(() => {
+        const nextRenderedInput = document.querySelector<HTMLInputElement>(
+          `input[data-max-buy-price-asset-id="${nextAssetId}"]`,
+        );
+        if (!nextRenderedInput) return;
+        nextRenderedInput.focus();
+        nextRenderedInput.select();
+      });
+      return;
+    }
+
+    current.blur();
+  };
+
+  return (
+    <div className="w-[120px]">
+      <div className="relative">
+        <span className="absolute left-2 top-1.5 text-xs text-muted-foreground pointer-events-none">R$</span>
+        <input
+          type="text"
+          value={localValue}
+          data-max-buy-price-input="true"
+          data-max-buy-price-asset-id={assetId}
+          inputMode="numeric"
+          onChange={(event) => setLocalValue(maskMoneyInput(event.target.value))}
+          onBlur={commit}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              commit();
+              focusNextMaxBuyInput(event.currentTarget);
+            }
+          }}
+          onClick={(event) => event.stopPropagation()}
+          className={cn(
+            "w-full bg-secondary border rounded pl-8 pr-2 py-1 text-sm font-mono text-white focus:outline-none focus:ring-1",
+            invalid
+              ? "border-loss focus:ring-loss"
+              : "border-haveres-border focus:ring-haveres-blue",
+          )}
+          placeholder=""
+        />
+      </div>
+    </div>
+  );
+}
+
 export function PositionsTable({
   positions,
   targetInputs,
   invalidTargetAssetIds,
+  maxBuyInputs,
+  invalidMaxBuyAssetIds,
   onTargetCommit,
+  onMaxBuyCommit,
 }: Props) {
   const [sorting, setSorting] = useState<SortingState>([
     { id: "current_value", desc: true },
@@ -222,6 +315,26 @@ export function PositionsTable({
       ),
     },
     {
+      id: "max_buy_price",
+      accessorFn: (row) => row.max_buy_price ?? 0,
+      header: () => <TermTooltip term="Preço Máximo de Compra" />,
+      sortingFn: numericSorting,
+      cell: ({ row }) => {
+        const assetId = row.original.asset_id;
+        const value = maxBuyInputs[assetId] ?? "";
+        const invalid = invalidMaxBuyAssetIds.has(assetId);
+
+        return (
+          <MaxBuyPriceInput
+            assetId={assetId}
+            value={value}
+            invalid={invalid}
+            onCommit={onMaxBuyCommit}
+          />
+        );
+      },
+    },
+    {
       accessorKey: "total_invested",
       header: () => <TermTooltip term="Investido" />,
       sortingFn: numericSorting,
@@ -291,6 +404,35 @@ export function PositionsTable({
       },
     },
     {
+      accessorKey: "max_buy_gap_value",
+      header: () => <TermTooltip term="Janela de Compra" />,
+      sortingFn: numericSorting,
+      cell: ({ row }) => {
+        const maxBuyPrice = row.original.max_buy_price;
+        const gapValue = row.original.max_buy_gap_value;
+        const gapPercent = row.original.max_buy_gap_percent;
+        const isWithin = row.original.is_within_max_buy_price;
+
+        if (maxBuyPrice == null) {
+          return <span className="text-xs text-muted-foreground">Não definido</span>;
+        }
+
+        return (
+          <div>
+            <p className={cn("font-mono text-sm font-medium", plClass(toNumber(gapValue)))}>
+              {formatCurrency(toNumber(gapValue))}
+            </p>
+            <p className={cn("font-mono text-xs", plClass(toNumber(gapPercent)))}>
+              {formatPercent(toNumber(gapPercent), true)}
+            </p>
+            <p className={cn("text-[11px] mt-0.5", isWithin ? "text-gain" : "text-loss")}>
+              {isWithin ? "Dentro do preço" : "Acima do máximo"}
+            </p>
+          </div>
+        );
+      },
+    },
+    {
       accessorKey: "target_gap_value",
       header: () => <TermTooltip term="Desvio da Meta" />,
       sortingFn: numericSorting,
@@ -317,7 +459,14 @@ export function PositionsTable({
         );
       },
     },
-  ]), [invalidTargetAssetIds, onTargetCommit, targetInputs]);
+  ]), [
+    invalidMaxBuyAssetIds,
+    invalidTargetAssetIds,
+    maxBuyInputs,
+    onMaxBuyCommit,
+    onTargetCommit,
+    targetInputs,
+  ]);
 
   const table = useReactTable({
     data: positions,
@@ -330,7 +479,7 @@ export function PositionsTable({
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-[1260px] text-sm">
+      <table className="w-full min-w-[1520px] text-sm">
         <thead>
           {table.getHeaderGroups().map((hg) => (
             <tr key={hg.id} className="border-b border-haveres-border">

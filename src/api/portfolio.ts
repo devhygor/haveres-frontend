@@ -7,6 +7,8 @@ import type {
   ProjectedDividend,
   SaveTargetAllocationPayload,
   SaveTargetAllocationResult,
+  SaveMaxBuyPricePayload,
+  SaveMaxBuyPriceResult,
 } from "@/types/portfolio";
 
 export const portfolioApi = {
@@ -24,4 +26,6 @@ export const portfolioApi = {
     api.get<ProjectedDividend[]>("/portfolio/upcoming-dividends"),
   saveTargetAllocation: (payload: SaveTargetAllocationPayload) =>
     api.put<SaveTargetAllocationResult>("/portfolio/target-allocation", payload),
+  saveMaxBuyPrice: (payload: SaveMaxBuyPricePayload) =>
+    api.put<SaveMaxBuyPriceResult>("/portfolio/max-buy-price", payload),
 };

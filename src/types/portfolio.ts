@@ -35,6 +35,10 @@ export interface Position {
   target_gap_percent: number;
   target_value: number;
   target_gap_value: number;
+  max_buy_price?: number | null;
+  max_buy_gap_value?: number | null;
+  max_buy_gap_percent?: number | null;
+  is_within_max_buy_price?: boolean | null;
   // Fundamentalistas
   price_to_earnings?: number | null;
   price_to_book?: number | null;
@@ -78,6 +82,20 @@ export interface SaveTargetAllocationResult {
   target_allocation_sum: number;
   target_allocation_remaining: number;
   target_allocation_is_valid: boolean;
+  positions_count: number;
+}
+
+export interface MaxBuyPriceInput {
+  asset_id: string;
+  max_buy_price: number | null;
+}
+
+export interface SaveMaxBuyPricePayload {
+  items: MaxBuyPriceInput[];
+}
+
+export interface SaveMaxBuyPriceResult {
+  configured_count: number;
   positions_count: number;
 }
 

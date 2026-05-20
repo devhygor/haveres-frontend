@@ -37,6 +37,8 @@ export const GLOSSARY: Record<string, string> = {
   "Alocação": "Percentual do patrimônio total da carteira investido neste ativo. Indica o grau de concentração da carteira nessa posição.",
   "Meta de Alocação": "Percentual alvo que você deseja para cada ativo dentro da carteira. A soma das metas deve totalizar 100% para orientar aportes e rebalanceamento.",
   "Desvio da Meta": "Diferença entre a alocação atual e a meta definida para o ativo. Valor positivo indica quanto falta aportar; valor negativo indica excesso em relação à meta.",
+  "Preço Máximo de Compra": "Preço limite que você aceita pagar para fazer novos aportes no ativo. Se a cotação atual estiver acima desse valor, o ativo fica fora do seu preço de entrada planejado.",
+  "Janela de Compra": "Compara a cotação atual com o preço máximo de compra definido. Valor positivo indica espaço para compra; valor negativo indica que a cotação está acima do limite.",
   "Investido": "Total de capital efetivamente aportado neste ativo, calculado como quantidade × preço médio de compra.",
   "DY": "Dividend Yield: total de dividendos/rendimentos pagos no período dividido pelo preço atual. Indica o retorno em proventos em relação ao preço de mercado.",
   "JCP": "Juros Sobre Capital Próprio: forma de distribuição de lucros usada por empresas. Diferente do dividendo, tem retenção de Imposto de Renda de 15% na fonte para o investidor.",

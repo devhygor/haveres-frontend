@@ -74,6 +74,42 @@ function formatPercentInput(value: number): string {
   return normalized.replace(".", ",");
 }
 
+function maskMoneyInput(value: string): string {
+  const digits = value.replace(/\D/g, "");
+  if (!digits) return "";
+
+  const amount = Number(digits) / 100;
+  return new Intl.NumberFormat("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(amount);
+}
+
+function parseMoneyInput(value: string): { value: number | null; valid: boolean } {
+  const trimmed = value.trim();
+  if (!trimmed) return { value: null, valid: true };
+
+  const normalized = trimmed.replace(/\./g, "").replace(",", ".");
+  if (!/^\d+(\.\d{1,2})?$/.test(normalized)) {
+    return { value: null, valid: false };
+  }
+
+  const parsed = Number(normalized);
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    return { value: null, valid: false };
+  }
+
+  return { value: parsed, valid: true };
+}
+
+function formatMoneyInput(value: number | null | undefined): string {
+  if (value == null || !Number.isFinite(value)) return "";
+  return new Intl.NumberFormat("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value);
+}
+
 function parseApiError(error: unknown, fallback: string): string {
   if (error && typeof error === "object") {
     const maybeError = error as {
@@ -99,8 +135,11 @@ export function PortfolioPage() {
   const [selectedType, setSelectedType] = useState<string | null>(null);
   const [selectedSector, setSelectedSector] = useState<string | null>(null);
   const [targetInputs, setTargetInputs] = useState<Record<string, string>>({});
+  const [maxBuyInputs, setMaxBuyInputs] = useState<Record<string, string>>({});
   const [targetError, setTargetError] = useState("");
   const [targetSuccess, setTargetSuccess] = useState("");
+  const [maxBuyError, setMaxBuyError] = useState("");
+  const [maxBuySuccess, setMaxBuySuccess] = useState("");
 
   const summary = useQuery({
     queryKey: ["portfolio", "summary"],
@@ -129,6 +168,24 @@ export function PortfolioPage() {
     },
   });
 
+  const saveMaxBuyPrice = useMutation({
+    mutationFn: (items: Array<{ asset_id: string; max_buy_price: number | null }>) =>
+      portfolioApi.saveMaxBuyPrice({ items }),
+    onSuccess: async (response) => {
+      setMaxBuyError("");
+      setMaxBuySuccess(
+        response.data.configured_count > 0
+          ? "Preços máximos salvos com sucesso."
+          : "Preços máximos removidos com sucesso.",
+      );
+      await queryClient.invalidateQueries({ queryKey: ["portfolio", "summary"] });
+    },
+    onError: (error) => {
+      setMaxBuySuccess("");
+      setMaxBuyError(parseApiError(error, "Não foi possível salvar os preços máximos. Tente novamente."));
+    },
+  });
+
   const positions = Array.isArray(summary.data?.positions) ? summary.data.positions : [];
   const totalValue = toFinite(summary.data?.total_value);
 
@@ -150,10 +207,33 @@ export function PortfolioPage() {
   }, [positions]);
 
   useEffect(() => {
+    setMaxBuyInputs((previous) => {
+      const next: Record<string, string> = {};
+      for (const position of positions) {
+        next[position.asset_id] = formatMoneyInput(position.max_buy_price ?? null);
+      }
+
+      const previousKeys = Object.keys(previous);
+      const nextKeys = Object.keys(next);
+      const isSame =
+        previousKeys.length === nextKeys.length
+        && nextKeys.every((key) => previous[key] === next[key]);
+
+      return isSame ? previous : next;
+    });
+  }, [positions]);
+
+  useEffect(() => {
     if (!targetSuccess) return;
     const timeoutId = window.setTimeout(() => setTargetSuccess(""), 2500);
     return () => window.clearTimeout(timeoutId);
   }, [targetSuccess]);
+
+  useEffect(() => {
+    if (!maxBuySuccess) return;
+    const timeoutId = window.setTimeout(() => setMaxBuySuccess(""), 2500);
+    return () => window.clearTimeout(timeoutId);
+  }, [maxBuySuccess]);
 
   const selectedTypeLabel = useMemo(() => {
     if (!selectedType || !allocation.data) return null;
@@ -229,6 +309,36 @@ export function PortfolioPage() {
   const isTargetSumValid = Math.abs(targetDelta) < 0.0001;
   const hasInvalidTargets = invalidTargetAssetIds.size > 0;
 
+  const invalidMaxBuyAssetIds = useMemo(() => {
+    const invalid = new Set<string>();
+    for (const position of positions) {
+      const raw = maxBuyInputs[position.asset_id] ?? "";
+      const parsed = parseMoneyInput(raw);
+      if (!parsed.valid) {
+        invalid.add(position.asset_id);
+      }
+    }
+    return invalid;
+  }, [maxBuyInputs, positions]);
+
+  const draftMaxBuyByAssetId = useMemo(() => {
+    const draft: Record<string, number | null> = {};
+    for (const position of positions) {
+      const raw = maxBuyInputs[position.asset_id] ?? "";
+      const parsed = parseMoneyInput(raw);
+
+      if (parsed.valid) {
+        draft[position.asset_id] = parsed.value;
+        continue;
+      }
+
+      draft[position.asset_id] = position.max_buy_price ?? null;
+    }
+    return draft;
+  }, [maxBuyInputs, positions]);
+
+  const hasInvalidMaxBuy = invalidMaxBuyAssetIds.size > 0;
+
   const hasUnsavedTargetChanges = useMemo(() => {
     return positions.some((position) => {
       const persisted = toFinite(position.target_allocation_percent);
@@ -236,6 +346,18 @@ export function PortfolioPage() {
       return Math.abs(draft - persisted) >= 0.0001;
     });
   }, [draftTargetByAssetId, positions]);
+
+  const hasUnsavedMaxBuyChanges = useMemo(() => {
+    return positions.some((position) => {
+      const persisted = position.max_buy_price ?? null;
+      const draft = draftMaxBuyByAssetId[position.asset_id] ?? null;
+
+      if (persisted == null && draft == null) return false;
+      if (persisted == null || draft == null) return true;
+
+      return Math.abs(draft - persisted) >= 0.0001;
+    });
+  }, [draftMaxBuyByAssetId, positions]);
 
   const displayPositions = useMemo(() => {
     return filteredPositions.map((position) => {
@@ -245,6 +367,19 @@ export function PortfolioPage() {
         : 0;
       const targetGapValue = targetValue - toFinite(position.current_value);
       const targetGapPercent = targetAllocationPercent - toFinite(position.allocation);
+      const maxBuyPrice = draftMaxBuyByAssetId[position.asset_id] ?? null;
+
+      const maxBuyGapValue = maxBuyPrice == null
+        ? null
+        : maxBuyPrice - toFinite(position.current_price);
+
+      const maxBuyGapPercent = maxBuyPrice == null || maxBuyPrice <= 0
+        ? null
+        : (maxBuyGapValue! / maxBuyPrice) * 100;
+
+      const isWithinMaxBuyPrice = maxBuyPrice == null
+        ? null
+        : toFinite(position.current_price) <= maxBuyPrice;
 
       return {
         ...position,
@@ -252,9 +387,13 @@ export function PortfolioPage() {
         target_value: targetValue,
         target_gap_value: targetGapValue,
         target_gap_percent: targetGapPercent,
+        max_buy_price: maxBuyPrice,
+        max_buy_gap_value: maxBuyGapValue,
+        max_buy_gap_percent: maxBuyGapPercent,
+        is_within_max_buy_price: isWithinMaxBuyPrice,
       };
     });
-  }, [draftTargetByAssetId, filteredPositions, totalValue]);
+  }, [draftMaxBuyByAssetId, draftTargetByAssetId, filteredPositions, totalValue]);
 
   useEffect(() => {
     if (!selectedType) return;
@@ -294,6 +433,16 @@ export function PortfolioPage() {
     }));
   };
 
+  const handleMaxBuyCommit = (assetId: string, rawValue: string) => {
+    setMaxBuySuccess("");
+    setMaxBuyError("");
+
+    setMaxBuyInputs((previous) => ({
+      ...previous,
+      [assetId]: maskMoneyInput(rawValue),
+    }));
+  };
+
   const handleSaveTargets = () => {
     if (!positions.length) return;
 
@@ -315,6 +464,23 @@ export function PortfolioPage() {
     }));
 
     saveTargetAllocation.mutate(targets);
+  };
+
+  const handleSaveMaxBuy = () => {
+    if (!positions.length) return;
+
+    if (hasInvalidMaxBuy) {
+      setMaxBuySuccess("");
+      setMaxBuyError("Existem preços máximos inválidos. Revise os valores informados.");
+      return;
+    }
+
+    const items = positions.map((position) => ({
+      asset_id: position.asset_id,
+      max_buy_price: draftMaxBuyByAssetId[position.asset_id] ?? null,
+    }));
+
+    saveMaxBuyPrice.mutate(items);
   };
 
   if (summary.isLoading) return <LoadingState />;
@@ -513,7 +679,10 @@ export function PortfolioPage() {
             positions={displayPositions}
             targetInputs={targetInputs}
             invalidTargetAssetIds={invalidTargetAssetIds}
+            maxBuyInputs={maxBuyInputs}
+            invalidMaxBuyAssetIds={invalidMaxBuyAssetIds}
             onTargetCommit={handleTargetCommit}
+            onMaxBuyCommit={handleMaxBuyCommit}
           />
         )
         }
@@ -551,6 +720,30 @@ export function PortfolioPage() {
             </div>
             {targetError && <p className="text-xs text-loss">{targetError}</p>}
             {targetSuccess && <p className="text-xs text-gain">{targetSuccess}</p>}
+          </div>
+        )}
+
+        {positions.length > 0 && (
+          <div className="p-4 sm:p-5 border-t border-haveres-border/70 space-y-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs text-muted-foreground"><TermTooltip term="Preço Máximo de Compra" /></span>
+              <span className="text-xs px-2 py-0.5 rounded font-numeric bg-secondary text-muted-foreground">
+                {positions.filter((position) => (draftMaxBuyByAssetId[position.asset_id] ?? null) != null).length} de {positions.length} ativos configurados
+              </span>
+              {hasInvalidMaxBuy && (
+                <span className="text-xs text-loss">Existem preços máximos inválidos.</span>
+              )}
+              <button
+                type="button"
+                onClick={handleSaveMaxBuy}
+                disabled={saveMaxBuyPrice.isPending || hasInvalidMaxBuy || !hasUnsavedMaxBuyChanges}
+                className="sm:ml-auto px-3 py-1.5 rounded text-xs font-medium bg-haveres-blue text-white hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {saveMaxBuyPrice.isPending ? "Salvando preços..." : "Salvar preços máximos"}
+              </button>
+            </div>
+            {maxBuyError && <p className="text-xs text-loss">{maxBuyError}</p>}
+            {maxBuySuccess && <p className="text-xs text-gain">{maxBuySuccess}</p>}
           </div>
         )}
       </div>
