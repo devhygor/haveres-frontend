@@ -61,9 +61,25 @@ export function DividendsPage() {
 
   const syncDividends = useMutation({
     mutationFn: () => dividendsApi.sync(),
+    onMutate: () => {
+      qc.invalidateQueries({ queryKey: ["dividends", "sync-progress"] });
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["dividends"] });
       qc.invalidateQueries({ queryKey: ["portfolio"] });
+      qc.invalidateQueries({ queryKey: ["dividends", "sync-progress"] });
+    },
+    onError: () => {
+      qc.invalidateQueries({ queryKey: ["dividends", "sync-progress"] });
+    },
+  });
+
+  const syncProgress = useQuery({
+    queryKey: ["dividends", "sync-progress"],
+    queryFn: () => dividendsApi.syncProgress().then((r) => r.data),
+    refetchInterval: (query) => {
+      const state = query.state.data;
+      return state?.status === "running" ? 1500 : 10000;
     },
   });
 
@@ -147,6 +163,13 @@ export function DividendsPage() {
   }, [byType, selectedDividendType]);
 
   const hasActiveTypeFilter = selectedDividendType !== null;
+
+  const dividendSync = syncProgress.data;
+  const dividendSyncPct =
+    dividendSync && dividendSync.total > 0
+      ? Math.round((dividendSync.done / dividendSync.total) * 100)
+      : 0;
+  const isDividendSyncRunning = dividendSync?.status === "running";
 
   const clearTypeFilter = () => {
     setSelectedDividendType(null);
@@ -379,6 +402,44 @@ export function DividendsPage() {
                 <Plus size={13} /> Novo Provento
               </button>
             </div>
+
+            {dividendSync && dividendSync.status !== "idle" && (
+              <div className="w-full mt-2">
+                <div className="flex items-center justify-between text-xs mb-1">
+                  <span className="text-muted-foreground">
+                    {isDividendSyncRunning
+                      ? "Sincronizando proventos..."
+                      : dividendSync.status === "done"
+                        ? "Última sincronização concluída"
+                        : "Última sincronização com erro"}
+                  </span>
+                  <span className={cn("font-medium font-numeric", {
+                    "text-haveres-blue": isDividendSyncRunning,
+                    "text-gain": dividendSync.status === "done",
+                    "text-loss": dividendSync.status === "error",
+                  })}>
+                    {dividendSync.total > 0
+                      ? `${dividendSync.done}/${dividendSync.total} (${dividendSyncPct}%)`
+                      : isDividendSyncRunning
+                        ? "Iniciando..."
+                        : "-"}
+                  </span>
+                </div>
+                <div className="h-1.5 bg-haveres-dark rounded-full overflow-hidden">
+                  <div
+                    className={cn("h-full rounded-full transition-all duration-500", {
+                      "bg-haveres-blue": isDividendSyncRunning,
+                      "bg-gain": dividendSync.status === "done",
+                      "bg-loss": dividendSync.status === "error",
+                    })}
+                    style={{ width: dividendSync.status === "done" ? "100%" : `${Math.min(dividendSyncPct, 100)}%` }}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Criados: {dividendSync.created} · Ignorados: {dividendSync.skipped} · Erros: {dividendSync.errors}
+                </p>
+              </div>
+            )}
           </div>
 
           {!data.length ? (
