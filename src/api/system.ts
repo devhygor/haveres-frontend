@@ -47,6 +47,7 @@ export interface SyncStatus {
   options_chain: string | null;
   treasury_bonds: string | null;
   treasury_benchmark_repair: string | null;
+  all_dividend_history: string | null;
 }
 export interface SyncAllResult {
   assets_catalog: string;
@@ -70,6 +71,7 @@ export interface SyncAllResult {
   options_chain: string;
   treasury_bonds: string;
   treasury_benchmark_repair: string;
+  all_dividend_history: string;
 }
 export interface SyncProgressItem {
   status: "idle" | "running" | "done" | "error";
