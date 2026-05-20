@@ -363,7 +363,9 @@ export function AssetsAdminTab() {
                     <span className="font-mono font-semibold text-white">{asset.ticker}</span>
                   </td>
                   <td className="px-3 py-3 max-w-[200px]">
-                    <span className="text-white truncate block">{asset.name}</span>
+                    <span className="text-white truncate block" title={asset.name}>
+                      {asset.name}
+                    </span>
                   </td>
                   <td className="px-3 py-3">
                     <span className="text-xs px-2 py-0.5 rounded-full bg-haveres-blue/10 text-haveres-blue font-medium">

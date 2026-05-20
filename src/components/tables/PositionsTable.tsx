@@ -41,7 +41,9 @@ const columns: ColumnDef<Position>[] = [
           >
             {row.original.ticker}
           </Link>
-          <p className="text-xs text-muted-foreground truncate max-w-[120px]">{row.original.name}</p>
+          <p className="text-xs text-muted-foreground truncate max-w-[120px]" title={row.original.name}>
+            {row.original.name}
+          </p>
         </div>
       </div>
     ),

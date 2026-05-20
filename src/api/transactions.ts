@@ -24,9 +24,9 @@ export interface CreateTransactionPayload {
 
 export const transactionsApi = {
   list: (filters?: TransactionFilters) =>
-    api.get<Transaction[]>("/transactions", { params: filters }),
+    api.get<Transaction[]>("/transactions/", { params: filters }),
   create: (payload: CreateTransactionPayload) =>
-    api.post<Transaction>("/transactions", payload),
+    api.post<Transaction>("/transactions/", payload),
   get: (id: string) => api.get<Transaction>(`/transactions/${id}`),
   update: (id: string, payload: Partial<Transaction>) =>
     api.put<Transaction>(`/transactions/${id}`, payload),

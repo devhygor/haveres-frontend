@@ -163,7 +163,9 @@ export function TransactionsPage() {
                         <AssetLogo logoUrl={t.asset_logo_url} ticker={t.asset_ticker} />
                         <div>
                           <span className="font-mono font-semibold text-white text-sm">{t.asset_ticker}</span>
-                          <p className="text-xs text-muted-foreground truncate max-w-[120px]">{t.asset_name}</p>
+                          <p className="text-xs text-muted-foreground truncate max-w-[120px]" title={t.asset_name}>
+                            {t.asset_name}
+                          </p>
                         </div>
                       </div>
                     </td>

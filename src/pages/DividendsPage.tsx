@@ -430,7 +430,9 @@ export function DividendsPage() {
                           <AssetLogo logoUrl={d.asset_logo_url} ticker={d.asset_ticker} />
                           <div>
                             <span className="font-mono font-semibold text-white text-sm">{d.asset_ticker}</span>
-                            <p className="text-xs text-muted-foreground truncate max-w-[120px]">{d.asset_name}</p>
+                            <p className="text-xs text-muted-foreground truncate max-w-[120px]" title={d.asset_name}>
+                              {d.asset_name}
+                            </p>
                           </div>
                         </div>
                       </td>
