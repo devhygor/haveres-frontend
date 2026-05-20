@@ -353,9 +353,13 @@ export function ImportsPage() {
                             <td className="px-3 py-2 text-muted-foreground font-numeric">{row.row_number}</td>
                             <td className="px-3 py-2 text-white font-medium">{row.parsed_data?.ticker ?? "—"}</td>
                             <td className="px-3 py-2">
-                              <span className={row.parsed_data?.transaction_type === "BUY" ? "text-gain" : "text-loss"}>
-                                {row.parsed_data?.transaction_type === "BUY" ? "COMPRA" : "VENDA"}
-                              </span>
+                              {row.parsed_data?.record_type === "dividend" ? (
+                                <span className="text-haveres-blue">PROVENTO</span>
+                              ) : (
+                                <span className={row.parsed_data?.transaction_type === "BUY" ? "text-gain" : "text-loss"}>
+                                  {row.parsed_data?.transaction_type === "BUY" ? "COMPRA" : "VENDA"}
+                                </span>
+                              )}
                             </td>
                             <td className="px-3 py-2 text-muted-foreground font-numeric">
                               {row.parsed_data?.date ? formatDate(row.parsed_data.date) : "—"}
