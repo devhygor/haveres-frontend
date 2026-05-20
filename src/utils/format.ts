@@ -1,8 +1,9 @@
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
-function toFinite(value: number): number {
-  return Number.isFinite(value) ? value : 0;
+function toFinite(value: unknown): number {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : 0;
 }
 
 export function formatCurrency(value: number, compact = false): string {

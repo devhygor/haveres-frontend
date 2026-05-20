@@ -43,11 +43,34 @@ export function PortfolioPage() {
     return item?.type_display || selectedType;
   }, [allocation.data, selectedType]);
 
+  const filteredSectorData = useMemo(() => {
+    const sectorDisplayMap = new Map(
+      (allocationBySector.data ?? []).map((item) => [item.sector, item.sector_display]),
+    );
+    if (!selectedType) return allocationBySector.data ?? [];
+    const typePositions = positions.filter((p) => p.asset_type === selectedType);
+    if (!typePositions.length) return [];
+    const total = typePositions.reduce((sum, p) => sum + p.current_value, 0);
+    if (total === 0) return [];
+    const bySector = new Map<string, number>();
+    for (const p of typePositions) {
+      bySector.set(p.sector, (bySector.get(p.sector) ?? 0) + p.current_value);
+    }
+    return Array.from(bySector.entries())
+      .map(([sector, value]) => ({
+        sector,
+        sector_display: sectorDisplayMap.get(sector) ?? sector,
+        value,
+        allocation: (value / total) * 100,
+      }))
+      .sort((a, b) => b.value - a.value);
+  }, [selectedType, positions, allocationBySector.data]);
+
   const selectedSectorLabel = useMemo(() => {
-    if (!selectedSector || !allocationBySector.data) return null;
-    const item = allocationBySector.data.find((entry) => entry.sector === selectedSector);
+    if (!selectedSector) return null;
+    const item = filteredSectorData.find((entry) => entry.sector === selectedSector);
     return item?.sector_display || selectedSector;
-  }, [allocationBySector.data, selectedSector]);
+  }, [filteredSectorData, selectedSector]);
 
   const filteredPositions = useMemo(() => {
     return positions.filter((position) => {
@@ -65,11 +88,15 @@ export function PortfolioPage() {
   }, [allocation.data, selectedType]);
 
   useEffect(() => {
+    setSelectedSector(null);
+  }, [selectedType]);
+
+  useEffect(() => {
     if (!selectedSector) return;
-    if (!allocationBySector.data?.some((entry) => entry.sector === selectedSector)) {
+    if (!filteredSectorData.some((entry) => entry.sector === selectedSector)) {
       setSelectedSector(null);
     }
-  }, [allocationBySector.data, selectedSector]);
+  }, [filteredSectorData, selectedSector]);
 
   const hasActiveFilters = Boolean(selectedType || selectedSector);
 
@@ -250,13 +277,18 @@ export function PortfolioPage() {
         <div className="card-haveres p-4 sm:p-5">
           <div className="flex items-center gap-2 mb-4">
             <PieChart size={18} className="text-haveres-blue" />
-            <h2 className="text-sm font-semibold text-white">Alocação por Setor</h2>
+            <h2 className="text-sm font-semibold text-white">
+              Alocação por Setor
+              {selectedTypeLabel && (
+                <span className="ml-2 text-xs font-normal text-haveres-blue">— {selectedTypeLabel}</span>
+              )}
+            </h2>
           </div>
           {allocationBySector.isLoading ? (
             <LoadingState />
-          ) : allocationBySector.data?.length ? (
+          ) : filteredSectorData.length ? (
             <AllocationChart
-              data={allocationBySector.data}
+              data={filteredSectorData}
               labelKey="sector_display"
               valueKey="sector"
               selectedValue={selectedSector}
