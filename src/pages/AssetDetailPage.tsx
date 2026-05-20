@@ -39,6 +39,7 @@ const TABS: { key: TabKey; label: string }[] = [
 export function AssetDetailPage() {
   const { ticker } = useParams<{ ticker: string }>();
   const [activeTab, setActiveTab] = useState<TabKey>("overview");
+  const [comparisonMonths, setComparisonMonths] = useState(60);
 
   const ticker_upper = ticker?.toUpperCase() ?? "";
 
@@ -72,8 +73,8 @@ export function AssetDetailPage() {
   });
 
   const indexComparisonQuery = useQuery({
-    queryKey: ["index-comparison", ticker_upper],
-    queryFn: () => quotesApi.getIndexComparison(ticker_upper).then((r) => r.data),
+    queryKey: ["index-comparison", ticker_upper, comparisonMonths],
+    queryFn: () => quotesApi.getIndexComparison(ticker_upper, comparisonMonths).then((r) => r.data),
     enabled: !!ticker_upper,
   });
 
@@ -86,12 +87,13 @@ export function AssetDetailPage() {
 
   const fiiDetail = fiiDetailQuery.data;
 
-  // Derive current price and last dividend for simulators
-  // prefer position data, fall back to fii detail from quotes api
-  const currentPrice = position?.current_price ?? null;
+  // Prefer position data, fallback via quotes/distribution APIs
+  const currentPrice =
+    position?.current_price ??
+    (distributionQuery.data?.current_price ? parseFloat(distributionQuery.data.current_price) : null);
   const lastDividend =
-    position?.fii_detail?.last_dividend ??
-    fiiDetail?.last_dividend ??
+    (distributionQuery.data?.last_dividend ? parseFloat(distributionQuery.data.last_dividend) : null) ??
+    (fiiDetail?.last_dividend ? parseFloat(String(fiiDetail.last_dividend)) : null) ??
     null;
 
   return (
@@ -278,6 +280,8 @@ export function AssetDetailPage() {
             <BenchmarkComparisonChart
               data={indexComparisonQuery.data}
               ticker={ticker_upper}
+              months={comparisonMonths}
+              onMonthsChange={setComparisonMonths}
             />
           )}
         </div>
