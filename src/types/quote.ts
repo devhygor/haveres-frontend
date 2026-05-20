@@ -17,6 +17,13 @@ export interface CurrencyQuote {
   variation: number | null;
 }
 
+export interface MarketIndexQuote {
+  ticker: string;
+  date: string;
+  close_price: number;
+  change_percent: number | null;
+}
+
 export interface MacroIndicator {
   indicator_type: string;
   date: string;

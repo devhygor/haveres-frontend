@@ -1,5 +1,5 @@
 import { api } from "@/config/api";
-import type { HistoricalQuote, CurrencyQuote, MacroIndicator, BenchmarkPoint, FIIDetailData, CryptoQuoteItem, FinancialStatementItem, OptionContract } from "@/types/quote";
+import type { HistoricalQuote, CurrencyQuote, MacroIndicator, BenchmarkPoint, FIIDetailData, CryptoQuoteItem, FinancialStatementItem, OptionContract, MarketIndexQuote } from "@/types/quote";
 
 export const quotesApi = {
   getHistory: (ticker: string, range = "1y") =>
@@ -13,6 +13,9 @@ export const quotesApi = {
 
   getMacro: () =>
     api.get<MacroIndicator[]>("/quotes/macro"),
+
+  getMarketIndices: () =>
+    api.get<MarketIndexQuote[]>("/quotes/market-indices"),
 
   getBenchmark: (months = 12, assetType = "ALL") =>
     api.get<BenchmarkPoint[]>("/quotes/benchmark", { params: { months, asset_type: assetType } }),
