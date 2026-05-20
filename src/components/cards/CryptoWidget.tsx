@@ -106,7 +106,35 @@ export function CryptoWidget() {
         <span className="text-xs text-muted-foreground">{totalItems} ativos</span>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-3">
+      <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2 mb-3">
+        <select
+          value={sortMode}
+          onChange={(event) => {
+            setSortMode(event.target.value as SortMode);
+            setPage(1);
+          }}
+          className={`${CONTROL_INPUT} w-full sm:w-[170px]`}
+        >
+          <option value="price_desc">Ordenar por preco</option>
+          <option value="name_asc">Ordenar por nome</option>
+        </select>
+
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground whitespace-nowrap">Itens por pagina</span>
+          <select
+            value={itemsPerPage}
+            onChange={(event) => {
+              setItemsPerPage(Number(event.target.value));
+              setPage(1);
+            }}
+            className={`${CONTROL_INPUT} w-[96px]`}
+          >
+            {PER_PAGE_OPTIONS.map((option) => (
+              <option key={option} value={option}>{option}</option>
+            ))}
+          </select>
+        </div>
+
         <input
           value={searchTerm}
           onChange={(event) => {
@@ -114,36 +142,8 @@ export function CryptoWidget() {
             setPage(1);
           }}
           placeholder="Buscar por nome ou ticker"
-          className={`${CONTROL_INPUT} sm:col-span-2`}
+          className={`${CONTROL_INPUT} w-full sm:flex-1 sm:min-w-[240px]`}
         />
-
-        <select
-          value={sortMode}
-          onChange={(event) => {
-            setSortMode(event.target.value as SortMode);
-            setPage(1);
-          }}
-          className={CONTROL_INPUT}
-        >
-          <option value="price_desc">Ordenar por preco</option>
-          <option value="name_asc">Ordenar por nome</option>
-        </select>
-
-        <div className="sm:col-span-3 flex items-center justify-between gap-2">
-          <span className="text-xs text-muted-foreground">Itens por pagina</span>
-          <select
-            value={itemsPerPage}
-            onChange={(event) => {
-              setItemsPerPage(Number(event.target.value));
-              setPage(1);
-            }}
-            className={`${CONTROL_INPUT} w-auto`}
-          >
-            {PER_PAGE_OPTIONS.map((option) => (
-              <option key={option} value={option}>{option}</option>
-            ))}
-          </select>
-        </div>
       </div>
 
       {visibleItems.length ? (
