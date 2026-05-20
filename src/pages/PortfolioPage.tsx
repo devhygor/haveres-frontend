@@ -772,13 +772,24 @@ export function PortfolioPage() {
               </button>
             </>
           )}
-          <input
-            type="text"
-            value={positionSearch}
-            onChange={(event) => setPositionSearch(event.target.value)}
-            className="w-full sm:w-[220px] sm:ml-auto bg-secondary border border-haveres-border rounded px-3 py-1.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-haveres-blue"
-            placeholder="Buscar ativo da carteira"
-          />
+          <div className="w-full sm:w-auto sm:ml-auto flex items-center gap-2">
+            <input
+              type="text"
+              value={positionSearch}
+              onChange={(event) => setPositionSearch(event.target.value)}
+              className="w-full sm:w-[220px] bg-secondary border border-haveres-border rounded px-3 py-1.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-haveres-blue"
+              placeholder="Buscar ativo da carteira"
+            />
+            {positionSearch.trim() && (
+              <button
+                type="button"
+                onClick={() => setPositionSearch("")}
+                className="shrink-0 px-3 py-1.5 rounded bg-secondary text-muted-foreground hover:text-white text-xs transition-colors"
+              >
+                Limpar busca
+              </button>
+            )}
+          </div>
         </div>
 
         {positions.length === 0 ? (

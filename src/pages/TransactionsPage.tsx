@@ -33,6 +33,7 @@ export function TransactionsPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Transaction | undefined>();
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [assetSearch, setAssetSearch] = useState("");
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["transactions"],
@@ -65,6 +66,18 @@ export function TransactionsPage() {
       .slice(-12)
       .map(([, v]) => v);
   }, [data]);
+
+  const filteredTransactions = useMemo(() => {
+    const search = assetSearch.trim().toLowerCase();
+
+    if (!search) return data ?? [];
+
+    return (data ?? []).filter((transaction) => {
+      const ticker = transaction.asset_ticker?.toLowerCase() ?? "";
+      const name = transaction.asset_name?.toLowerCase() ?? "";
+      return ticker.includes(search) || name.includes(search);
+    });
+  }, [data, assetSearch]);
 
   if (isLoading) return <LoadingState />;
   if (isError) return <ErrorState onRetry={refetch} />;
@@ -116,11 +129,31 @@ export function TransactionsPage() {
       <div className="card-haveres">
         <div className="flex flex-wrap items-center gap-2 p-4 sm:p-5 border-b border-haveres-border">
           <ArrowLeftRight size={18} className="text-haveres-blue" />
-          <h2 className="text-sm font-semibold text-white">Movimentações</h2>
-          <span className="text-xs text-muted-foreground">{data?.length ?? 0} registros</span>
+          <h2 className="text-sm font-semibold text-white">Movimentações ({filteredTransactions.length})</h2>
+          {assetSearch.trim() && (
+            <span className="text-xs text-muted-foreground">de {data?.length ?? 0} registros</span>
+          )}
+          <div className="w-full sm:w-auto sm:ml-auto flex items-center gap-2">
+            <input
+              type="text"
+              value={assetSearch}
+              onChange={(event) => setAssetSearch(event.target.value)}
+              className="w-full sm:w-[220px] bg-secondary border border-haveres-border rounded px-3 py-1.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-haveres-blue"
+              placeholder="Buscar ativo"
+            />
+            {assetSearch.trim() && (
+              <button
+                type="button"
+                onClick={() => setAssetSearch("")}
+                className="shrink-0 px-3 py-1.5 rounded bg-secondary text-muted-foreground hover:text-white text-xs transition-colors"
+              >
+                Limpar busca
+              </button>
+            )}
+          </div>
           <button
             onClick={openCreate}
-            className="w-full sm:w-auto sm:ml-auto justify-center flex items-center gap-1.5 px-3 py-1.5 bg-haveres-blue text-white text-xs font-medium rounded-lg hover:bg-haveres-blue-dark transition-colors"
+            className="w-full sm:w-auto justify-center flex items-center gap-1.5 px-3 py-1.5 bg-haveres-blue text-white text-xs font-medium rounded-lg hover:bg-haveres-blue-dark transition-colors"
           >
             <Plus size={13} /> Nova Movimentação
           </button>
@@ -139,15 +172,20 @@ export function TransactionsPage() {
               </button>
             }
           />
+        ) : !filteredTransactions.length ? (
+          <EmptyState
+            title="Nenhuma movimentação encontrada"
+            description="Tente outro ticker ou nome de ativo na busca."
+          />
         ) : (
-          <div className="overflow-x-auto">
+          <div className="relative max-h-[70vh] overflow-auto">
             <table className="w-full min-w-[1080px] text-sm">
               <thead>
                 <tr className="border-b border-haveres-border">
                   {["Data", "Ticker", "Tipo", "Qtd", "Preço", "Taxas", "Total", "Corretora", "Origem", ""].map((h, i) => (
                     <th
                       key={i}
-                      className="text-left py-3 px-4 text-xs font-medium text-muted-foreground uppercase tracking-wider"
+                      className="sticky top-0 z-10 bg-haveres-card text-left py-3 px-4 text-xs font-medium text-muted-foreground uppercase tracking-wider"
                     >
                       {h}
                     </th>
@@ -155,7 +193,7 @@ export function TransactionsPage() {
                 </tr>
               </thead>
               <tbody>
-                {data.map(t => (
+                {filteredTransactions.map(t => (
                   <tr key={t.id} className="border-b border-haveres-border/50 hover:bg-secondary/30 group">
                     <td className="py-3 px-4 text-muted-foreground text-xs">{formatDate(t.date)}</td>
                     <td className="py-3 px-4">

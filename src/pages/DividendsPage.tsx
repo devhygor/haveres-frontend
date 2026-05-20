@@ -37,6 +37,8 @@ export function DividendsPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Dividend | undefined>();
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [historySearch, setHistorySearch] = useState("");
+  const [upcomingSearch, setUpcomingSearch] = useState("");
   const [selectedDividendType, setSelectedDividendType] = useState<string | null>(null);
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
   const [evolutionRangeMonths, setEvolutionRangeMonths] = useState<number>(12);
@@ -145,6 +147,17 @@ export function DividendsPage() {
       return monthKey === selectedMonth;
     });
   }, [selectedMonth, upcomingByType, upcomingFallbackMonth]);
+
+  const searchedUpcoming = useMemo(() => {
+    const search = upcomingSearch.trim().toLowerCase();
+    if (!search) return filteredUpcoming;
+
+    return filteredUpcoming.filter((item) => {
+      const ticker = item.ticker?.toLowerCase() ?? "";
+      const name = item.name?.toLowerCase() ?? "";
+      return ticker.includes(search) || name.includes(search);
+    });
+  }, [filteredUpcoming, upcomingSearch]);
 
   const chartData = useMemo(() => {
     if (!filteredData.length && !upcomingByType.length) return [];
@@ -311,6 +324,17 @@ export function DividendsPage() {
   const upcomingNetTotal = useMemo(() => {
     return (upcoming.data ?? []).reduce((s, d) => s + Number(d.expected_amount), 0);
   }, [upcoming.data]);
+
+  const searchedHistoryData = useMemo(() => {
+    const search = historySearch.trim().toLowerCase();
+    if (!search) return historyData;
+
+    return historyData.filter((item) => {
+      const ticker = item.asset_ticker?.toLowerCase() ?? "";
+      const name = item.asset_name?.toLowerCase() ?? "";
+      return ticker.includes(search) || name.includes(search);
+    });
+  }, [historyData, historySearch]);
 
   if (dividends.isLoading) return <LoadingState />;
   if (dividends.isError) return <ErrorState onRetry={() => dividends.refetch()} />;
@@ -499,52 +523,80 @@ export function DividendsPage() {
         {/* Proventos a Receber */}
         {(filteredUpcoming.length > 0 || hasActiveTypeFilter || hasActiveMonthFilter) && (
           <div className="card-haveres p-5">
-            <div className="flex items-center gap-2 mb-4">
+            <div className="flex flex-wrap items-center gap-2 mb-4">
               <CalendarDays size={18} className="text-haveres-blue" />
               <h2 className="text-sm font-semibold text-white">A Receber</h2>
               <span className="text-xs text-muted-foreground">
-                {filteredUpcoming.length} proventos agendados
-                {hasActiveTypeFilter || hasActiveMonthFilter ? ` de ${upcomingByType.length}` : ""}
+                {searchedUpcoming.length} proventos agendados
+                {upcomingSearch.trim()
+                  ? ` de ${filteredUpcoming.length}`
+                  : hasActiveTypeFilter || hasActiveMonthFilter
+                    ? ` de ${upcomingByType.length}`
+                    : ""}
               </span>
+              <div className="w-full sm:w-auto sm:ml-auto flex items-center gap-2">
+                <input
+                  type="text"
+                  value={upcomingSearch}
+                  onChange={(event) => setUpcomingSearch(event.target.value)}
+                  className="w-full sm:w-[220px] bg-secondary border border-haveres-border rounded px-3 py-1.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-haveres-blue"
+                  placeholder="Buscar ativo"
+                />
+                {upcomingSearch.trim() && (
+                  <button
+                    type="button"
+                    onClick={() => setUpcomingSearch("")}
+                    className="shrink-0 px-3 py-1.5 rounded bg-secondary text-muted-foreground hover:text-white text-xs transition-colors"
+                  >
+                    Limpar busca
+                  </button>
+                )}
+              </div>
             </div>
             {filteredUpcoming.length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-haveres-border">
-                      {["Pgto", "Ticker", "Tipo", "Qtd", "Valor/ação", "Total Bruto"].map((h, i) => (
-                        <th key={i} className="text-left py-2 px-4 text-xs font-medium text-muted-foreground uppercase tracking-wider">{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredUpcoming.map((d, i) => (
-                      <tr key={`${d.ticker}-${d.expected_date}-${i}`} className="border-b border-haveres-border/50 hover:bg-secondary/30">
-                        <td className="py-2 px-4 text-muted-foreground text-xs">
-                          {d.expected_date ? formatDate(d.expected_date) : "Próximo mês"}
-                          {d.source === "FII_PROJECTED" && (
-                            <span className="ml-1 text-haveres-blue/70">~</span>
-                          )}
-                        </td>
-                        <td className="py-2 px-4">
-                          <div className="flex items-center gap-2">
-                            <AssetLogo logoUrl={d.logo_url} ticker={d.ticker} size={20} />
-                            <span className="font-mono font-semibold text-white text-sm">{d.ticker}</span>
-                          </div>
-                        </td>
-                        <td className="py-2 px-4">
-                          <span className={`text-xs font-medium ${TYPE_COLORS[d.dividend_type] ?? "text-muted-foreground"}`}>
-                            {d.dividend_type_display}
-                          </span>
-                        </td>
-                        <td className="py-2 px-4 font-numeric text-sm">{Number(d.quantity).toFixed(0)}</td>
-                        <td className="py-2 px-4 font-numeric text-sm">{formatCurrency(d.value_per_share)}</td>
-                        <td className="py-2 px-4 font-numeric text-sm text-gain font-medium">{formatCurrency(d.expected_amount)}</td>
+              searchedUpcoming.length > 0 ? (
+                <div className="relative max-h-[70vh] overflow-auto">
+                  <table className="w-full min-w-[760px] text-sm">
+                    <thead>
+                      <tr className="border-b border-haveres-border">
+                        {["Pgto", "Ticker", "Tipo", "Qtd", "Valor/ação", "Total Bruto"].map((h, i) => (
+                          <th key={i} className="sticky top-0 z-10 bg-haveres-card text-left py-2 px-4 text-xs font-medium text-muted-foreground uppercase tracking-wider">{h}</th>
+                        ))}
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {searchedUpcoming.map((d, i) => (
+                        <tr key={`${d.ticker}-${d.expected_date}-${i}`} className="border-b border-haveres-border/50 hover:bg-secondary/30">
+                          <td className="py-2 px-4 text-muted-foreground text-xs">
+                            {d.expected_date ? formatDate(d.expected_date) : "Próximo mês"}
+                            {d.source === "FII_PROJECTED" && (
+                              <span className="ml-1 text-haveres-blue/70">~</span>
+                            )}
+                          </td>
+                          <td className="py-2 px-4">
+                            <div className="flex items-center gap-2">
+                              <AssetLogo logoUrl={d.logo_url} ticker={d.ticker} size={20} />
+                              <span className="font-mono font-semibold text-white text-sm">{d.ticker}</span>
+                            </div>
+                          </td>
+                          <td className="py-2 px-4">
+                            <span className={`text-xs font-medium ${TYPE_COLORS[d.dividend_type] ?? "text-muted-foreground"}`}>
+                              {d.dividend_type_display}
+                            </span>
+                          </td>
+                          <td className="py-2 px-4 font-numeric text-sm">{Number(d.quantity).toFixed(0)}</td>
+                          <td className="py-2 px-4 font-numeric text-sm">{formatCurrency(d.value_per_share)}</td>
+                          <td className="py-2 px-4 font-numeric text-sm text-gain font-medium">{formatCurrency(d.expected_amount)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground py-4">
+                  Nenhum provento encontrado para a busca.
+                </p>
+              )
             ) : (
               <p className="text-sm text-muted-foreground py-4">
                 Nenhum provento agendado para o filtro selecionado.
@@ -558,10 +610,32 @@ export function DividendsPage() {
           <div className="flex flex-wrap items-center gap-2 p-4 sm:p-5 border-b border-haveres-border">
             <h2 className="text-sm font-semibold text-white">Histórico de Proventos</h2>
             <span className="text-xs text-muted-foreground">
-              {historyData.length} registros
-              {hasActiveTypeFilter || hasActiveMonthFilter ? ` de ${filteredData.length}` : ""}
+              {searchedHistoryData.length} registros
+              {historySearch.trim()
+                ? ` de ${historyData.length}`
+                : hasActiveTypeFilter || hasActiveMonthFilter
+                  ? ` de ${filteredData.length}`
+                  : ""}
             </span>
             <div className="w-full sm:w-auto sm:ml-auto flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+              <div className="w-full sm:w-auto flex items-center gap-2">
+                <input
+                  type="text"
+                  value={historySearch}
+                  onChange={(event) => setHistorySearch(event.target.value)}
+                  className="w-full sm:w-[220px] bg-secondary border border-haveres-border rounded px-3 py-1.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-haveres-blue"
+                  placeholder="Buscar ativo"
+                />
+                {historySearch.trim() && (
+                  <button
+                    type="button"
+                    onClick={() => setHistorySearch("")}
+                    className="shrink-0 px-3 py-1.5 rounded bg-secondary text-muted-foreground hover:text-white text-xs transition-colors"
+                  >
+                    Limpar busca
+                  </button>
+                )}
+              </div>
               {hasActiveTypeFilter && (
                 <button
                   type="button"
@@ -634,20 +708,25 @@ export function DividendsPage() {
                 </button>
               )}
             />
+          ) : !searchedHistoryData.length ? (
+            <EmptyState
+              title="Nenhum provento encontrado"
+              description="Tente outro ticker ou nome de ativo na busca."
+            />
           ) : (
-            <div className="overflow-x-auto">
+            <div className="relative max-h-[70vh] overflow-auto">
               <table className="w-full min-w-[1100px] text-sm">
                 <thead>
                   <tr className="border-b border-haveres-border">
                     {["Data com", "Pgto", "Ticker", "Tipo", "Qtd", "Valor/ação", "Bruto", "IR", "Líquido", "Origem", ""].map((h, i) => (
-                      <th key={i} className="text-left py-3 px-4 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                      <th key={i} className="sticky top-0 z-10 bg-haveres-card text-left py-3 px-4 text-xs font-medium text-muted-foreground uppercase tracking-wider">
                         {h}
                       </th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {historyData.map(d => (
+                  {searchedHistoryData.map(d => (
                     <tr key={d.id} className="border-b border-haveres-border/50 hover:bg-secondary/30 group">
                       <td className="py-3 px-4 text-muted-foreground text-xs">{formatDate(d.ex_date)}</td>
                       <td className="py-3 px-4 text-muted-foreground text-xs">{d.payment_date ? formatDate(d.payment_date) : "—"}</td>
