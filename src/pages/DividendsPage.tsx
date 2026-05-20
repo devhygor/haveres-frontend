@@ -9,7 +9,7 @@ import { LoadingState } from "@/components/common/LoadingState";
 import { ErrorState } from "@/components/common/ErrorState";
 import { EmptyState } from "@/components/common/EmptyState";
 import { DividendFormModal } from "@/components/forms/DividendFormModal";
-import { formatCurrency, formatDate } from "@/utils/format";
+import { formatCurrency, formatDate, formatDateShort } from "@/utils/format";
 import { cn } from "@/utils/cn";
 import { TrendingUp, Plus, Pencil, Trash2, RefreshCw, PieChart, BarChart3, CalendarDays } from "lucide-react";
 import { SourceBadge } from "@/components/common/SourceBadge";
@@ -39,6 +39,7 @@ export function DividendsPage() {
   const [editing, setEditing] = useState<Dividend | undefined>();
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [selectedDividendType, setSelectedDividendType] = useState<string | null>(null);
+  const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
   const [evolutionRangeMonths, setEvolutionRangeMonths] = useState<number>(12);
 
   const dividends = useQuery({
@@ -113,25 +114,42 @@ export function DividendsPage() {
     return d.filter((item) => item.dividend_type === selectedDividendType);
   }, [dividends.data, selectedDividendType]);
 
+  const upcomingFallbackMonth = useMemo(() => {
+    const nextMonth = new Date();
+    nextMonth.setMonth(nextMonth.getMonth() + 1);
+    return nextMonth.toISOString().slice(0, 7);
+  }, []);
+
   const historyData = useMemo(() => {
     const today = new Date().toISOString().split("T")[0];
-    return filteredData
-      .filter((d) => !d.payment_date || d.payment_date < today)
-      .sort((a, b) => (b.payment_date ?? b.ex_date).localeCompare(a.payment_date ?? a.ex_date));
-  }, [filteredData]);
+    let data = filteredData
+      .filter((d) => !d.payment_date || d.payment_date < today);
 
-  const filteredUpcoming = useMemo(() => {
+    if (selectedMonth) {
+      data = data.filter((d) => ((d.payment_date ?? d.ex_date).slice(0, 7) === selectedMonth));
+    }
+
+    return data
+      .sort((a, b) => (b.payment_date ?? b.ex_date).localeCompare(a.payment_date ?? a.ex_date));
+  }, [filteredData, selectedMonth]);
+
+  const upcomingByType = useMemo(() => {
     const d = upcoming.data ?? [];
     if (!selectedDividendType) return d;
     return d.filter((item) => item.dividend_type === selectedDividendType);
   }, [selectedDividendType, upcoming.data]);
 
+  const filteredUpcoming = useMemo(() => {
+    if (!selectedMonth) return upcomingByType;
+    return upcomingByType.filter((item) => {
+      const monthKey = item.expected_date?.slice(0, 7) || upcomingFallbackMonth;
+      return monthKey === selectedMonth;
+    });
+  }, [selectedMonth, upcomingByType, upcomingFallbackMonth]);
+
   const chartData = useMemo(() => {
-    if (!filteredData.length && !filteredUpcoming.length) return [];
+    if (!filteredData.length && !upcomingByType.length) return [];
     const today = new Date().toISOString().split("T")[0];
-    const nextMonth = new Date();
-    nextMonth.setMonth(nextMonth.getMonth() + 1);
-    const fallbackUpcomingMonth = nextMonth.toISOString().slice(0, 7);
 
     const monthTotals: Record<string, {
       paid: number;
@@ -178,9 +196,9 @@ export function DividendsPage() {
       month.paidByType[item.dividend_type] = (month.paidByType[item.dividend_type] ?? 0) + amount;
     });
 
-    filteredUpcoming.forEach((item) => {
+    upcomingByType.forEach((item) => {
       typeDisplayMap[item.dividend_type] = item.dividend_type_display;
-      const monthKey = (item.expected_date?.slice(0, 7) || fallbackUpcomingMonth);
+      const monthKey = (item.expected_date?.slice(0, 7) || upcomingFallbackMonth);
       if (!monthKey) return;
       const month = ensureMonth(monthKey);
       const amount = Number(item.expected_amount);
@@ -199,7 +217,7 @@ export function DividendsPage() {
       }));
     if (evolutionRangeMonths === 0) return monthlyData;
     return monthlyData.slice(-evolutionRangeMonths);
-  }, [filteredData, filteredUpcoming, evolutionRangeMonths]);
+  }, [filteredData, upcomingByType, evolutionRangeMonths, upcomingFallbackMonth]);
 
   const selectedEvolutionRangeLabel = useMemo(() => {
     return EVOLUTION_RANGE_OPTIONS.find((option) => option.value === evolutionRangeMonths)?.label ?? "12 meses";
@@ -217,7 +235,16 @@ export function DividendsPage() {
     }
   }, [byType, selectedDividendType]);
 
+  useEffect(() => {
+    if (!selectedMonth) return;
+    const hasSelectedMonthInChart = chartData.some((item) => item.month.slice(0, 7) === selectedMonth);
+    if (!hasSelectedMonthInChart) {
+      setSelectedMonth(null);
+    }
+  }, [chartData, selectedMonth]);
+
   const hasActiveTypeFilter = selectedDividendType !== null;
+  const hasActiveMonthFilter = selectedMonth !== null;
 
   const dividendSync = syncProgress.data;
   const dividendSyncPct =
@@ -229,6 +256,24 @@ export function DividendsPage() {
   const clearTypeFilter = () => {
     setSelectedDividendType(null);
   };
+
+  const clearMonthFilter = () => {
+    setSelectedMonth(null);
+  };
+
+  const clearAllFilters = () => {
+    setSelectedDividendType(null);
+    setSelectedMonth(null);
+  };
+
+  const handleSelectMonth = (month: string) => {
+    setSelectedMonth((current) => (current === month ? null : month));
+  };
+
+  const selectedMonthLabel = useMemo(() => {
+    if (!selectedMonth) return null;
+    return formatDateShort(`${selectedMonth}-01`);
+  }, [selectedMonth]);
 
   const byAsset = useMemo(() => {
     const d = filteredData;
@@ -333,11 +378,25 @@ export function DividendsPage() {
         )}
 
         {/* Gráfico mensal */}
-        {(filteredData.length > 0 || filteredUpcoming.length > 0) ? (
+        {(filteredData.length > 0 || upcomingByType.length > 0) ? (
           <div className="card-haveres p-5">
             <div className="flex items-center gap-2 mb-4">
               <TrendingUp size={18} className="text-gain" />
               <h2 className="text-sm font-semibold text-white">Proventos por Mês</h2>
+              {hasActiveMonthFilter && selectedMonthLabel && (
+                <>
+                  <span className="text-xs px-2 py-0.5 rounded bg-secondary text-muted-foreground">
+                    Mês: {selectedMonthLabel}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={clearMonthFilter}
+                    className="text-xs px-2 py-1 rounded bg-secondary text-muted-foreground hover:text-white transition-colors"
+                  >
+                    Limpar mês
+                  </button>
+                </>
+              )}
               <div className="ml-auto flex items-center gap-2">
                 <span className="text-xs text-muted-foreground">Período</span>
                 <select
@@ -355,9 +414,14 @@ export function DividendsPage() {
             </div>
             <p className="text-xs text-muted-foreground mb-3">
               Exibindo {selectedEvolutionRangeLabel.toLowerCase()}.
+              {hasActiveMonthFilter && selectedMonthLabel ? ` Filtro ativo no mês ${selectedMonthLabel}.` : ""}
             </p>
             {chartData.length ? (
-              <DividendsChart data={chartData} />
+              <DividendsChart
+                data={chartData}
+                selectedMonth={selectedMonth}
+                onMonthSelect={handleSelectMonth}
+              />
             ) : (
               <p className="text-sm text-muted-foreground py-4">
                 Sem dados nesse período. Selecione um intervalo maior para visualizar mais histórico.
@@ -367,14 +431,14 @@ export function DividendsPage() {
         ) : null}
 
         {/* Proventos a Receber */}
-        {(filteredUpcoming.length > 0 || hasActiveTypeFilter) && (
+        {(filteredUpcoming.length > 0 || hasActiveTypeFilter || hasActiveMonthFilter) && (
           <div className="card-haveres p-5">
             <div className="flex items-center gap-2 mb-4">
               <CalendarDays size={18} className="text-haveres-blue" />
               <h2 className="text-sm font-semibold text-white">A Receber</h2>
               <span className="text-xs text-muted-foreground">
                 {filteredUpcoming.length} proventos agendados
-                {hasActiveTypeFilter ? ` de ${upcoming.data?.length ?? 0}` : ""}
+                {hasActiveTypeFilter || hasActiveMonthFilter ? ` de ${upcomingByType.length}` : ""}
               </span>
             </div>
             {filteredUpcoming.length > 0 ? (
@@ -429,7 +493,7 @@ export function DividendsPage() {
             <h2 className="text-sm font-semibold text-white">Histórico de Proventos</h2>
             <span className="text-xs text-muted-foreground">
               {historyData.length} registros
-              {hasActiveTypeFilter ? ` de ${data.length}` : ""}
+              {hasActiveTypeFilter || hasActiveMonthFilter ? ` de ${filteredData.length}` : ""}
             </span>
             <div className="w-full sm:w-auto sm:ml-auto flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
               {hasActiveTypeFilter && (
@@ -439,6 +503,15 @@ export function DividendsPage() {
                   className="w-full sm:w-auto justify-center flex items-center gap-1.5 px-3 py-1.5 bg-secondary text-muted-foreground text-xs font-medium rounded-lg hover:text-white transition-colors"
                 >
                   Limpar filtro
+                </button>
+              )}
+              {hasActiveMonthFilter && (
+                <button
+                  type="button"
+                  onClick={clearMonthFilter}
+                  className="w-full sm:w-auto justify-center flex items-center gap-1.5 px-3 py-1.5 bg-secondary text-muted-foreground text-xs font-medium rounded-lg hover:text-white transition-colors"
+                >
+                  Limpar mês
                 </button>
               )}
               <button
@@ -517,10 +590,10 @@ export function DividendsPage() {
               action={(
                 <button
                   type="button"
-                  onClick={clearTypeFilter}
+                  onClick={clearAllFilters}
                   className="flex items-center gap-1.5 px-4 py-2 bg-secondary text-muted-foreground text-sm font-medium rounded-lg hover:text-white transition-colors"
                 >
-                  Limpar filtro
+                  Limpar filtros
                 </button>
               )}
             />

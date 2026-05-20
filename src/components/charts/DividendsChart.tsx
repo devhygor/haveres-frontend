@@ -1,4 +1,4 @@
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { formatCurrency, formatDateShort } from "@/utils/format";
 
 interface DividendTypeAmount {
@@ -32,6 +32,11 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   const point = payload[0]?.payload as DividendChartPoint | undefined;
   if (!point) return null;
 
+  const normalizedLabel =
+    typeof label === "string" && /^\d{4}-\d{2}$/.test(label)
+      ? formatDateShort(`${label}-01`)
+      : label;
+
   const paid = point.paid ?? 0;
   const upcoming = point.upcoming ?? 0;
   const monthTotal = paid + upcoming;
@@ -44,7 +49,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   return (
     <div className="bg-haveres-card border border-haveres-border rounded-lg p-3 shadow-xl text-xs space-y-2 min-w-[250px]">
       <div className="flex items-center justify-between border-b border-haveres-border/70 pb-1">
-        <p className="text-muted-foreground">{label}</p>
+        <p className="text-muted-foreground">{normalizedLabel}</p>
         <p className="text-white font-mono font-semibold">Total: {formatCurrency(monthTotal)}</p>
       </div>
 
@@ -89,27 +94,107 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   );
 };
 
-interface Props { data: DividendChartPoint[] }
+interface Props {
+  data: DividendChartPoint[];
+  selectedMonth?: string | null;
+  onMonthSelect?: (month: string) => void;
+}
 
-export function DividendsChart({ data }: Props) {
+export function DividendsChart({ data, selectedMonth = null, onMonthSelect }: Props) {
   const formatted = data.map((d) => ({
-    month: formatDateShort(d.month),
+    month_key: d.month.slice(0, 7),
     paid: d.paid,
     upcoming: d.upcoming,
     paid_details: d.paid_details,
     upcoming_details: d.upcoming_details,
   }));
 
+  const getCellOpacity = (monthKey: string) => {
+    if (!selectedMonth) return 1;
+    return selectedMonth === monthKey ? 1 : 0.35;
+  };
+
+  const handleBarClick = (entry: any) => {
+    const monthKey = entry?.payload?.month_key || entry?.month_key;
+    if (!monthKey || !onMonthSelect) return;
+    onMonthSelect(monthKey);
+  };
+
+  const renderMonthTick = (props: any) => {
+    const { x = 0, y = 0, payload } = props;
+    const monthKey = String(payload?.value ?? "");
+    if (!monthKey) return <g />;
+
+    const isSelected = monthKey === selectedMonth;
+
+    return (
+      <g
+        transform={`translate(${x},${y})`}
+        onClick={() => onMonthSelect?.(monthKey)}
+        style={{ cursor: onMonthSelect ? "pointer" : "default" }}
+      >
+        <text
+          x={0}
+          y={0}
+          dy={16}
+          textAnchor="middle"
+          fill={isSelected ? "#e2e8f0" : "#718096"}
+          fontSize={11}
+          fontWeight={isSelected ? 600 : 400}
+        >
+          {formatDateShort(`${monthKey}-01`)}
+        </text>
+      </g>
+    );
+  };
+
   return (
     <ResponsiveContainer width="100%" height={200}>
       <BarChart data={formatted} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="#2d3748" vertical={false} />
-        <XAxis dataKey="month" tick={{ fill: "#718096", fontSize: 11 }} axisLine={false} tickLine={false} />
+        <XAxis
+          dataKey="month_key"
+          tick={renderMonthTick}
+          axisLine={false}
+          tickLine={false}
+        />
         <YAxis tick={{ fill: "#718096", fontSize: 11 }} axisLine={false} tickLine={false}
           tickFormatter={(v) => formatCurrency(v, true)} width={65} />
         <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(160, 174, 192, 0.12)" }} />
-        <Bar dataKey="paid" name="Recebido" stackId="a" fill="#22c55e" radius={[0, 0, 0, 0]} maxBarSize={32} />
-        <Bar dataKey="upcoming" name="A receber" stackId="a" fill="#86efac" radius={[4, 4, 0, 0]} maxBarSize={32} />
+        <Bar
+          dataKey="paid"
+          name="Recebido"
+          stackId="a"
+          fill="#22c55e"
+          radius={[0, 0, 0, 0]}
+          maxBarSize={32}
+          onClick={handleBarClick}
+        >
+          {formatted.map((item) => (
+            <Cell
+              key={`paid-${item.month_key}`}
+              cursor={onMonthSelect ? "pointer" : "default"}
+              fillOpacity={getCellOpacity(item.month_key)}
+            />
+          ))}
+        </Bar>
+        <Bar
+          dataKey="upcoming"
+          name="A receber"
+          stackId="a"
+          fill="#86efac"
+          radius={[4, 4, 0, 0]}
+          maxBarSize={32}
+          onClick={handleBarClick}
+        >
+          {formatted.map((item) => (
+            <Cell
+              key={`upcoming-${item.month_key}`}
+              cursor={onMonthSelect ? "pointer" : "default"}
+              fillOpacity={getCellOpacity(item.month_key)}
+            />
+          ))}
+        </Bar>
       </BarChart>
     </ResponsiveContainer>
   );
