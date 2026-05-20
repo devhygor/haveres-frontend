@@ -31,6 +31,10 @@ export interface Position {
   pl_percent: number;
   realized_gain: number;
   allocation: number;
+  target_allocation_percent: number;
+  target_gap_percent: number;
+  target_value: number;
+  target_gap_value: number;
   // Fundamentalistas
   price_to_earnings?: number | null;
   price_to_book?: number | null;
@@ -52,10 +56,29 @@ export interface PortfolioSummary {
   dividends_year: number;
   dividends_12m: number;
   positions_count: number;
+  target_allocation_sum: number;
+  target_allocation_remaining: number;
+  target_allocation_is_valid: boolean;
   valuation_reference_at?: string | null;
   valuation_reference_min_at?: string | null;
   valuation_reference_max_at?: string | null;
   positions: Position[];
+}
+
+export interface TargetAllocationInput {
+  asset_id: string;
+  target_allocation_percent: number;
+}
+
+export interface SaveTargetAllocationPayload {
+  targets: TargetAllocationInput[];
+}
+
+export interface SaveTargetAllocationResult {
+  target_allocation_sum: number;
+  target_allocation_remaining: number;
+  target_allocation_is_valid: boolean;
+  positions_count: number;
 }
 
 export interface ProjectedDividend {

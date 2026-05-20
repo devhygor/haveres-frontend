@@ -1,5 +1,13 @@
 import { api } from "@/config/api";
-import type { PortfolioSummary, AllocationItem, PatrimonyPoint, DividendsEvolution, ProjectedDividend } from "@/types/portfolio";
+import type {
+  PortfolioSummary,
+  AllocationItem,
+  PatrimonyPoint,
+  DividendsEvolution,
+  ProjectedDividend,
+  SaveTargetAllocationPayload,
+  SaveTargetAllocationResult,
+} from "@/types/portfolio";
 
 export const portfolioApi = {
   getSummary: () => api.get<PortfolioSummary>("/portfolio/summary"),
@@ -14,4 +22,6 @@ export const portfolioApi = {
     api.get<DividendsEvolution[]>(`/portfolio/evolution/dividends?months=${months}`),
   getUpcomingDividends: () =>
     api.get<ProjectedDividend[]>("/portfolio/upcoming-dividends"),
+  saveTargetAllocation: (payload: SaveTargetAllocationPayload) =>
+    api.put<SaveTargetAllocationResult>("/portfolio/target-allocation", payload),
 };

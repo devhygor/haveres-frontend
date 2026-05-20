@@ -35,6 +35,8 @@ export const GLOSSARY: Record<string, string> = {
   "Preço Médio": "Custo médio ponderado de todas as compras realizadas, incluindo taxas de corretagem. Serve de referência para calcular lucro ou prejuízo da posição.",
   "P&L": "Profit & Loss (Lucro e Prejuízo): diferença entre o valor atual da posição e o total investido. Positivo = lucro não realizado; negativo = prejuízo não realizado.",
   "Alocação": "Percentual do patrimônio total da carteira investido neste ativo. Indica o grau de concentração da carteira nessa posição.",
+  "Meta de Alocação": "Percentual alvo que você deseja para cada ativo dentro da carteira. A soma das metas deve totalizar 100% para orientar aportes e rebalanceamento.",
+  "Desvio da Meta": "Diferença entre a alocação atual e a meta definida para o ativo. Valor positivo indica quanto falta aportar; valor negativo indica excesso em relação à meta.",
   "Investido": "Total de capital efetivamente aportado neste ativo, calculado como quantidade × preço médio de compra.",
   "DY": "Dividend Yield: total de dividendos/rendimentos pagos no período dividido pelo preço atual. Indica o retorno em proventos em relação ao preço de mercado.",
   "JCP": "Juros Sobre Capital Próprio: forma de distribuição de lucros usada por empresas. Diferente do dividendo, tem retenção de Imposto de Renda de 15% na fonte para o investidor.",
