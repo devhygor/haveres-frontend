@@ -50,6 +50,7 @@ export interface PortfolioSummary {
   pl_percent: number;
   dividends_month: number;
   dividends_year: number;
+  dividends_12m: number;
   positions_count: number;
   valuation_reference_at?: string | null;
   valuation_reference_min_at?: string | null;

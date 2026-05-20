@@ -34,6 +34,11 @@ export function PortfolioPage() {
     queryKey: ["portfolio", "allocation", "sector"],
     queryFn: () => portfolioApi.getAllocationBySector().then((r) => r.data),
   });
+  const upcomingDividends = useQuery({
+    queryKey: ["portfolio", "upcoming-dividends"],
+    queryFn: () => portfolioApi.getUpcomingDividends().then((r) => r.data),
+    staleTime: 1000 * 60 * 5,
+  });
 
   const positions = Array.isArray(summary.data?.positions) ? summary.data!.positions : [];
 
@@ -80,6 +85,10 @@ export function PortfolioPage() {
     });
   }, [positions, selectedSector, selectedType]);
 
+  const upcomingTotal = useMemo(() => {
+    return (upcomingDividends.data ?? []).reduce((sum, item) => sum + toFinite(item.expected_amount), 0);
+  }, [upcomingDividends.data]);
+
   useEffect(() => {
     if (!selectedType) return;
     if (!allocation.data?.some((entry) => entry.type === selectedType)) {
@@ -111,12 +120,13 @@ export function PortfolioPage() {
   const plPercent = toFinite(data.pl_percent);
   const dividendsMonth = toFinite(data.dividends_month);
   const dividendsYear = toFinite(data.dividends_year);
+  const dividends12m = toFinite(data.dividends_12m);
   const positionsCount = Math.max(0, Math.trunc(toFinite(data.positions_count)));
   const totalResult = plAbsolute + dividendsYear;
   const totalReturnPercent = totalInvested > 0
     ? (totalResult / totalInvested) * 100
     : 0;
-  const ResultTrendIcon = totalResult >= 0 ? TrendingUp : TrendingDown;
+  const ResultTrendIcon = plAbsolute >= 0 ? TrendingUp : TrendingDown;
   const ReturnTrendIcon = totalReturnPercent >= 0 ? TrendingUp : TrendingDown;
 
   const clearFilters = () => {
@@ -143,17 +153,7 @@ export function PortfolioPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <p className="text-2xl font-bold text-white font-numeric">{formatCurrency(totalValue)}</p>
-            <span
-              className={cn(
-                "inline-flex items-center rounded-full px-2 py-1 text-xs font-semibold font-numeric",
-                plPercent >= 0 ? "bg-gain/15 text-gain" : "bg-loss/15 text-loss",
-              )}
-            >
-              {formatPercent(plPercent, true)}
-            </span>
-          </div>
+          <p className="text-2xl font-bold text-white font-numeric">{formatCurrency(totalValue)}</p>
 
           <div className="mt-3 pt-3 border-t border-haveres-border/70">
             <p className="text-xs text-muted-foreground"><TermTooltip term="Valor investido" /></p>
@@ -167,39 +167,33 @@ export function PortfolioPage() {
               <TermTooltip term="Lucro / Prejuízo" />
             </p>
             <div className="p-2 rounded-lg bg-secondary/50">
-              <ResultTrendIcon size={16} className={cn(plClass(totalResult))} />
+              <ResultTrendIcon size={16} className={cn(plClass(plAbsolute))} />
             </div>
           </div>
 
-          <p className={cn("text-2xl font-bold font-numeric", plClass(totalResult))}>
-            {formatCurrency(totalResult)}
+          <p className={cn("text-2xl font-bold font-numeric", plClass(plAbsolute))}>
+            {formatCurrency(plAbsolute)}
           </p>
-
-          <div className="mt-3 pt-3 border-t border-haveres-border/70 grid grid-cols-2 gap-3">
-            <div>
-              <p className="text-xs text-muted-foreground"><TermTooltip term="Ganho de Capital" /></p>
-              <p className={cn("text-sm font-semibold font-numeric", plClass(plAbsolute))}>
-                {formatCurrency(plAbsolute)}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground"><TermTooltip term="Dividendos Recebidos" /></p>
-              <p className={cn("text-sm font-semibold font-numeric", plClass(dividendsYear))}>
-                {formatCurrency(dividendsYear)}
-              </p>
-            </div>
-          </div>
         </div>
 
         <div className="card-haveres p-4 sm:p-5">
           <div className="flex items-start justify-between gap-3 mb-3">
-            <p className="text-sm text-muted-foreground font-medium"><TermTooltip term="Proventos Recebidos (Ano)" /></p>
+            <p className="text-sm text-muted-foreground font-medium"><TermTooltip term="Dividendos/Proventos Recebidos" /></p>
             <div className="p-2 rounded-lg bg-secondary/50">
               <CalendarDays size={16} className="text-gain" />
             </div>
           </div>
 
-          <p className="text-2xl font-bold text-white font-numeric">{formatCurrency(dividendsYear)}</p>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <p className="text-xs text-muted-foreground">Ano atual</p>
+              <p className="text-xl font-bold text-white font-numeric">{formatCurrency(dividendsYear)}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground"><TermTooltip term="Últimos 12m" /></p>
+              <p className="text-xl font-bold text-white font-numeric">{formatCurrency(dividends12m)}</p>
+            </div>
+          </div>
 
           <div className="mt-3 pt-3 border-t border-haveres-border/70 grid grid-cols-2 gap-3">
             <div>
@@ -207,8 +201,8 @@ export function PortfolioPage() {
               <p className="text-sm font-semibold text-white font-numeric">{formatCurrency(dividendsMonth)}</p>
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">Posições</p>
-              <p className="text-sm font-semibold text-haveres-blue font-numeric">{positionsCount}</p>
+              <p className="text-xs text-muted-foreground"><TermTooltip term="A receber" /></p>
+              <p className="text-sm font-semibold text-haveres-blue font-numeric">{formatCurrency(upcomingTotal)}</p>
             </div>
           </div>
         </div>
