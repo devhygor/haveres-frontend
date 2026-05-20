@@ -85,6 +85,7 @@ export interface PatrimonyPoint {
   total_value: number;
   total_invested: number;
   total_dividends_month: number;
+  type_breakdown?: Record<string, number>;
 }
 
 export interface DividendsEvolution {

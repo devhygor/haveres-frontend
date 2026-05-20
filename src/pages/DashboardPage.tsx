@@ -1,9 +1,8 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Wallet, TrendingUp, CalendarDays, PieChart } from "lucide-react";
+import { Wallet, TrendingUp, TrendingDown, CalendarDays, PieChart } from "lucide-react";
 import { portfolioApi } from "@/api/portfolio";
-import { StatCard, PLCard } from "@/components/cards/StatCard";
-import { DividendsChart } from "@/components/charts/DividendsChart";
+import { PatrimonyEvolutionChart } from "@/components/charts/PatrimonyEvolutionChart";
 import { AllocationChart } from "@/components/charts/AllocationChart";
 import { BenchmarkChart } from "@/components/charts/BenchmarkChart";
 import { CurrencyWidget } from "@/components/cards/CurrencyWidget";
@@ -12,8 +11,14 @@ import { CryptoWidget } from "@/components/cards/CryptoWidget";
 import { LoadingState, SkeletonCard } from "@/components/common/LoadingState";
 import { ErrorState } from "@/components/common/ErrorState";
 import { ReferenceTimeHint } from "@/components/common/ReferenceTimeHint";
-import { formatCurrency } from "@/utils/format";
+import { cn } from "@/utils/cn";
+import { formatCurrency, formatPercent, plClass } from "@/utils/format";
 import { TermTooltip } from "@/components/common/TermTooltip";
+
+function toFinite(value: unknown): number {
+  const parsed = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
 
 export function DashboardPage() {
   const summary = useQuery({
@@ -26,11 +31,6 @@ export function DashboardPage() {
     queryFn: () => portfolioApi.getAllocationByType().then((r) => r.data),
   });
 
-  const dividendsEvolution = useQuery({
-    queryKey: ["portfolio", "evolution", "dividends"],
-    queryFn: () => portfolioApi.getDividendsEvolution(12).then((r) => r.data),
-  });
-
   const upcomingDividends = useQuery({
     queryKey: ["portfolio", "upcoming-dividends"],
     queryFn: () => portfolioApi.getUpcomingDividends().then((r) => r.data),
@@ -40,28 +40,9 @@ export function DashboardPage() {
   const data = summary.data;
 
   const upcomingTotal = useMemo(() => {
-    return (upcomingDividends.data ?? []).reduce((s, d) => s + Number(d.expected_amount), 0);
+    return (upcomingDividends.data ?? []).reduce((s, d) => s + toFinite(d.expected_amount), 0);
   }, [upcomingDividends.data]);
 
-  const dividendChartData = useMemo(() => {
-    const historical = (dividendsEvolution.data ?? []).map((d) => ({
-      month: d.month,
-      paid: Number(d.total),
-      upcoming: 0,
-    }));
-    const projected = upcomingDividends.data ?? [];
-    const byMonth: Record<string, number> = {};
-    projected.forEach((d) => {
-      if (!d.expected_date) return;
-      const key = d.expected_date.slice(0, 7) + "-01";
-      byMonth[key] = (byMonth[key] ?? 0) + Number(d.expected_amount);
-    });
-    const existingMonths = new Set(historical.map((h) => h.month));
-    const projectedPoints = Object.entries(byMonth)
-      .filter(([m]) => !existingMonths.has(m))
-      .map(([month, upcoming]) => ({ month, paid: 0, upcoming }));
-    return [...historical, ...projectedPoints].sort((a, b) => a.month.localeCompare(b.month));
-  }, [dividendsEvolution.data, upcomingDividends.data]);
 
   if (summary.isLoading) {
     return (
@@ -82,51 +63,143 @@ export function DashboardPage() {
     return <ErrorState message="Não foi possível carregar os dados do dashboard." onRetry={() => summary.refetch()} />;
   }
 
+  const totalValue = toFinite(data.total_value);
+  const totalInvested = toFinite(data.total_invested);
+  const plAbsolute = toFinite(data.pl_absolute);
+  const plPercent = toFinite(data.pl_percent);
+  const dividendsMonth = toFinite(data.dividends_month);
+  const dividendsYear = toFinite(data.dividends_year);
+  const positionsCount = Math.max(0, Math.trunc(toFinite(data.positions_count)));
+
+  const totalResult = plAbsolute + dividendsYear;
+  const totalReturnPercent = totalInvested > 0
+    ? (totalResult / totalInvested) * 100
+    : 0;
+  const ResultTrendIcon = totalResult >= 0 ? TrendingUp : TrendingDown;
+  const ReturnTrendIcon = totalReturnPercent >= 0 ? TrendingUp : TrendingDown;
+
   return (
     <div className="space-y-6">
       {/* Cards principais */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-        <StatCard
-          title={(
-            <span className="inline-flex items-center gap-1.5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="card-haveres p-4 sm:p-5">
+          <div className="flex items-start justify-between gap-3 mb-3">
+            <div className="inline-flex items-center gap-1.5 text-sm text-muted-foreground font-medium">
               Patrimônio Total
               <ReferenceTimeHint
                 asOf={data.valuation_reference_at}
                 rangeStart={data.valuation_reference_min_at}
                 rangeEnd={data.valuation_reference_max_at}
               />
+            </div>
+            <div className="p-2 rounded-lg bg-secondary/50">
+              <Wallet size={16} className="text-haveres-blue" />
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <p className="text-2xl font-bold text-white font-numeric">{formatCurrency(totalValue)}</p>
+            <span
+              className={cn(
+                "inline-flex items-center rounded-full px-2 py-1 text-xs font-semibold font-numeric",
+                plPercent >= 0 ? "bg-gain/15 text-gain" : "bg-loss/15 text-loss",
+              )}
+            >
+              {formatPercent(plPercent, true)}
             </span>
-          )}
-          value={formatCurrency(data.total_value)}
-          icon={Wallet}
-          iconColor="text-haveres-blue"
-          subtitle={`${data.positions_count} posições`}
-          className="sm:col-span-2 lg:col-span-1"
-        />
-        <PLCard
-          title={<TermTooltip term="Lucro / Prejuízo" />}
-          absolute={data.pl_absolute}
-          percent={data.pl_percent}
-        />
-        <StatCard
-          title="Proventos no Mês"
-          value={formatCurrency(data.dividends_month)}
-          icon={CalendarDays}
-          iconColor="text-gain"
-        />
-        <StatCard
-          title="Proventos no Ano"
-          value={formatCurrency(data.dividends_year)}
-          icon={TrendingUp}
-          iconColor="text-gain"
-        />
-        <StatCard
-          title="A Receber"
-          value={formatCurrency(upcomingTotal)}
-          icon={CalendarDays}
-          iconColor="text-haveres-blue"
-          subtitle={upcomingDividends.data ? `${upcomingDividends.data.length} proventos` : "—"}
-        />
+          </div>
+
+          <div className="mt-3 pt-3 border-t border-haveres-border/70">
+            <p className="text-xs text-muted-foreground">Valor investido</p>
+            <p className="text-base font-semibold text-white font-numeric">{formatCurrency(totalInvested)}</p>
+          </div>
+        </div>
+
+        <div className="card-haveres p-4 sm:p-5">
+          <div className="flex items-start justify-between gap-3 mb-3">
+            <p className="text-sm text-muted-foreground font-medium">
+              <TermTooltip term="Lucro / Prejuízo" />
+            </p>
+            <div className="p-2 rounded-lg bg-secondary/50">
+              <ResultTrendIcon size={16} className={cn(plClass(totalResult))} />
+            </div>
+          </div>
+
+          <p className={cn("text-2xl font-bold font-numeric", plClass(totalResult))}>
+            {formatCurrency(totalResult)}
+          </p>
+
+          <div className="mt-3 pt-3 border-t border-haveres-border/70 grid grid-cols-2 gap-3">
+            <div>
+              <p className="text-xs text-muted-foreground">Ganho de Capital</p>
+              <p className={cn("text-sm font-semibold font-numeric", plClass(plAbsolute))}>
+                {formatCurrency(plAbsolute)}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Dividendos Recebidos</p>
+              <p className={cn("text-sm font-semibold font-numeric", plClass(dividendsYear))}>
+                {formatCurrency(dividendsYear)}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="card-haveres p-4 sm:p-5">
+          <div className="flex items-start justify-between gap-3 mb-3">
+            <p className="text-sm text-muted-foreground font-medium">Proventos Recebidos (Ano)</p>
+            <div className="p-2 rounded-lg bg-secondary/50">
+              <CalendarDays size={16} className="text-gain" />
+            </div>
+          </div>
+
+          <p className="text-2xl font-bold text-white font-numeric">{formatCurrency(dividendsYear)}</p>
+
+          <div className="mt-3 pt-3 border-t border-haveres-border/70 grid grid-cols-2 gap-3">
+            <div>
+              <p className="text-xs text-muted-foreground">No mês</p>
+              <p className="text-sm font-semibold text-white font-numeric">{formatCurrency(dividendsMonth)}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">A receber</p>
+              <p className="text-sm font-semibold text-haveres-blue font-numeric">{formatCurrency(upcomingTotal)}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="card-haveres p-4 sm:p-5">
+          <div className="flex items-start justify-between gap-3 mb-3">
+            <p className="text-sm text-muted-foreground font-medium">Variação e Rentabilidade</p>
+            <div className="p-2 rounded-lg bg-secondary/50">
+              <ReturnTrendIcon size={16} className={cn(plClass(totalReturnPercent))} />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <p className="text-xs text-muted-foreground">Variação</p>
+              <p className={cn("text-2xl font-bold font-numeric", plClass(plPercent))}>
+                {formatPercent(plPercent, true)}
+              </p>
+              <p className={cn("text-sm font-medium font-numeric", plClass(plAbsolute))}>
+                {formatCurrency(plAbsolute)}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Rentabilidade</p>
+              <p className={cn("text-2xl font-bold font-numeric", plClass(totalReturnPercent))}>
+                {formatPercent(totalReturnPercent, true)}
+              </p>
+              <p className={cn("text-sm font-medium font-numeric", plClass(totalResult))}>
+                {formatCurrency(totalResult)}
+              </p>
+            </div>
+          </div>
+
+          <p className="mt-3 text-xs text-muted-foreground">
+            {positionsCount} posições
+          </p>
+        </div>
       </div>
 
       {/* Alocação + Dividendos */}
@@ -151,16 +224,10 @@ export function DashboardPage() {
 
         <div className="card-haveres p-4 sm:p-5">
           <div className="flex items-center gap-2 mb-4">
-            <TrendingUp size={18} className="text-gain" />
-            <h2 className="text-sm font-semibold text-white">Proventos Mensais</h2>
+            <TrendingUp size={18} className="text-haveres-blue" />
+            <h2 className="text-sm font-semibold text-white">Evolução do Patrimônio</h2>
           </div>
-          {dividendsEvolution.isLoading ? (
-            <LoadingState />
-          ) : dividendChartData.length ? (
-            <DividendsChart data={dividendChartData} />
-          ) : (
-            <p className="text-sm text-muted-foreground py-8 text-center">Sem proventos registrados</p>
-          )}
+          <PatrimonyEvolutionChart availableTypes={allocationByType.data ?? []} />
         </div>
       </div>
 

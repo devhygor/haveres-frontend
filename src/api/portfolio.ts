@@ -5,8 +5,11 @@ export const portfolioApi = {
   getSummary: () => api.get<PortfolioSummary>("/portfolio/summary"),
   getAllocationByType: () => api.get<AllocationItem[]>("/portfolio/allocation/by-type"),
   getAllocationBySector: () => api.get<AllocationItem[]>("/portfolio/allocation/by-sector"),
-  getPatrimonyEvolution: (months = 12) =>
-    api.get<PatrimonyPoint[]>(`/portfolio/evolution/patrimony?months=${months}`),
+  getPatrimonyEvolution: (months = 12, assetType?: string) => {
+    const params = new URLSearchParams({ months: String(months) });
+    if (assetType) params.append("asset_type", assetType);
+    return api.get<PatrimonyPoint[]>(`/portfolio/evolution/patrimony?${params}`);
+  },
   getDividendsEvolution: (months = 12) =>
     api.get<DividendsEvolution[]>(`/portfolio/evolution/dividends?months=${months}`),
   getUpcomingDividends: () =>

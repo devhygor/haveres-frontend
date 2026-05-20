@@ -9,9 +9,14 @@ import { ErrorState } from "@/components/common/ErrorState";
 import { EmptyState } from "@/components/common/EmptyState";
 import { ReferenceTimeHint } from "@/components/common/ReferenceTimeHint";
 import { formatCurrency, formatPercent, plClass } from "@/utils/format";
-import { Briefcase, PieChart } from "lucide-react";
+import { Briefcase, PieChart, Wallet, TrendingUp, TrendingDown, CalendarDays } from "lucide-react";
 import { cn } from "@/utils/cn";
 import { TermTooltip } from "@/components/common/TermTooltip";
+
+function toFinite(value: unknown): number {
+  const parsed = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
 
 export function PortfolioPage() {
   const [selectedType, setSelectedType] = useState<string | null>(null);
@@ -73,6 +78,19 @@ export function PortfolioPage() {
   if (!summary.data) return <ErrorState message="Não foi possível carregar os dados da carteira." onRetry={() => summary.refetch()} />;
 
   const data = summary.data;
+  const totalValue = toFinite(data.total_value);
+  const totalInvested = toFinite(data.total_invested);
+  const plAbsolute = toFinite(data.pl_absolute);
+  const plPercent = toFinite(data.pl_percent);
+  const dividendsMonth = toFinite(data.dividends_month);
+  const dividendsYear = toFinite(data.dividends_year);
+  const positionsCount = Math.max(0, Math.trunc(toFinite(data.positions_count)));
+  const totalResult = plAbsolute + dividendsYear;
+  const totalReturnPercent = totalInvested > 0
+    ? (totalResult / totalInvested) * 100
+    : 0;
+  const ResultTrendIcon = totalResult >= 0 ? TrendingUp : TrendingDown;
+  const ReturnTrendIcon = totalReturnPercent >= 0 ? TrendingUp : TrendingDown;
 
   const clearFilters = () => {
     setSelectedType(null);
@@ -82,37 +100,125 @@ export function PortfolioPage() {
   return (
     <div className="space-y-6">
       {/* Resumo */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-        {[
-          {
-            label: (
-              <span className="inline-flex items-center gap-1.5">
-                Valor Atual
-                <ReferenceTimeHint
-                  asOf={data.valuation_reference_at}
-                  rangeStart={data.valuation_reference_min_at}
-                  rangeEnd={data.valuation_reference_max_at}
-                />
-              </span>
-            ),
-            key: "Valor Atual",
-            value: formatCurrency(data.total_value),
-            highlight: true,
-          },
-          { label: "Total Investido", value: formatCurrency(data.total_invested) },
-          { label: <TermTooltip term="P&L Absoluto" />, key: "P&L Absoluto", value: formatCurrency(data.pl_absolute), colored: data.pl_absolute },
-          { label: <TermTooltip term="P&L %" />, key: "P&L %", value: formatPercent(data.pl_percent, true), colored: data.pl_percent },
-        ].map(({ label, key, value, highlight, colored }) => (
-          <div key={key ?? String(label)} className="card-haveres p-4 sm:p-5">
-            <p className="text-xs text-muted-foreground mb-2">{label}</p>
-            <p className={cn(
-              "text-xl font-bold font-numeric",
-              highlight ? "text-white" : colored !== undefined ? plClass(colored) : "text-white"
-            )}>
-              {value}
-            </p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="card-haveres p-4 sm:p-5">
+          <div className="flex items-start justify-between gap-3 mb-3">
+            <div className="inline-flex items-center gap-1.5 text-sm text-muted-foreground font-medium">
+              Patrimônio Total
+              <ReferenceTimeHint
+                asOf={data.valuation_reference_at}
+                rangeStart={data.valuation_reference_min_at}
+                rangeEnd={data.valuation_reference_max_at}
+              />
+            </div>
+            <div className="p-2 rounded-lg bg-secondary/50">
+              <Wallet size={16} className="text-haveres-blue" />
+            </div>
           </div>
-        ))}
+
+          <div className="flex items-center gap-2">
+            <p className="text-2xl font-bold text-white font-numeric">{formatCurrency(totalValue)}</p>
+            <span
+              className={cn(
+                "inline-flex items-center rounded-full px-2 py-1 text-xs font-semibold font-numeric",
+                plPercent >= 0 ? "bg-gain/15 text-gain" : "bg-loss/15 text-loss",
+              )}
+            >
+              {formatPercent(plPercent, true)}
+            </span>
+          </div>
+
+          <div className="mt-3 pt-3 border-t border-haveres-border/70">
+            <p className="text-xs text-muted-foreground">Valor investido</p>
+            <p className="text-base font-semibold text-white font-numeric">{formatCurrency(totalInvested)}</p>
+          </div>
+        </div>
+
+        <div className="card-haveres p-4 sm:p-5">
+          <div className="flex items-start justify-between gap-3 mb-3">
+            <p className="text-sm text-muted-foreground font-medium">
+              <TermTooltip term="Lucro / Prejuízo" />
+            </p>
+            <div className="p-2 rounded-lg bg-secondary/50">
+              <ResultTrendIcon size={16} className={cn(plClass(totalResult))} />
+            </div>
+          </div>
+
+          <p className={cn("text-2xl font-bold font-numeric", plClass(totalResult))}>
+            {formatCurrency(totalResult)}
+          </p>
+
+          <div className="mt-3 pt-3 border-t border-haveres-border/70 grid grid-cols-2 gap-3">
+            <div>
+              <p className="text-xs text-muted-foreground">Ganho de Capital</p>
+              <p className={cn("text-sm font-semibold font-numeric", plClass(plAbsolute))}>
+                {formatCurrency(plAbsolute)}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Dividendos Recebidos</p>
+              <p className={cn("text-sm font-semibold font-numeric", plClass(dividendsYear))}>
+                {formatCurrency(dividendsYear)}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="card-haveres p-4 sm:p-5">
+          <div className="flex items-start justify-between gap-3 mb-3">
+            <p className="text-sm text-muted-foreground font-medium">Proventos Recebidos (Ano)</p>
+            <div className="p-2 rounded-lg bg-secondary/50">
+              <CalendarDays size={16} className="text-gain" />
+            </div>
+          </div>
+
+          <p className="text-2xl font-bold text-white font-numeric">{formatCurrency(dividendsYear)}</p>
+
+          <div className="mt-3 pt-3 border-t border-haveres-border/70 grid grid-cols-2 gap-3">
+            <div>
+              <p className="text-xs text-muted-foreground">No mês</p>
+              <p className="text-sm font-semibold text-white font-numeric">{formatCurrency(dividendsMonth)}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Posições</p>
+              <p className="text-sm font-semibold text-haveres-blue font-numeric">{positionsCount}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="card-haveres p-4 sm:p-5">
+          <div className="flex items-start justify-between gap-3 mb-3">
+            <p className="text-sm text-muted-foreground font-medium">Variação e Rentabilidade</p>
+            <div className="p-2 rounded-lg bg-secondary/50">
+              <ReturnTrendIcon size={16} className={cn(plClass(totalReturnPercent))} />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <p className="text-xs text-muted-foreground">Variação</p>
+              <p className={cn("text-2xl font-bold font-numeric", plClass(plPercent))}>
+                {formatPercent(plPercent, true)}
+              </p>
+              <p className={cn("text-sm font-medium font-numeric", plClass(plAbsolute))}>
+                {formatCurrency(plAbsolute)}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Rentabilidade</p>
+              <p className={cn("text-2xl font-bold font-numeric", plClass(totalReturnPercent))}>
+                {formatPercent(totalReturnPercent, true)}
+              </p>
+              <p className={cn("text-sm font-medium font-numeric", plClass(totalResult))}>
+                {formatCurrency(totalResult)}
+              </p>
+            </div>
+          </div>
+
+          <p className="mt-3 text-xs text-muted-foreground">
+            {positionsCount} posições
+          </p>
+        </div>
       </div>
 
       {/* Rentabilidade Comparada */}

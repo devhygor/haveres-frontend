@@ -1,43 +1,52 @@
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
+function toFinite(value: number): number {
+  return Number.isFinite(value) ? value : 0;
+}
+
 export function formatCurrency(value: number, compact = false): string {
-  if (compact && Math.abs(value) >= 1000) {
+  const safeValue = toFinite(value);
+
+  if (compact && Math.abs(safeValue) >= 1000) {
     return new Intl.NumberFormat("pt-BR", {
       style: "currency",
       currency: "BRL",
       notation: "compact",
       maximumFractionDigits: 1,
-    }).format(value);
+    }).format(safeValue);
   }
   return new Intl.NumberFormat("pt-BR", {
     style: "currency",
     currency: "BRL",
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  }).format(value);
+  }).format(safeValue);
 }
 
 export function formatPercent(value: number, alwaysSign = false): string {
+  const safeValue = toFinite(value);
   const formatted = new Intl.NumberFormat("pt-BR", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  }).format(Math.abs(value));
-  const sign = value > 0 ? "+" : value < 0 ? "-" : alwaysSign ? "+" : "";
+  }).format(Math.abs(safeValue));
+  const sign = safeValue > 0 ? "+" : safeValue < 0 ? "-" : alwaysSign ? "+" : "";
   return `${sign}${formatted}%`;
 }
 
 export function formatNumber(value: number, decimals = 2): string {
+  const safeValue = toFinite(value);
   return new Intl.NumberFormat("pt-BR", {
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
-  }).format(value);
+  }).format(safeValue);
 }
 
 export function formatQuantity(value: number): string {
-  return value % 1 === 0
-    ? new Intl.NumberFormat("pt-BR").format(value)
-    : formatNumber(value, 4);
+  const safeValue = toFinite(value);
+  return safeValue % 1 === 0
+    ? new Intl.NumberFormat("pt-BR").format(safeValue)
+    : formatNumber(safeValue, 4);
 }
 
 export function formatDate(date: string | Date): string {
@@ -56,11 +65,12 @@ export function formatDateShort(date: string | Date): string {
 }
 
 export function isPositive(value: number): boolean {
-  return value > 0;
+  return toFinite(value) > 0;
 }
 
 export function plClass(value: number): string {
-  if (value > 0) return "text-gain";
-  if (value < 0) return "text-loss";
+  const safeValue = toFinite(value);
+  if (safeValue > 0) return "text-gain";
+  if (safeValue < 0) return "text-loss";
   return "text-muted-foreground";
 }
