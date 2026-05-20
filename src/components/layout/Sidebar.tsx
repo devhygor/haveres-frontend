@@ -11,8 +11,8 @@ import { cn } from "@/utils/cn";
 const navItems = [
   { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
   { to: "/carteira", icon: Briefcase, label: "Carteira" },
-  { to: "/movimentacoes", icon: ArrowLeftRight, label: "Movimentações" },
   { to: "/proventos", icon: TrendingUp, label: "Proventos" },
+  { to: "/movimentacoes", icon: ArrowLeftRight, label: "Movimentações" },
   { to: "/importacoes", icon: Upload, label: "Importações" },
   { to: "/open-finance", icon: Building2, label: "Open Finance" },
 ];
