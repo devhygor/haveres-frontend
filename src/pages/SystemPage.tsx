@@ -72,13 +72,14 @@ const SYNC_LABELS: Record<string, string> = {
   options_chain: "Cadeia de Opções",
   treasury_bonds: "Tesouro Direto",
   treasury_benchmark_repair: "Reparo Benchmark Tesouro",
+  all_dividend_history: "Histórico de Proventos (Ações/ETF/BDR)",
 };
 
 const SYNC_PHASES: { label: string; keys: string[] }[] = [
   { label: "Catálogos",   keys: ["assets_catalog", "fii_details", "crypto_catalog"] },
   { label: "Cotações",    keys: ["quotes", "currencies", "fii_dividends", "macro_indicators", "crypto_quotes"] },
   { label: "Fundamentos", keys: ["asset_fundamentals", "asset_profiles", "financial_statements"] },
-  { label: "Histórico",   keys: ["currency_history", "fii_indicator_history", "fii_reports"] },
+  { label: "Histórico",   keys: ["currency_history", "fii_indicator_history", "fii_reports", "all_dividend_history"] },
   { label: "Econômicos",  keys: ["inflation", "prime_rate"] },
   { label: "Portfólio",   keys: ["portfolio_history", "portfolio_snapshots"] },
   { label: "Derivativos", keys: ["options_chain"] },
