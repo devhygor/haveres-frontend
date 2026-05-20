@@ -31,22 +31,30 @@ const columns: ColumnDef<Position>[] = [
   {
     accessorKey: "ticker",
     header: "Código",
-    cell: ({ row }) => (
-      <div className="flex items-center gap-2">
-        <AssetLogo logoUrl={row.original.logo_url} ticker={row.original.ticker} />
-        <div>
-          <Link
-            to={`/ativos/${row.original.ticker}`}
-            className="font-semibold text-haveres-blue hover:text-white font-mono text-sm transition-colors"
-          >
-            {row.original.ticker}
-          </Link>
-          <p className="text-xs text-muted-foreground truncate max-w-[120px]" title={row.original.name}>
-            {row.original.name}
-          </p>
+    cell: ({ row }) => {
+      const isTreasury = row.original.asset_type === "TREASURY";
+
+      return (
+        <div className="flex items-center gap-2">
+          <AssetLogo logoUrl={row.original.logo_url} ticker={row.original.ticker} />
+          <div>
+            <Link
+              to={`/ativos/${row.original.ticker}`}
+              className={cn(
+                "font-semibold text-haveres-blue hover:text-white text-sm transition-colors",
+                !isTreasury && "font-mono"
+              )}
+              title={isTreasury ? row.original.name : row.original.ticker}
+            >
+              {isTreasury ? row.original.name : row.original.ticker}
+            </Link>
+            <p className="text-xs text-muted-foreground truncate max-w-[160px]" title={isTreasury ? row.original.ticker : row.original.name}>
+              {isTreasury ? row.original.ticker : row.original.name}
+            </p>
+          </div>
         </div>
-      </div>
-    ),
+      );
+    },
   },
   {
     accessorKey: "asset_type",

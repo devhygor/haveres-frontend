@@ -88,6 +88,9 @@ function sanitizeDecimalInput(value: string): string {
 }
 
 function assetLabel(asset: Asset): string {
+  if (asset.asset_type === "TREASURY") {
+    return `${asset.name} - ${asset.ticker}`;
+  }
   return `${asset.ticker} - ${asset.name}`;
 }
 
@@ -361,8 +364,17 @@ export function TransactionFormModal({ open, onClose, transaction }: Props) {
                       setShowNewAsset(false);
                     }}
                   >
-                    <span className="font-mono font-medium">{asset.ticker}</span>
-                    <span className="text-muted-foreground"> - {asset.name}</span>
+                    {asset.asset_type === "TREASURY" ? (
+                      <>
+                        <span className="font-medium">{asset.name}</span>
+                        <span className="text-muted-foreground"> - {asset.ticker}</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="font-mono font-medium">{asset.ticker}</span>
+                        <span className="text-muted-foreground"> - {asset.name}</span>
+                      </>
+                    )}
                   </button>
                 ))}
 
