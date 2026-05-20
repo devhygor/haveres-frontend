@@ -9,7 +9,7 @@ import { ErrorState } from "@/components/common/ErrorState";
 import { EmptyState } from "@/components/common/EmptyState";
 import { ReferenceTimeHint } from "@/components/common/ReferenceTimeHint";
 import { formatCurrency, formatPercent, plClass } from "@/utils/format";
-import { Briefcase, PieChart, Wallet, TrendingUp, TrendingDown, CalendarDays } from "lucide-react";
+import { Briefcase, PieChart, Wallet, TrendingUp, TrendingDown } from "lucide-react";
 import { cn } from "@/utils/cn";
 import { TermTooltip } from "@/components/common/TermTooltip";
 
@@ -33,11 +33,6 @@ export function PortfolioPage() {
   const allocationBySector = useQuery({
     queryKey: ["portfolio", "allocation", "sector"],
     queryFn: () => portfolioApi.getAllocationBySector().then((r) => r.data),
-  });
-  const upcomingDividends = useQuery({
-    queryKey: ["portfolio", "upcoming-dividends"],
-    queryFn: () => portfolioApi.getUpcomingDividends().then((r) => r.data),
-    staleTime: 1000 * 60 * 5,
   });
 
   const positions = Array.isArray(summary.data?.positions) ? summary.data!.positions : [];
@@ -85,10 +80,6 @@ export function PortfolioPage() {
     });
   }, [positions, selectedSector, selectedType]);
 
-  const upcomingTotal = useMemo(() => {
-    return (upcomingDividends.data ?? []).reduce((sum, item) => sum + toFinite(item.expected_amount), 0);
-  }, [upcomingDividends.data]);
-
   useEffect(() => {
     if (!selectedType) return;
     if (!allocation.data?.some((entry) => entry.type === selectedType)) {
@@ -118,9 +109,7 @@ export function PortfolioPage() {
   const totalInvested = toFinite(data.total_invested);
   const plAbsolute = toFinite(data.pl_absolute);
   const plPercent = toFinite(data.pl_percent);
-  const dividendsMonth = toFinite(data.dividends_month);
   const dividendsYear = toFinite(data.dividends_year);
-  const dividends12m = toFinite(data.dividends_12m);
   const positionsCount = Math.max(0, Math.trunc(toFinite(data.positions_count)));
   const totalResult = plAbsolute + dividendsYear;
   const totalReturnPercent = totalInvested > 0
@@ -137,7 +126,7 @@ export function PortfolioPage() {
   return (
     <div className="space-y-6">
       {/* Resumo */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <div className="card-haveres p-4 sm:p-5">
           <div className="flex items-start justify-between gap-3 mb-3">
             <div className="inline-flex items-center gap-1.5 text-sm text-muted-foreground font-medium">
@@ -174,37 +163,6 @@ export function PortfolioPage() {
           <p className={cn("text-2xl font-bold font-numeric", plClass(plAbsolute))}>
             {formatCurrency(plAbsolute)}
           </p>
-        </div>
-
-        <div className="card-haveres p-4 sm:p-5">
-          <div className="flex items-start justify-between gap-3 mb-3">
-            <p className="text-sm text-muted-foreground font-medium"><TermTooltip term="Dividendos/Proventos Recebidos" /></p>
-            <div className="p-2 rounded-lg bg-secondary/50">
-              <CalendarDays size={16} className="text-gain" />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <p className="text-xs text-muted-foreground">Ano atual</p>
-              <p className="text-xl font-bold text-white font-numeric">{formatCurrency(dividendsYear)}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground"><TermTooltip term="Últimos 12m" /></p>
-              <p className="text-xl font-bold text-white font-numeric">{formatCurrency(dividends12m)}</p>
-            </div>
-          </div>
-
-          <div className="mt-3 pt-3 border-t border-haveres-border/70 grid grid-cols-2 gap-3">
-            <div>
-              <p className="text-xs text-muted-foreground"><TermTooltip term="Proventos no mês">No mês</TermTooltip></p>
-              <p className="text-sm font-semibold text-white font-numeric">{formatCurrency(dividendsMonth)}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground"><TermTooltip term="A receber" /></p>
-              <p className="text-sm font-semibold text-haveres-blue font-numeric">{formatCurrency(upcomingTotal)}</p>
-            </div>
-          </div>
         </div>
 
         <div className="card-haveres p-4 sm:p-5">

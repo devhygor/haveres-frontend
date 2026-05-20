@@ -284,6 +284,34 @@ export function DividendsPage() {
     return Object.values(map).sort((a, b) => b.total - a.total).slice(0, 10);
   }, [filteredData]);
 
+  const trailing12mNet = useMemo(() => {
+    const cutoff = new Date();
+    cutoff.setFullYear(cutoff.getFullYear() - 1);
+    const cutoffStr = cutoff.toISOString().slice(0, 10);
+    const today = new Date().toISOString().slice(0, 10);
+    return (dividends.data ?? [])
+      .filter(d => {
+        const dateKey = d.payment_date ?? d.ex_date;
+        return dateKey >= cutoffStr && dateKey <= today;
+      })
+      .reduce((s, d) => s + Number(d.net_amount), 0);
+  }, [dividends.data]);
+
+  const thisMonthNet = useMemo(() => {
+    const currentMonth = new Date().toISOString().slice(0, 7);
+    const today = new Date().toISOString().slice(0, 10);
+    return (dividends.data ?? [])
+      .filter(d => {
+        const dateKey = d.payment_date ?? d.ex_date;
+        return dateKey.slice(0, 7) === currentMonth && dateKey <= today;
+      })
+      .reduce((s, d) => s + Number(d.net_amount), 0);
+  }, [dividends.data]);
+
+  const upcomingNetTotal = useMemo(() => {
+    return (upcoming.data ?? []).reduce((s, d) => s + Number(d.expected_amount), 0);
+  }, [upcoming.data]);
+
   if (dividends.isLoading) return <LoadingState />;
   if (dividends.isError) return <ErrorState onRetry={() => dividends.refetch()} />;
 
@@ -296,18 +324,57 @@ export function DividendsPage() {
     <>
       <div className="space-y-6">
         {/* Resumo */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {/* Bruto + distribuição por tipo */}
           <div className="card-haveres p-5">
             <p className="text-xs text-muted-foreground mb-2">Total Bruto</p>
             <p className="text-xl font-bold font-numeric text-gain">{formatCurrency(totalGross)}</p>
+            {byType.length > 0 && (
+              <div className="mt-3 pt-3 border-t border-haveres-border/70 space-y-1.5">
+                {byType.map((t) => (
+                  <div key={t.type} className="flex items-center justify-between gap-2">
+                    <span className={`text-xs font-medium truncate ${(t.type && TYPE_COLORS[t.type]) || "text-muted-foreground"}`}>
+                      {t.type_display}
+                    </span>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <span className="text-[11px] text-muted-foreground font-numeric">{t.allocation.toFixed(0)}%</span>
+                      <span className="text-xs font-semibold text-white font-numeric">{formatCurrency(t.value)}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
+
+          {/* Líquido + IR como detalhe */}
           <div className="card-haveres p-5">
             <p className="text-xs text-muted-foreground mb-2">Total Líquido</p>
             <p className="text-xl font-bold font-numeric text-white">{formatCurrency(totalNet)}</p>
+            <div className="mt-3 pt-3 border-t border-haveres-border/70">
+              <p className="text-xs text-muted-foreground">IR Retido</p>
+              <p className="text-sm font-semibold text-muted-foreground font-numeric">{formatCurrency(totalIR)}</p>
+              {totalGross > 0 && (
+                <p className="text-[11px] text-muted-foreground/70 font-numeric mt-0.5">
+                  {((totalIR / totalGross) * 100).toFixed(1)}% do bruto
+                </p>
+              )}
+            </div>
           </div>
+
+          {/* Período: 12m + no mês + a receber */}
           <div className="card-haveres p-5">
-            <p className="text-xs text-muted-foreground mb-2">IR Retido</p>
-            <p className="text-xl font-bold font-numeric text-muted-foreground">{formatCurrency(totalIR)}</p>
+            <p className="text-xs text-muted-foreground mb-2">Últimos 12 meses</p>
+            <p className="text-xl font-bold font-numeric text-white">{formatCurrency(trailing12mNet)}</p>
+            <div className="mt-3 pt-3 border-t border-haveres-border/70 grid grid-cols-2 gap-3">
+              <div>
+                <p className="text-xs text-muted-foreground">No mês</p>
+                <p className="text-sm font-semibold text-white font-numeric">{formatCurrency(thisMonthNet)}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">A receber</p>
+                <p className="text-sm font-semibold text-haveres-blue font-numeric">{formatCurrency(upcomingNetTotal)}</p>
+              </div>
+            </div>
           </div>
         </div>
 
