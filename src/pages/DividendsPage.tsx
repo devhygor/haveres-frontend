@@ -578,10 +578,7 @@ export function DividendsPage() {
                       {searchedUpcoming.map((d, i) => (
                         <tr key={`${d.ticker}-${d.expected_date}-${i}`} className="border-b border-haveres-border/50 hover:bg-secondary/30">
                           <td className="py-2 px-4 text-muted-foreground text-xs">
-                            {d.expected_date ? formatDate(d.expected_date) : "Próximo mês"}
-                            {d.source === "FII_PROJECTED" && (
-                              <span className="ml-1 text-haveres-blue/70">~</span>
-                            )}
+                            {d.expected_date ? formatDate(d.expected_date) : "—"}
                           </td>
                           <td className="py-2 px-4">
                             <div className="flex items-center gap-2">
