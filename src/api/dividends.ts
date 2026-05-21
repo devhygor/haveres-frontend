@@ -2,7 +2,7 @@ import { api } from "@/config/api";
 import type { Dividend } from "@/types/dividend";
 
 export interface DividendSyncProgress {
-  status: "idle" | "running" | "done" | "error";
+  status: "idle" | "queued" | "running" | "done" | "error";
   done: number;
   total: number;
   started_at: string | null;

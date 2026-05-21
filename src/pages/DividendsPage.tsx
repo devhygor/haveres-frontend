@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { dividendsApi } from "@/api/dividends";
@@ -82,7 +82,7 @@ export function DividendsPage() {
     queryFn: () => dividendsApi.syncProgress().then((r) => r.data),
     refetchInterval: (query) => {
       const state = query.state.data;
-      return state?.status === "running" ? 1500 : 10000;
+      return state?.status === "running" || state?.status === "queued" ? 1500 : 10000;
     },
   });
 
@@ -263,7 +263,17 @@ export function DividendsPage() {
     dividendSync && dividendSync.total > 0
       ? Math.round((dividendSync.done / dividendSync.total) * 100)
       : 0;
-  const isDividendSyncRunning = dividendSync?.status === "running";
+  const isDividendSyncRunning = dividendSync?.status === "running" || dividendSync?.status === "queued";
+
+  const prevSyncStatus = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    const status = dividendSync?.status;
+    if (prevSyncStatus.current && prevSyncStatus.current !== status && status === "done") {
+      qc.invalidateQueries({ queryKey: ["dividends"] });
+      qc.invalidateQueries({ queryKey: ["portfolio"] });
+    }
+    prevSyncStatus.current = status;
+  }, [dividendSync?.status]);
 
   const clearTypeFilter = () => {
     setSelectedDividendType(null);
