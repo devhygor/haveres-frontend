@@ -56,7 +56,7 @@ export const importsApi = {
   },
   confirm: (batchId: string) => api.post<ImportBatch>(`/imports/${batchId}/confirm`),
   cancel: (batchId: string) => api.post(`/imports/${batchId}/cancel`),
-  list: () => api.get<ImportBatch[]>("/imports"),
+  list: () => api.get<ImportBatch[]>("/imports/"),
   get: (batchId: string) => api.get<ImportBatch>(`/imports/${batchId}`),
   rows: (batchId: string) => api.get<ImportRow[]>(`/imports/${batchId}/rows`),
 };
