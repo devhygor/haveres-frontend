@@ -359,6 +359,21 @@ export function PositionsTable({
       ),
     },
     {
+      accessorKey: "pl_total",
+      header: () => <TermTooltip term="Retorno total" />,
+      sortingFn: numericSorting,
+      cell: ({ row }) => (
+        <div>
+          <p className={cn("font-mono text-sm font-medium", plClass(row.original.pl_total))}>
+            {formatCurrency(row.original.pl_total)}
+          </p>
+          <p className="font-mono text-xs text-gain">
+            +{formatCurrency(row.original.dividends_received)} prov.
+          </p>
+        </div>
+      ),
+    },
+    {
       id: "max_buy_price",
       accessorFn: (row) => row.max_buy_price ?? 0,
       header: () => <TermTooltip term="Preço Máximo de Compra" />,
@@ -550,6 +565,11 @@ export function PositionsTable({
                 <div>
                   <p className="text-[11px] text-muted-foreground"><TermTooltip term="P&L" /></p>
                   <p className={cn("font-mono text-sm", plClass(toNumber(p.pl_absolute)))}>{formatCurrency(toNumber(p.pl_absolute))}</p>
+                </div>
+                <div>
+                  <p className="text-[11px] text-muted-foreground"><TermTooltip term="Retorno total" /></p>
+                  <p className={cn("font-mono text-sm", plClass(toNumber(p.pl_total)))}>{formatCurrency(toNumber(p.pl_total))}</p>
+                  <p className="font-mono text-[11px] text-gain">+{formatCurrency(toNumber(p.dividends_received))} prov.</p>
                 </div>
               </div>
 
