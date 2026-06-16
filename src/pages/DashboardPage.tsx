@@ -10,7 +10,7 @@ import { LoadingState, SkeletonCard } from "@/components/common/LoadingState";
 import { ErrorState } from "@/components/common/ErrorState";
 import { ReferenceTimeHint } from "@/components/common/ReferenceTimeHint";
 import { cn } from "@/utils/cn";
-import { formatCurrency, plClass } from "@/utils/format";
+import { formatCurrency, formatPercent, plClass } from "@/utils/format";
 import { TermTooltip } from "@/components/common/TermTooltip";
 
 function toFinite(value: unknown): number {
@@ -53,6 +53,9 @@ export function DashboardPage() {
   const totalValue = toFinite(data.total_value);
   const totalInvested = toFinite(data.total_invested);
   const plAbsolute = toFinite(data.pl_absolute);
+  const dividendsTotal = toFinite(data.dividends_total);
+  const plTotal = toFinite(data.pl_total);
+  const plTotalPercent = toFinite(data.pl_total_percent);
   const ResultTrendIcon = plAbsolute >= 0 ? TrendingUp : TrendingDown;
 
   return (
@@ -95,6 +98,23 @@ export function DashboardPage() {
           <p className={cn("text-2xl font-bold font-numeric", plClass(plAbsolute))}>
             {formatCurrency(plAbsolute)}
           </p>
+          <p className="text-xs text-muted-foreground mt-1">Ganho de capital (sem proventos)</p>
+
+          <div className="mt-3 pt-3 border-t border-haveres-border/70 grid grid-cols-2 gap-3">
+            <div>
+              <p className="text-xs text-muted-foreground">Proventos recebidos</p>
+              <p className="text-base font-semibold text-gain font-numeric">{formatCurrency(dividendsTotal)}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">
+                <TermTooltip term="Retorno total" />
+              </p>
+              <p className={cn("text-base font-semibold font-numeric", plClass(plTotal))}>
+                {formatCurrency(plTotal)}{" "}
+                <span className="text-xs">({formatPercent(plTotalPercent, true)})</span>
+              </p>
+            </div>
+          </div>
         </div>
       </div>
 

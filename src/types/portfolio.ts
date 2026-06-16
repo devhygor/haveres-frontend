@@ -30,6 +30,9 @@ export interface Position {
   pl_absolute: number;
   pl_percent: number;
   realized_gain: number;
+  dividends_received: number;
+  pl_total: number;
+  pl_total_percent: number;
   allocation: number;
   target_allocation_percent: number;
   target_gap_percent: number;
@@ -59,6 +62,9 @@ export interface PortfolioSummary {
   dividends_month: number;
   dividends_year: number;
   dividends_12m: number;
+  dividends_total: number;
+  pl_total: number;
+  pl_total_percent: number;
   positions_count: number;
   target_allocation_sum: number;
   target_allocation_remaining: number;
@@ -153,7 +159,7 @@ export interface ProjectedDividend {
   quantity: number;
   expected_amount: number;
   expected_date: string | null;
-  source: "DECLARED" | "FII_PROJECTED";
+  source: "DECLARED" | "ANNOUNCED" | "FII_PROJECTED";
 }
 
 export interface AllocationItem {

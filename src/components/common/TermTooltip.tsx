@@ -52,6 +52,7 @@ export const GLOSSARY: Record<string, string> = {
   "Patrimônio Total": "Valor de mercado atual da carteira: soma do valor atual de todas as posições abertas.",
   "Valor investido": "Total de capital aportado nas posições atuais da carteira. Não inclui posições já zeradas.",
   "Lucro / Prejuízo": "Diferença entre o valor atual da carteira e o total investido. Positivo = lucro não realizado; negativo = prejuízo não realizado.",
+  "Retorno total": "Resultado completo da carteira: ganho de capital (valor atual − investido) + proventos líquidos recebidos (já descontado o IR). Mostra o quanto a carteira rendeu de fato.",
   "Ganho de Capital": "Parcela do resultado que vem da variação de preço dos ativos: valor atual menos valor investido.",
   "Dividendos Recebidos": "Soma dos proventos efetivamente recebidos (pagos) no período considerado.",
   "Dividendos/Proventos Recebidos": "Totais de dividendos e demais proventos efetivamente recebidos em janelas de tempo da carteira.",
