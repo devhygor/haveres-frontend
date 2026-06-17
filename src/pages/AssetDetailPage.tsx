@@ -7,6 +7,7 @@ import { quotesApi } from "@/api/quotes";
 import { FundamentalsCard } from "@/components/cards/FundamentalsCard";
 import { FIIDetailCard } from "@/components/cards/FIIDetailCard";
 import { FinancialStatementsCard } from "@/components/cards/FinancialStatementsCard";
+import { ValueAddedCard } from "@/components/cards/ValueAddedCard";
 import OptionsChainCard from "@/components/cards/OptionsChainCard";
 import { AssetInfoCard } from "@/components/cards/AssetInfoCard";
 import { PerformanceTableCard } from "@/components/cards/PerformanceTableCard";
@@ -200,6 +201,10 @@ export function AssetDetailPage() {
             position.asset_type !== "CRYPTO" && (
               <FinancialStatementsCard ticker={ticker_upper} />
             )}
+
+          {position?.asset_type === "STOCK" && (
+            <ValueAddedCard ticker={ticker_upper} />
+          )}
 
           {position?.asset_type === "STOCK" && (
             <OptionsChainCard ticker={ticker_upper} />

@@ -91,6 +91,25 @@ export interface FinancialStatementItem {
   free_cash_flow: number | null;
 }
 
+export interface ValueAddedStatementItem {
+  period_type: string;
+  period_end_date: string;
+  revenue: number | null;
+  gross_added_value: number | null;
+  net_added_value: number | null;
+  depreciation_and_amortization: number | null;
+  added_value_to_distribute: number | null;
+  team_remuneration: number | null;
+  taxes: number | null;
+  federal_taxes: number | null;
+  state_taxes: number | null;
+  municipal_taxes: number | null;
+  own_equity_remuneration: number | null;
+  interest_on_own_equity: number | null;
+  dividends: number | null;
+  retained_earnings_or_loss: number | null;
+}
+
 export interface OptionContract {
   expiration_date: string;
   option_type: "CALL" | "PUT";
