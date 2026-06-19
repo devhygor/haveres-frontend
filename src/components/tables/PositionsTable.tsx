@@ -11,6 +11,7 @@ import type { Position } from "@/types/portfolio";
 import { ASSET_TYPE_LABELS } from "@/types/asset";
 import { AssetLogo } from "@/components/common/AssetLogo";
 import { TermTooltip } from "@/components/common/TermTooltip";
+import * as TooltipPrimitive from "@radix-ui/react-tooltip";
 
 function toNumber(value: unknown): number {
   if (typeof value === "number") return Number.isFinite(value) ? value : 0;
@@ -363,14 +364,29 @@ export function PositionsTable({
       header: () => <TermTooltip term="Retorno total" />,
       sortingFn: numericSorting,
       cell: ({ row }) => (
-        <div>
-          <p className={cn("font-mono text-sm font-medium", plClass(row.original.pl_total))}>
-            {formatCurrency(row.original.pl_total)}
-          </p>
-          <p className="font-mono text-xs text-gain">
-            +{formatCurrency(row.original.dividends_received)} prov.
-          </p>
-        </div>
+        <TooltipPrimitive.Root delayDuration={150}>
+          <TooltipPrimitive.Trigger asChild>
+            <span className={cn("font-mono text-sm font-medium cursor-help", plClass(row.original.pl_total))}>
+              {formatCurrency(row.original.pl_total)}
+            </span>
+          </TooltipPrimitive.Trigger>
+          <TooltipPrimitive.Portal>
+            <TooltipPrimitive.Content
+              sideOffset={6}
+              className="z-50 rounded-lg bg-haveres-card border border-haveres-border px-3 py-2 text-xs shadow-xl space-y-1"
+            >
+              <div className="flex justify-between gap-4">
+                <span className="text-muted-foreground">P&L</span>
+                <span className={cn("font-mono", plClass(row.original.pl_absolute))}>{formatCurrency(row.original.pl_absolute)}</span>
+              </div>
+              <div className="flex justify-between gap-4">
+                <span className="text-muted-foreground">Proventos</span>
+                <span className="font-mono text-gain">+{formatCurrency(row.original.dividends_received)}</span>
+              </div>
+              <TooltipPrimitive.Arrow className="fill-haveres-border" />
+            </TooltipPrimitive.Content>
+          </TooltipPrimitive.Portal>
+        </TooltipPrimitive.Root>
       ),
     },
     {
@@ -601,8 +617,27 @@ export function PositionsTable({
                 </div>
                 <div>
                   <p className="text-[11px] text-muted-foreground"><TermTooltip term="Retorno total" /></p>
-                  <p className={cn("font-mono text-sm", plClass(toNumber(p.pl_total)))}>{formatCurrency(toNumber(p.pl_total))}</p>
-                  <p className="font-mono text-[11px] text-gain">+{formatCurrency(toNumber(p.dividends_received))} prov.</p>
+                  <TooltipPrimitive.Root delayDuration={150}>
+                    <TooltipPrimitive.Trigger asChild>
+                      <p className={cn("font-mono text-sm cursor-help", plClass(toNumber(p.pl_total)))}>{formatCurrency(toNumber(p.pl_total))}</p>
+                    </TooltipPrimitive.Trigger>
+                    <TooltipPrimitive.Portal>
+                      <TooltipPrimitive.Content
+                        sideOffset={6}
+                        className="z-50 rounded-lg bg-haveres-card border border-haveres-border px-3 py-2 text-xs shadow-xl space-y-1"
+                      >
+                        <div className="flex justify-between gap-4">
+                          <span className="text-muted-foreground">P&L</span>
+                          <span className={cn("font-mono", plClass(toNumber(p.pl_absolute)))}>{formatCurrency(toNumber(p.pl_absolute))}</span>
+                        </div>
+                        <div className="flex justify-between gap-4">
+                          <span className="text-muted-foreground">Proventos</span>
+                          <span className="font-mono text-gain">+{formatCurrency(toNumber(p.dividends_received))}</span>
+                        </div>
+                        <TooltipPrimitive.Arrow className="fill-haveres-border" />
+                      </TooltipPrimitive.Content>
+                    </TooltipPrimitive.Portal>
+                  </TooltipPrimitive.Root>
                 </div>
               </div>
 
