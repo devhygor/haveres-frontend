@@ -578,8 +578,9 @@ export function PositionsTable({
                 <div>
                   <p className="text-[11px] text-muted-foreground"><TermTooltip term="P/VP" /></p>
                   {(() => {
-                    const pvp = p.fii_detail?.pvp ?? p.price_to_book ?? null;
-                    if (pvp == null) return <p className="text-sm text-muted-foreground">—</p>;
+                    const pvpRaw = p.fii_detail?.pvp ?? p.price_to_book ?? null;
+                    if (pvpRaw == null) return <p className="text-sm text-muted-foreground">—</p>;
+                    const pvp = Number(pvpRaw);
                     const isCheap = pvp < 1;
                     const isExpensive = pvp > 1;
                     return (
