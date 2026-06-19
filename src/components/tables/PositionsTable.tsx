@@ -442,8 +442,9 @@ export function PositionsTable({
       header: () => <TermTooltip term="P/VP" />,
       sortingFn: numericSorting,
       cell: ({ getValue }) => {
-        const v = getValue() as number | null;
-        if (v == null) return <span className="text-sm text-muted-foreground">—</span>;
+        const raw = getValue();
+        if (raw == null) return <span className="text-sm text-muted-foreground">—</span>;
+        const v = Number(raw);
         const isCheap = v < 1;
         const isExpensive = v > 1;
         return (
