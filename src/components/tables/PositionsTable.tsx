@@ -318,19 +318,19 @@ export function PositionsTable({
       ),
     },
     {
-      accessorKey: "total_invested",
-      header: () => <TermTooltip term="Investido" />,
-      sortingFn: numericSorting,
-      cell: ({ getValue }) => (
-        <span className="font-mono text-sm">{formatCurrency(getValue() as number)}</span>
-      ),
-    },
-    {
       accessorKey: "current_price",
       header: () => <TermTooltip term="Cotação" />,
       sortingFn: numericSorting,
       cell: ({ getValue }) => (
         <span className="font-mono text-sm text-white">{formatCurrency(getValue() as number)}</span>
+      ),
+    },
+    {
+      accessorKey: "total_invested",
+      header: () => <TermTooltip term="Investido" />,
+      sortingFn: numericSorting,
+      cell: ({ getValue }) => (
+        <span className="font-mono text-sm">{formatCurrency(getValue() as number)}</span>
       ),
     },
     {
@@ -372,6 +372,86 @@ export function PositionsTable({
           </p>
         </div>
       ),
+    },
+    {
+      accessorKey: "allocation",
+      header: () => <TermTooltip term="Alocação" />,
+      sortingFn: numericSorting,
+      cell: ({ getValue }) => {
+        const v = getValue() as number;
+        return (
+          <div className="flex items-center gap-2">
+            <div className="w-16 h-1.5 bg-secondary rounded-full overflow-hidden">
+              <div className="h-full bg-haveres-blue rounded-full" style={{ width: `${Math.min(v, 100)}%` }} />
+            </div>
+            <span className="font-mono text-xs text-muted-foreground">{formatPercent(v)}</span>
+          </div>
+        );
+      },
+    },
+    {
+      id: "target_allocation_percent",
+      accessorFn: (row) => row.target_allocation_percent,
+      header: () => <TermTooltip term="Meta de Alocação" />,
+      sortingFn: numericSorting,
+      cell: ({ row }) => {
+        const assetId = row.original.asset_id;
+        const value = targetInputs[assetId] ?? "";
+        const invalid = invalidTargetAssetIds.has(assetId);
+
+        return (
+          <TargetPercentInput
+            assetId={assetId}
+            value={value}
+            invalid={invalid}
+            onCommit={onTargetCommit}
+          />
+        );
+      },
+    },
+    {
+      accessorKey: "target_gap_value",
+      header: () => <TermTooltip term="Desvio da Meta" />,
+      sortingFn: numericSorting,
+      cell: ({ row }) => {
+        const gapValue = toNumber(row.original.target_gap_value);
+        const gapPercent = toNumber(row.original.target_gap_percent);
+        const needsBuy = gapValue > 0;
+        const needsTrim = gapValue < 0;
+
+        return (
+          <div title={`Valor alvo: ${formatCurrency(toNumber(row.original.target_value))}`}>
+            <p className={cn("font-mono text-sm font-medium", plClass(gapValue))}>
+              {formatCurrency(gapValue)}
+            </p>
+            <p className={cn("font-mono text-xs", plClass(gapPercent))}>
+              {formatPercent(gapPercent, true)}
+            </p>
+            <p className="text-[11px] text-muted-foreground mt-0.5">
+              {needsBuy && `Aportar ${formatCurrency(gapValue)}`}
+              {needsTrim && `Reduzir ${formatCurrency(Math.abs(gapValue))}`}
+              {!needsBuy && !needsTrim && "Na meta"}
+            </p>
+          </div>
+        );
+      },
+    },
+    {
+      id: "pvp",
+      accessorFn: (row) => row.fii_detail?.pvp ?? row.price_to_book ?? null,
+      header: () => <TermTooltip term="P/VP" />,
+      sortingFn: numericSorting,
+      cell: ({ getValue }) => {
+        const v = getValue() as number | null;
+        if (v == null) return <span className="text-sm text-muted-foreground">—</span>;
+        const isCheap = v < 1;
+        const isExpensive = v > 1;
+        return (
+          <span className={cn("font-mono text-sm font-medium", isCheap ? "text-gain" : isExpensive ? "text-loss" : "text-white")}>
+            {v.toFixed(2).replace(".", ",")}x
+          </span>
+        );
+      },
     },
     {
       id: "max_buy_price",
@@ -417,69 +497,6 @@ export function PositionsTable({
             </p>
             <p className={cn("text-[11px] mt-0.5", isWithin ? "text-gain" : "text-loss")}>
               {isWithin ? "Dentro do preço" : "Acima do máximo"}
-            </p>
-          </div>
-        );
-      },
-    },
-    {
-      id: "target_allocation_percent",
-      accessorFn: (row) => row.target_allocation_percent,
-      header: () => <TermTooltip term="Meta de Alocação" />,
-      sortingFn: numericSorting,
-      cell: ({ row }) => {
-        const assetId = row.original.asset_id;
-        const value = targetInputs[assetId] ?? "";
-        const invalid = invalidTargetAssetIds.has(assetId);
-
-        return (
-          <TargetPercentInput
-            assetId={assetId}
-            value={value}
-            invalid={invalid}
-            onCommit={onTargetCommit}
-          />
-        );
-      },
-    },
-    {
-      accessorKey: "allocation",
-      header: () => <TermTooltip term="Alocação" />,
-      sortingFn: numericSorting,
-      cell: ({ getValue }) => {
-        const v = getValue() as number;
-        return (
-          <div className="flex items-center gap-2">
-            <div className="w-16 h-1.5 bg-secondary rounded-full overflow-hidden">
-              <div className="h-full bg-haveres-blue rounded-full" style={{ width: `${Math.min(v, 100)}%` }} />
-            </div>
-            <span className="font-mono text-xs text-muted-foreground">{formatPercent(v)}</span>
-          </div>
-        );
-      },
-    },
-    {
-      accessorKey: "target_gap_value",
-      header: () => <TermTooltip term="Desvio da Meta" />,
-      sortingFn: numericSorting,
-      cell: ({ row }) => {
-        const gapValue = toNumber(row.original.target_gap_value);
-        const gapPercent = toNumber(row.original.target_gap_percent);
-        const needsBuy = gapValue > 0;
-        const needsTrim = gapValue < 0;
-
-        return (
-          <div title={`Valor alvo: ${formatCurrency(toNumber(row.original.target_value))}`}>
-            <p className={cn("font-mono text-sm font-medium", plClass(gapValue))}>
-              {formatCurrency(gapValue)}
-            </p>
-            <p className={cn("font-mono text-xs", plClass(gapPercent))}>
-              {formatPercent(gapPercent, true)}
-            </p>
-            <p className="text-[11px] text-muted-foreground mt-0.5">
-              {needsBuy && `Aportar ${formatCurrency(gapValue)}`}
-              {needsTrim && `Reduzir ${formatCurrency(Math.abs(gapValue))}`}
-              {!needsBuy && !needsTrim && "Na meta"}
             </p>
           </div>
         );
@@ -557,6 +574,20 @@ export function PositionsTable({
                 <div>
                   <p className="text-[11px] text-muted-foreground"><TermTooltip term="Cotação" /></p>
                   <p className="font-mono text-sm text-white">{formatCurrency(toNumber(p.current_price))}</p>
+                </div>
+                <div>
+                  <p className="text-[11px] text-muted-foreground"><TermTooltip term="P/VP" /></p>
+                  {(() => {
+                    const pvp = p.fii_detail?.pvp ?? p.price_to_book ?? null;
+                    if (pvp == null) return <p className="text-sm text-muted-foreground">—</p>;
+                    const isCheap = pvp < 1;
+                    const isExpensive = pvp > 1;
+                    return (
+                      <p className={cn("font-mono text-sm font-medium", isCheap ? "text-gain" : isExpensive ? "text-loss" : "text-white")}>
+                        {pvp.toFixed(2).replace(".", ",")}x
+                      </p>
+                    );
+                  })()}
                 </div>
                 <div>
                   <p className="text-[11px] text-muted-foreground">Valor Atual</p>
