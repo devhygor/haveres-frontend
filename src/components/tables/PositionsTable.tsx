@@ -345,30 +345,20 @@ export function PositionsTable({
       ),
     },
     {
-      accessorKey: "pl_absolute",
-      header: () => <TermTooltip term="P&L" />,
-      sortingFn: numericSorting,
-      cell: ({ row }) => (
-        <div>
-          <p className={cn("font-mono text-sm font-medium", plClass(row.original.pl_absolute))}>
-            {formatCurrency(row.original.pl_absolute)}
-          </p>
-          <p className={cn("font-mono text-xs", plClass(row.original.pl_percent))}>
-            {formatPercent(row.original.pl_percent, true)}
-          </p>
-        </div>
-      ),
-    },
-    {
       accessorKey: "pl_total",
       header: () => <TermTooltip term="Retorno total" />,
       sortingFn: numericSorting,
       cell: ({ row }) => (
         <TooltipPrimitive.Root delayDuration={150}>
           <TooltipPrimitive.Trigger asChild>
-            <span className={cn("font-mono text-sm font-medium cursor-help", plClass(row.original.pl_total))}>
-              {formatCurrency(row.original.pl_total)}
-            </span>
+            <div className="cursor-help">
+              <p className={cn("font-mono text-sm font-medium", plClass(row.original.pl_total))}>
+                {formatCurrency(row.original.pl_total)}
+              </p>
+              <p className={cn("font-mono text-xs", plClass(row.original.pl_total_percent))}>
+                {formatPercent(row.original.pl_total_percent, true)}
+              </p>
+            </div>
           </TooltipPrimitive.Trigger>
           <TooltipPrimitive.Portal>
             <TooltipPrimitive.Content
@@ -376,7 +366,7 @@ export function PositionsTable({
               className="z-50 rounded-lg bg-haveres-card border border-haveres-border px-3 py-2 text-xs shadow-xl space-y-1"
             >
               <div className="flex justify-between gap-4">
-                <span className="text-muted-foreground">P&L</span>
+                <span className="text-muted-foreground">Valorização</span>
                 <span className={cn("font-mono", plClass(row.original.pl_absolute))}>{formatCurrency(row.original.pl_absolute)}</span>
               </div>
               <div className="flex justify-between gap-4">
@@ -612,14 +602,13 @@ export function PositionsTable({
                   <p className="font-mono text-sm text-white">{formatCurrency(toNumber(p.current_value))}</p>
                 </div>
                 <div>
-                  <p className="text-[11px] text-muted-foreground"><TermTooltip term="P&L" /></p>
-                  <p className={cn("font-mono text-sm", plClass(toNumber(p.pl_absolute)))}>{formatCurrency(toNumber(p.pl_absolute))}</p>
-                </div>
-                <div>
                   <p className="text-[11px] text-muted-foreground"><TermTooltip term="Retorno total" /></p>
                   <TooltipPrimitive.Root delayDuration={150}>
                     <TooltipPrimitive.Trigger asChild>
-                      <p className={cn("font-mono text-sm cursor-help", plClass(toNumber(p.pl_total)))}>{formatCurrency(toNumber(p.pl_total))}</p>
+                      <div className="cursor-help">
+                        <p className={cn("font-mono text-sm", plClass(toNumber(p.pl_total)))}>{formatCurrency(toNumber(p.pl_total))}</p>
+                        <p className={cn("font-mono text-[11px]", plClass(toNumber(p.pl_total_percent)))}>{formatPercent(toNumber(p.pl_total_percent), true)}</p>
+                      </div>
                     </TooltipPrimitive.Trigger>
                     <TooltipPrimitive.Portal>
                       <TooltipPrimitive.Content
@@ -627,7 +616,7 @@ export function PositionsTable({
                         className="z-50 rounded-lg bg-haveres-card border border-haveres-border px-3 py-2 text-xs shadow-xl space-y-1"
                       >
                         <div className="flex justify-between gap-4">
-                          <span className="text-muted-foreground">P&L</span>
+                          <span className="text-muted-foreground">Valorização</span>
                           <span className={cn("font-mono", plClass(toNumber(p.pl_absolute)))}>{formatCurrency(toNumber(p.pl_absolute))}</span>
                         </div>
                         <div className="flex justify-between gap-4">
