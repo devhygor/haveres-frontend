@@ -14,6 +14,7 @@ import { cn } from "@/utils/cn";
 import { SourceBadge } from "@/components/common/SourceBadge";
 import { AssetLogo } from "@/components/common/AssetLogo";
 import type { Transaction } from "@/types/transaction";
+import { Link } from "react-router-dom";
 
 const TYPE_COLORS: Record<string, string> = {
   BUY: "text-gain bg-gain-bg",
@@ -263,14 +264,14 @@ export function TransactionsPage() {
         ) : !filteredTransactions.length ? (
           <EmptyState
             title="Nenhuma movimentação encontrada"
-            description="Tente outro ticker ou nome de ativo na busca."
+            description="Tente outro código ou nome de ativo na busca."
           />
         ) : (
           <div className="relative max-h-[70vh] overflow-auto">
             <table className="w-full min-w-[1080px] text-sm">
               <thead>
                 <tr className="border-b border-haveres-border">
-                  {["Data", "Ticker", "Tipo", "Qtd", "Preço", "Taxas", "Total", "Corretora", "Origem", ""].map((h, i) => (
+                  {["Data", "Código", "Tipo", "Qtd", "Preço", "Taxas", "Total", "Corretora", "Origem", ""].map((h, i) => (
                     <th
                       key={i}
                       className="sticky top-0 z-10 bg-haveres-card text-left py-3 px-4 text-xs font-medium text-muted-foreground uppercase tracking-wider"
@@ -288,7 +289,7 @@ export function TransactionsPage() {
                       <div className="flex items-center gap-2">
                         <AssetLogo logoUrl={t.asset_logo_url} ticker={t.asset_ticker} />
                         <div>
-                          <span className="font-mono font-semibold text-white text-sm">{t.asset_ticker}</span>
+                          <Link to={`/ativos/${t.asset_ticker}`} className="font-mono font-semibold text-haveres-blue hover:text-white text-sm transition-colors">{t.asset_ticker}</Link>
                           <p className="text-xs text-muted-foreground truncate max-w-[120px]" title={t.asset_name}>
                             {t.asset_name}
                           </p>

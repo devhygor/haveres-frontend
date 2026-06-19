@@ -15,6 +15,7 @@ import { SourceBadge } from "@/components/common/SourceBadge";
 import { AssetLogo } from "@/components/common/AssetLogo";
 import type { Dividend } from "@/types/dividend";
 import type { AllocationItem } from "@/types/portfolio";
+import { Link } from "react-router-dom";
 
 const TYPE_COLORS: Record<string, string> = {
   DIVIDEND: "text-gain",
@@ -569,7 +570,7 @@ export function DividendsPage() {
                   <table className="w-full min-w-[760px] text-sm">
                     <thead>
                       <tr className="border-b border-haveres-border">
-                        {["Pgto", "Ticker", "Tipo", "Qtd", "Valor/ação", "Total Bruto"].map((h, i) => (
+                        {["Pgto", "Código", "Tipo", "Qtd", "Valor/ação", "Total Bruto"].map((h, i) => (
                           <th key={i} className="sticky top-0 z-10 bg-haveres-card text-left py-2 px-4 text-xs font-medium text-muted-foreground uppercase tracking-wider">{h}</th>
                         ))}
                       </tr>
@@ -583,7 +584,7 @@ export function DividendsPage() {
                           <td className="py-2 px-4">
                             <div className="flex items-center gap-2">
                               <AssetLogo logoUrl={d.logo_url} ticker={d.ticker} size={20} />
-                              <span className="font-mono font-semibold text-white text-sm">{d.ticker}</span>
+                              <Link to={`/ativos/${d.ticker}`} className="font-mono font-semibold text-haveres-blue hover:text-white text-sm transition-colors">{d.ticker}</Link>
                             </div>
                           </td>
                           <td className="py-2 px-4">
@@ -718,14 +719,14 @@ export function DividendsPage() {
           ) : !searchedHistoryData.length ? (
             <EmptyState
               title="Nenhum provento encontrado"
-              description="Tente outro ticker ou nome de ativo na busca."
+              description="Tente outro código ou nome de ativo na busca."
             />
           ) : (
             <div className="relative max-h-[70vh] overflow-auto">
               <table className="w-full min-w-[1100px] text-sm">
                 <thead>
                   <tr className="border-b border-haveres-border">
-                    {["Data com", "Pgto", "Ticker", "Tipo", "Qtd", "Valor/ação", "Bruto", "IR", "Líquido", "Origem", ""].map((h, i) => (
+                    {["Data com", "Pgto", "Código", "Tipo", "Qtd", "Valor/ação", "Bruto", "IR", "Líquido", "Origem", ""].map((h, i) => (
                       <th key={i} className="sticky top-0 z-10 bg-haveres-card text-left py-3 px-4 text-xs font-medium text-muted-foreground uppercase tracking-wider">
                         {h}
                       </th>
@@ -741,7 +742,7 @@ export function DividendsPage() {
                         <div className="flex items-center gap-2">
                           <AssetLogo logoUrl={d.asset_logo_url} ticker={d.asset_ticker} />
                           <div>
-                            <span className="font-mono font-semibold text-white text-sm">{d.asset_ticker}</span>
+                            <Link to={`/ativos/${d.asset_ticker}`} className="font-mono font-semibold text-haveres-blue hover:text-white text-sm transition-colors">{d.asset_ticker}</Link>
                             <p className="text-xs text-muted-foreground truncate max-w-[120px]" title={d.asset_name}>
                               {d.asset_name}
                             </p>

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { assetsApi, ASSET_TYPES, SECTOR_TYPES, type AssetAdminUpdate } from "@/api/assets";
 import type { Asset } from "@/types/asset";
@@ -294,7 +295,7 @@ export function AssetsAdminTab() {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar ticker ou nome…"
+            placeholder="Buscar código ou nome…"
             className="w-full bg-haveres-dark border border-haveres-border rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder:text-muted-foreground focus:outline-none focus:border-haveres-blue"
           />
         </div>
@@ -324,7 +325,7 @@ export function AssetsAdminTab() {
           <table className="w-full text-sm">
             <thead className="border-b border-haveres-border">
               <tr>
-                {th("Ticker", "ticker")}
+                {th("Código", "ticker")}
                 {th("Nome", "name")}
                 {th("Tipo", "asset_type")}
                 {th("Setor", "sector")}
@@ -360,7 +361,7 @@ export function AssetsAdminTab() {
                   )}
                 >
                   <td className="px-3 py-3">
-                    <span className="font-mono font-semibold text-white">{asset.ticker}</span>
+                    <Link to={`/ativos/${asset.ticker}`} className="font-mono font-semibold text-haveres-blue hover:text-white transition-colors">{asset.ticker}</Link>
                   </td>
                   <td className="px-3 py-3 max-w-[200px]">
                     <span className="text-white truncate block" title={asset.name}>

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { portfolioApi } from "@/api/portfolio";
 import { PositionsTable } from "@/components/tables/PositionsTable";
@@ -971,12 +972,12 @@ export function PortfolioPage() {
                         <td className="px-3 py-1.5 align-top max-w-[360px]">
                           {item.asset_type === "TREASURY" ? (
                             <>
-                              <p className="text-haveres-blue text-[13px] whitespace-normal break-normal leading-tight">{item.name}</p>
+                              <Link to={`/ativos/${item.ticker}`} className="text-haveres-blue hover:text-white text-[13px] whitespace-normal break-normal leading-tight transition-colors">{item.name}</Link>
                               <p className="text-[11px] text-muted-foreground whitespace-normal break-normal leading-tight">{item.ticker}</p>
                             </>
                           ) : (
                             <>
-                              <p className="font-mono text-haveres-blue text-[13px] whitespace-normal break-normal leading-tight">{item.ticker}</p>
+                              <Link to={`/ativos/${item.ticker}`} className="font-mono text-haveres-blue hover:text-white text-[13px] whitespace-normal break-normal leading-tight transition-colors">{item.ticker}</Link>
                               <p className="text-[11px] text-muted-foreground whitespace-normal break-normal leading-tight">{item.name}</p>
                             </>
                           )}
@@ -1002,7 +1003,7 @@ export function PortfolioPage() {
                 <div className="flex flex-wrap gap-2">
                   {contributionResult.blocked_assets.map((item) => (
                     <span key={item.asset_id} className="text-xs px-2 py-1 rounded bg-loss/10 text-loss font-mono">
-                      {item.ticker} (máx {formatCurrency(toFinite(item.max_buy_price))})
+                      <Link to={`/ativos/${item.ticker}`} className="hover:underline">{item.ticker}</Link> (máx {formatCurrency(toFinite(item.max_buy_price))})
                     </span>
                   ))}
                 </div>
