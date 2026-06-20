@@ -63,6 +63,8 @@ export interface PortfolioSummary {
   dividends_year: number;
   dividends_12m: number;
   dividends_total: number;
+  dividends_total_gross: number;
+  dividends_total_ir: number;
   pl_total: number;
   pl_total_percent: number;
   positions_count: number;
