@@ -510,7 +510,7 @@ export function RebalancingPage() {
               description="Selecione outro filtro ou adicione ativos desse tipo."
             />
           ) : (
-            <div className="overflow-x-auto">
+            <div className="max-h-[70vh] overflow-auto">
               <table className="w-full min-w-[920px] text-sm">
                 <thead>
                   <tr className="border-b border-haveres-border text-xs uppercase tracking-wider text-muted-foreground">
@@ -528,7 +528,7 @@ export function RebalancingPage() {
                       return (
                         <th
                           key={key}
-                          className={`${align} px-3 py-3 cursor-pointer select-none hover:text-white transition-colors`}
+                          className={`${align} sticky top-0 z-20 bg-haveres-card px-3 py-3 cursor-pointer select-none hover:text-white transition-colors`}
                           onClick={() => toggleSort(key)}
                         >
                           <span className="inline-flex items-center gap-1">
@@ -542,10 +542,10 @@ export function RebalancingPage() {
                         </th>
                       );
                     })}
-                    <th className="text-right px-3 py-3"><TermTooltip term="Preço Máximo de Compra" /></th>
-                    <th className="text-right px-3 py-3"><TermTooltip term="P/VP Máx. Compra" /></th>
-                    <th className="text-center px-3 py-3">Vender?</th>
-                    <th className="px-3 py-3" />
+                    <th className="text-right sticky top-0 z-20 bg-haveres-card px-3 py-3"><TermTooltip term="Preço Máximo de Compra" /></th>
+                    <th className="text-right sticky top-0 z-20 bg-haveres-card px-3 py-3"><TermTooltip term="P/VP Máx. Compra" /></th>
+                    <th className="text-center sticky top-0 z-20 bg-haveres-card px-3 py-3">Vender?</th>
+                    <th className="sticky top-0 z-20 bg-haveres-card px-3 py-3" />
                   </tr>
                 </thead>
                 <tbody>
@@ -740,16 +740,16 @@ export function RebalancingPage() {
               {simResult.sell_recommendations.length > 0 && (
                 <div className="space-y-2">
                   <h3 className="text-xs font-semibold uppercase tracking-wider text-loss">Vendas sugeridas</h3>
-                  <div className="overflow-x-auto rounded-lg border border-loss/30">
+                  <div className="max-h-[40vh] overflow-auto rounded-lg border border-loss/30">
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="border-b border-haveres-border/70 text-xs uppercase tracking-wider text-muted-foreground">
-                          <th className="text-left px-3 py-2">Ativo</th>
-                          <th className="text-right px-3 py-2">Qtd</th>
-                          <th className="text-right px-3 py-2">Preço</th>
-                          <th className="text-right px-3 py-2">Receita</th>
-                          <th className="text-right px-3 py-2">Aloc. proj.</th>
-                          <th className="px-3 py-2" />
+                          <th className="text-left sticky top-0 z-20 bg-haveres-card px-3 py-2">Ativo</th>
+                          <th className="text-right sticky top-0 z-20 bg-haveres-card px-3 py-2">Qtd</th>
+                          <th className="text-right sticky top-0 z-20 bg-haveres-card px-3 py-2">Preço</th>
+                          <th className="text-right sticky top-0 z-20 bg-haveres-card px-3 py-2">Receita</th>
+                          <th className="text-right sticky top-0 z-20 bg-haveres-card px-3 py-2">Aloc. proj.</th>
+                          <th className="sticky top-0 z-20 bg-haveres-card px-3 py-2" />
                         </tr>
                       </thead>
                       <tbody>
@@ -790,17 +790,17 @@ export function RebalancingPage() {
               {simResult.buy_recommendations.length > 0 ? (
                 <div className="space-y-2">
                   <h3 className="text-xs font-semibold uppercase tracking-wider text-gain">Compras sugeridas</h3>
-                  <div className="overflow-x-auto rounded-lg border border-gain/30">
+                  <div className="max-h-[40vh] overflow-auto rounded-lg border border-gain/30">
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="border-b border-haveres-border/70 text-xs uppercase tracking-wider text-muted-foreground">
-                          <th className="text-left px-3 py-2">Ativo</th>
-                          <th className="text-right px-3 py-2">Qtd</th>
-                          <th className="text-right px-3 py-2">Preço</th>
-                          <th className="text-right px-3 py-2">Aporte</th>
-                          <th className="text-right px-3 py-2">Desvio</th>
-                          <th className="text-right px-3 py-2">Aloc. proj.</th>
-                          <th className="px-3 py-2" />
+                          <th className="text-left sticky top-0 z-20 bg-haveres-card px-3 py-2">Ativo</th>
+                          <th className="text-right sticky top-0 z-20 bg-haveres-card px-3 py-2">Qtd</th>
+                          <th className="text-right sticky top-0 z-20 bg-haveres-card px-3 py-2">Preço</th>
+                          <th className="text-right sticky top-0 z-20 bg-haveres-card px-3 py-2">Aporte</th>
+                          <th className="text-right sticky top-0 z-20 bg-haveres-card px-3 py-2">Desvio</th>
+                          <th className="text-right sticky top-0 z-20 bg-haveres-card px-3 py-2">Aloc. proj.</th>
+                          <th className="sticky top-0 z-20 bg-haveres-card px-3 py-2" />
                         </tr>
                       </thead>
                       <tbody>
