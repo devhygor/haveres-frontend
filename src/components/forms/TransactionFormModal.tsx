@@ -63,6 +63,12 @@ interface Props {
   open: boolean;
   onClose: () => void;
   transaction?: Transaction;
+  prefill?: {
+    asset_id?: string;
+    quantity?: string;
+    price?: string;
+    transaction_type?: string;
+  };
 }
 
 const INPUT = "w-full bg-secondary border border-haveres-border rounded-lg px-3 py-2 text-sm text-white placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-haveres-blue";
@@ -135,7 +141,7 @@ function maskMoneyInput(value: string): string {
   return formatMoneyFromNumber(amount);
 }
 
-export function TransactionFormModal({ open, onClose, transaction }: Props) {
+export function TransactionFormModal({ open, onClose, transaction, prefill }: Props) {
   const qc = useQueryClient();
   const isEditing = !!transaction;
   const user = useAuthStore((s) => s.user);
@@ -165,7 +171,14 @@ export function TransactionFormModal({ open, onClose, transaction }: Props) {
               broker_id: transaction.broker_id ?? "",
               notes: transaction.notes,
             }
-          : { ...DEFAULT_FORM, date: today() }
+          : {
+              ...DEFAULT_FORM,
+              date: today(),
+              ...(prefill?.asset_id && { asset_id: prefill.asset_id }),
+              ...(prefill?.quantity && { quantity: prefill.quantity }),
+              ...(prefill?.price && { price: prefill.price }),
+              ...(prefill?.transaction_type && { transaction_type: prefill.transaction_type }),
+            }
       );
       setShowNewAsset(false);
       setAssetSearch(transaction ? `${transaction.asset_ticker} - ${transaction.asset_name}` : "");
@@ -175,7 +188,7 @@ export function TransactionFormModal({ open, onClose, transaction }: Props) {
       setDuplicate(null);
       setPendingPayload(null);
     }
-  }, [open, transaction]);
+  }, [open, transaction, prefill]);
 
   const assets = useQuery({ queryKey: ["assets"], queryFn: () => assetsApi.list().then(r => r.data) });
   const brokers = useQuery({ queryKey: ["brokers"], queryFn: () => transactionsApi.listBrokers().then(r => r.data) });

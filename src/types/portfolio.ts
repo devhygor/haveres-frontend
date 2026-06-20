@@ -42,6 +42,8 @@ export interface Position {
   max_buy_gap_value?: number | null;
   max_buy_gap_percent?: number | null;
   is_within_max_buy_price?: boolean | null;
+  max_buy_pvp?: number | null;
+  is_within_max_buy_pvp?: boolean | null;
   // Fundamentalistas
   price_to_earnings?: number | null;
   price_to_book?: number | null;
@@ -96,6 +98,7 @@ export interface SaveTargetAllocationResult {
 export interface MaxBuyPriceInput {
   asset_id: string;
   max_buy_price: number | null;
+  max_buy_pvp: number | null;
 }
 
 export interface SaveMaxBuyPricePayload {
@@ -127,6 +130,10 @@ export interface ContributionRecommendation {
   max_buy_price: number | null;
   has_max_buy_rule: boolean;
   is_within_max_buy_price: boolean;
+  max_buy_pvp: number | null;
+  has_max_buy_pvp_rule: boolean;
+  is_within_max_buy_pvp: boolean;
+  current_pvp: number | null;
 }
 
 export interface ContributionBlockedAsset {
@@ -135,6 +142,8 @@ export interface ContributionBlockedAsset {
   name: string;
   current_price: number;
   max_buy_price: number | null;
+  max_buy_pvp: number | null;
+  current_pvp: number | null;
   target_gap_value_before: number;
   reason: string;
 }

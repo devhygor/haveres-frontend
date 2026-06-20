@@ -32,6 +32,7 @@ const COLUMN_WIDTH_CLASS: Record<string, string> = {
   ticker: "w-[164px] max-w-[164px]",
   asset_type: "w-[88px] max-w-[88px]",
   max_buy_price: "w-[118px]",
+  max_buy_pvp: "w-[108px]",
   target_allocation_percent: "w-[108px]",
   max_buy_gap_value: "w-[122px]",
   target_gap_value: "w-[122px]",
@@ -43,8 +44,11 @@ interface Props {
   invalidTargetAssetIds: Set<string>;
   maxBuyInputs: Record<string, string>;
   invalidMaxBuyAssetIds: Set<string>;
+  maxBuyPvpInputs: Record<string, string>;
+  invalidMaxBuyPvpAssetIds: Set<string>;
   onTargetCommit: (assetId: string, rawValue: string) => void;
   onMaxBuyCommit: (assetId: string, rawValue: string) => void;
+  onMaxBuyPvpCommit: (assetId: string, rawValue: string) => void;
 }
 
 function maskPercentInput(value: string): string {
@@ -90,6 +94,16 @@ function maskMoneyInput(value: string): string {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(amount);
+}
+
+function maskPvpInput(value: string): string {
+  const normalized = value.replace(/\./g, ",").replace(/\s/g, "").replace(/[^0-9,]/g, "");
+  const parts = normalized.split(",");
+  const intPart = parts[0].slice(0, 2);
+  const decPart = parts.length > 1 ? parts.slice(1).join("").slice(0, 4) : null;
+  if (!intPart && decPart === null) return "";
+  if (decPart !== null) return `${intPart || "0"},${decPart}`;
+  return intPart;
 }
 
 interface TargetPercentInputProps {
@@ -246,14 +260,84 @@ function MaxBuyPriceInput({ assetId, value, invalid, onCommit, fullWidth = false
   );
 }
 
+interface MaxBuyPvpInputProps {
+  assetId: string;
+  value: string;
+  invalid: boolean;
+  onCommit: (assetId: string, rawValue: string) => void;
+  fullWidth?: boolean;
+}
+
+function MaxBuyPvpInput({ assetId, value, invalid, onCommit, fullWidth = false }: MaxBuyPvpInputProps) {
+  const [localValue, setLocalValue] = useState(value);
+
+  useEffect(() => {
+    setLocalValue(value);
+  }, [value]);
+
+  const commit = () => onCommit(assetId, localValue);
+
+  const focusNext = (current: HTMLInputElement) => {
+    const all = Array.from(document.querySelectorAll<HTMLInputElement>('input[data-max-buy-pvp-input="true"]'));
+    const idx = all.indexOf(current);
+    if (idx < 0) return;
+    const next = all[idx + 1];
+    const nextId = next?.getAttribute("data-max-buy-pvp-asset-id");
+    if (nextId) {
+      requestAnimationFrame(() => {
+        const el = document.querySelector<HTMLInputElement>(`input[data-max-buy-pvp-asset-id="${nextId}"]`);
+        el?.focus();
+        el?.select();
+      });
+    } else {
+      current.blur();
+    }
+  };
+
+  return (
+    <div className={cn("w-[100px] max-w-full", fullWidth && "w-full")}>
+      <div className="relative">
+        <input
+          type="text"
+          value={localValue}
+          data-max-buy-pvp-input="true"
+          data-max-buy-pvp-asset-id={assetId}
+          inputMode="decimal"
+          onChange={(e) => setLocalValue(maskPvpInput(e.target.value))}
+          onBlur={commit}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              commit();
+              focusNext(e.currentTarget);
+            }
+          }}
+          onClick={(e) => e.stopPropagation()}
+          className={cn(
+            "w-full bg-secondary border rounded px-2 pr-6 py-1 text-sm font-mono text-white focus:outline-none focus:ring-1",
+            invalid
+              ? "border-loss focus:ring-loss"
+              : "border-haveres-border focus:ring-haveres-blue",
+          )}
+          placeholder="—"
+        />
+        <span className="absolute right-2 top-1.5 text-xs text-muted-foreground pointer-events-none">x</span>
+      </div>
+    </div>
+  );
+}
+
 export function PositionsTable({
   positions,
   targetInputs,
   invalidTargetAssetIds,
   maxBuyInputs,
   invalidMaxBuyAssetIds,
+  maxBuyPvpInputs,
+  invalidMaxBuyPvpAssetIds,
   onTargetCommit,
   onMaxBuyCommit,
+  onMaxBuyPvpCommit,
 }: Props) {
   const [sorting, setSorting] = useState<SortingState>([
     { id: "current_value", desc: true },
@@ -481,6 +565,26 @@ export function PositionsTable({
       },
     },
     {
+      id: "max_buy_pvp",
+      accessorFn: (row) => row.max_buy_pvp ?? null,
+      header: () => <TermTooltip term="P/VP Máx. Compra" />,
+      sortingFn: numericSorting,
+      cell: ({ row }) => {
+        const assetId = row.original.asset_id;
+        const value = maxBuyPvpInputs[assetId] ?? "";
+        const invalid = invalidMaxBuyPvpAssetIds.has(assetId);
+
+        return (
+          <MaxBuyPvpInput
+            assetId={assetId}
+            value={value}
+            invalid={invalid}
+            onCommit={onMaxBuyPvpCommit}
+          />
+        );
+      },
+    },
+    {
       accessorKey: "max_buy_gap_value",
       header: () => <TermTooltip term="Janela de Compra" />,
       sortingFn: numericSorting,
@@ -511,9 +615,12 @@ export function PositionsTable({
     },
   ]), [
     invalidMaxBuyAssetIds,
+    invalidMaxBuyPvpAssetIds,
     invalidTargetAssetIds,
     maxBuyInputs,
+    maxBuyPvpInputs,
     onMaxBuyCommit,
+    onMaxBuyPvpCommit,
     onTargetCommit,
     targetInputs,
   ]);
@@ -638,6 +745,16 @@ export function PositionsTable({
                     value={maxBuyInputs[p.asset_id] ?? ""}
                     invalid={invalidMaxBuyAssetIds.has(p.asset_id)}
                     onCommit={onMaxBuyCommit}
+                    fullWidth
+                  />
+                </div>
+                <div>
+                  <p className="text-[11px] text-muted-foreground mb-1"><TermTooltip term="P/VP Máx. Compra" /></p>
+                  <MaxBuyPvpInput
+                    assetId={p.asset_id}
+                    value={maxBuyPvpInputs[p.asset_id] ?? ""}
+                    invalid={invalidMaxBuyPvpAssetIds.has(p.asset_id)}
+                    onCommit={onMaxBuyPvpCommit}
                     fullWidth
                   />
                 </div>

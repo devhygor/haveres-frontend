@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { TransactionFormModal } from "@/components/forms/TransactionFormModal";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { portfolioApi } from "@/api/portfolio";
 import { PositionsTable } from "@/components/tables/PositionsTable";
@@ -15,7 +16,7 @@ import { cn } from "@/utils/cn";
 import { TermTooltip } from "@/components/common/TermTooltip";
 import type { ContributionSimulationResult } from "@/types/portfolio";
 
-type ContributionSortKey = "asset" | "quantity" | "price" | "amount" | "projected_allocation";
+type ContributionSortKey = "asset" | "quantity" | "price" | "amount" | "projected_allocation" | "gap";
 type SortDirection = "asc" | "desc";
 
 function toFinite(value: unknown): number {
@@ -160,13 +161,17 @@ export function PortfolioPage() {
   const [maxBuyError, setMaxBuyError] = useState("");
   const [maxBuySuccess, setMaxBuySuccess] = useState("");
   const [positionSearch, setPositionSearch] = useState("");
+  const [maxBuyPvpInputs, setMaxBuyPvpInputs] = useState<Record<string, string>>({});
   const [contributionInput, setContributionInput] = useState("");
   const [contributionError, setContributionError] = useState("");
   const [contributionResult, setContributionResult] = useState<ContributionSimulationResult | null>(null);
   const [contributionSort, setContributionSort] = useState<{ key: ContributionSortKey; direction: SortDirection }>({
-    key: "amount",
+    key: "gap",
     direction: "desc",
   });
+  const [contributionPrefill, setContributionPrefill] = useState<{
+    asset_id: string; quantity: string; price: string;
+  } | null>(null);
 
   const summary = useQuery({
     queryKey: ["portfolio", "summary"],
@@ -196,7 +201,7 @@ export function PortfolioPage() {
   });
 
   const saveMaxBuyPrice = useMutation({
-    mutationFn: (items: Array<{ asset_id: string; max_buy_price: number | null }>) =>
+    mutationFn: (items: Array<{ asset_id: string; max_buy_price: number | null; max_buy_pvp: number | null }>) =>
       portfolioApi.saveMaxBuyPrice({ items }),
     onSuccess: async (response) => {
       setMaxBuyError("");
@@ -250,6 +255,24 @@ export function PortfolioPage() {
       const next: Record<string, string> = {};
       for (const position of positions) {
         next[position.asset_id] = formatMoneyInput(position.max_buy_price ?? null);
+      }
+
+      const previousKeys = Object.keys(previous);
+      const nextKeys = Object.keys(next);
+      const isSame =
+        previousKeys.length === nextKeys.length
+        && nextKeys.every((key) => previous[key] === next[key]);
+
+      return isSame ? previous : next;
+    });
+  }, [positions]);
+
+  useEffect(() => {
+    setMaxBuyPvpInputs((previous) => {
+      const next: Record<string, string> = {};
+      for (const position of positions) {
+        const pvp = position.max_buy_pvp;
+        next[position.asset_id] = pvp != null ? String(pvp).replace(".", ",") : "";
       }
 
       const previousKeys = Object.keys(previous);
@@ -384,6 +407,35 @@ export function PortfolioPage() {
 
   const hasInvalidMaxBuy = invalidMaxBuyAssetIds.size > 0;
 
+  const invalidMaxBuyPvpAssetIds = useMemo(() => {
+    const invalid = new Set<string>();
+    for (const position of positions) {
+      const raw = maxBuyPvpInputs[position.asset_id] ?? "";
+      if (!raw.trim()) continue;
+      const normalized = raw.replace(",", ".");
+      const parsed = Number(normalized);
+      if (!Number.isFinite(parsed) || parsed <= 0) {
+        invalid.add(position.asset_id);
+      }
+    }
+    return invalid;
+  }, [maxBuyPvpInputs, positions]);
+
+  const draftMaxBuyPvpByAssetId = useMemo(() => {
+    const draft: Record<string, number | null> = {};
+    for (const position of positions) {
+      const raw = maxBuyPvpInputs[position.asset_id] ?? "";
+      if (!raw.trim()) {
+        draft[position.asset_id] = null;
+        continue;
+      }
+      const normalized = raw.replace(",", ".");
+      const parsed = Number(normalized);
+      draft[position.asset_id] = Number.isFinite(parsed) && parsed > 0 ? parsed : (position.max_buy_pvp ?? null);
+    }
+    return draft;
+  }, [maxBuyPvpInputs, positions]);
+
   const hasUnsavedTargetChanges = useMemo(() => {
     return positions.some((position) => {
       const persisted = toFinite(position.target_allocation_percent);
@@ -398,13 +450,19 @@ export function PortfolioPage() {
       const persisted = persistedRaw == null ? null : Number(persistedRaw);
       const draft = draftMaxBuyByAssetId[position.asset_id] ?? null;
 
-      if (persisted == null && draft == null) return false;
-      if (persisted == null || draft == null) return true;
-      if (!Number.isFinite(persisted)) return true;
+      if (persisted == null && draft == null) {
+        // check pvp
+      } else if (persisted == null || draft == null) return true;
+      else if (!Number.isFinite(persisted)) return true;
+      else if (Math.abs(draft - persisted) >= 0.0001) return true;
 
-      return Math.abs(draft - persisted) >= 0.0001;
+      const persistedPvp = position.max_buy_pvp == null ? null : Number(position.max_buy_pvp);
+      const draftPvp = draftMaxBuyPvpByAssetId[position.asset_id] ?? null;
+      if (persistedPvp == null && draftPvp == null) return false;
+      if (persistedPvp == null || draftPvp == null) return true;
+      return Math.abs(draftPvp - persistedPvp) >= 0.0001;
     });
-  }, [draftMaxBuyByAssetId, positions]);
+  }, [draftMaxBuyByAssetId, draftMaxBuyPvpByAssetId, positions]);
 
   const displayPositions = useMemo(() => {
     return filteredPositions.map((position) => {
@@ -434,6 +492,13 @@ export function PortfolioPage() {
           ? true
           : toFinite(position.current_price) <= maxBuyPrice;
 
+      const maxBuyPvp = draftMaxBuyPvpByAssetId[position.asset_id] ?? null;
+      const fiiPvp = position.fii_detail?.pvp ?? null;
+      const currentPvp = fiiPvp ?? position.price_to_book ?? null;
+      const isWithinMaxBuyPvp = maxBuyPvp == null || currentPvp == null
+        ? null
+        : currentPvp <= maxBuyPvp;
+
       return {
         ...position,
         target_allocation_percent: targetAllocationPercent,
@@ -444,9 +509,11 @@ export function PortfolioPage() {
         max_buy_gap_value: maxBuyGapValue,
         max_buy_gap_percent: maxBuyGapPercent,
         is_within_max_buy_price: isWithinMaxBuyPrice,
+        max_buy_pvp: maxBuyPvp,
+        is_within_max_buy_pvp: isWithinMaxBuyPvp,
       };
     });
-  }, [draftMaxBuyByAssetId, draftTargetByAssetId, filteredPositions, totalValue]);
+  }, [draftMaxBuyByAssetId, draftMaxBuyPvpByAssetId, draftTargetByAssetId, filteredPositions, totalValue]);
 
   useEffect(() => {
     if (!selectedType) return;
@@ -518,6 +585,10 @@ export function PortfolioPage() {
         comparison = toFinite(a.projected_allocation_percent) - toFinite(b.projected_allocation_percent);
       }
 
+      if (contributionSort.key === "gap") {
+        comparison = toFinite(a.target_gap_value_before) - toFinite(b.target_gap_value_before);
+      }
+
       return contributionSort.direction === "asc" ? comparison : -comparison;
     });
 
@@ -544,6 +615,16 @@ export function PortfolioPage() {
     setMaxBuyInputs((previous) => ({
       ...previous,
       [assetId]: maskMoneyInput(rawValue),
+    }));
+  };
+
+  const handleMaxBuyPvpCommit = (assetId: string, rawValue: string) => {
+    setMaxBuySuccess("");
+    setMaxBuyError("");
+
+    setMaxBuyPvpInputs((previous) => ({
+      ...previous,
+      [assetId]: rawValue,
     }));
   };
 
@@ -582,6 +663,7 @@ export function PortfolioPage() {
     const items = positions.map((position) => ({
       asset_id: position.asset_id,
       max_buy_price: draftMaxBuyByAssetId[position.asset_id] ?? null,
+      max_buy_pvp: draftMaxBuyPvpByAssetId[position.asset_id] ?? null,
     }));
 
     saveMaxBuyPrice.mutate(items);
@@ -618,6 +700,7 @@ export function PortfolioPage() {
   const ReturnTrendIcon = totalReturnPercent >= 0 ? TrendingUp : TrendingDown;
 
   return (
+    <>
     <div className="space-y-6">
       {/* Resumo */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -816,8 +899,11 @@ export function PortfolioPage() {
             invalidTargetAssetIds={invalidTargetAssetIds}
             maxBuyInputs={maxBuyInputs}
             invalidMaxBuyAssetIds={invalidMaxBuyAssetIds}
+            maxBuyPvpInputs={maxBuyPvpInputs}
+            invalidMaxBuyPvpAssetIds={invalidMaxBuyPvpAssetIds}
             onTargetCommit={handleTargetCommit}
             onMaxBuyCommit={handleMaxBuyCommit}
+            onMaxBuyPvpCommit={handleMaxBuyPvpCommit}
           />
         )
         }
@@ -962,8 +1048,12 @@ export function PortfolioPage() {
                         <button type="button" className="hover:text-white" onClick={() => handleContributionSort("amount")}>Aporte {contributionSort.key === "amount" ? (contributionSort.direction === "asc" ? "↑" : "↓") : "↕"}</button>
                       </th>
                       <th className="text-right px-3 py-2">
+                        <button type="button" className="hover:text-white" onClick={() => handleContributionSort("gap")}>Desvio {contributionSort.key === "gap" ? (contributionSort.direction === "asc" ? "↑" : "↓") : "↕"}</button>
+                      </th>
+                      <th className="text-right px-3 py-2">
                         <button type="button" className="hover:text-white" onClick={() => handleContributionSort("projected_allocation")}>Aloc. proj. {contributionSort.key === "projected_allocation" ? (contributionSort.direction === "asc" ? "↑" : "↓") : "↕"}</button>
                       </th>
+                      <th className="px-3 py-2" />
                     </tr>
                   </thead>
                   <tbody>
@@ -985,7 +1075,26 @@ export function PortfolioPage() {
                         <td className="px-3 py-1.5 text-right font-mono text-white align-top">{formatSuggestedQuantity(item.quantity_to_buy)}</td>
                         <td className="px-3 py-1.5 text-right font-mono text-white align-top">{formatCurrency(toFinite(item.current_price))}</td>
                         <td className="px-3 py-1.5 text-right font-mono text-white align-top">{formatCurrency(toFinite(item.amount_to_buy))}</td>
+                        <td className="px-3 py-1.5 text-right font-mono align-top">
+                          <span className={cn(plClass(toFinite(item.target_gap_value_before)))}>
+                            {formatCurrency(toFinite(item.target_gap_value_before))}
+                          </span>
+                        </td>
                         <td className="px-3 py-1.5 text-right font-mono text-white align-top">{formatPercent(toFinite(item.projected_allocation_percent))}</td>
+                        <td className="px-3 py-1.5 text-right align-top">
+                          <button
+                            type="button"
+                            title="Registrar compra"
+                            onClick={() => setContributionPrefill({
+                              asset_id: item.asset_id,
+                              quantity: formatSuggestedQuantity(item.quantity_to_buy),
+                              price: new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(toFinite(item.current_price)),
+                            })}
+                            className="px-2 py-0.5 rounded text-xs font-medium bg-haveres-blue/20 text-haveres-blue hover:bg-haveres-blue hover:text-white transition-colors"
+                          >
+                            + Comprar
+                          </button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -1013,5 +1122,12 @@ export function PortfolioPage() {
         )}
       </div>
     </div>
+
+    <TransactionFormModal
+      open={contributionPrefill !== null}
+      onClose={() => setContributionPrefill(null)}
+      prefill={contributionPrefill ?? undefined}
+    />
+    </>
   );
 }
