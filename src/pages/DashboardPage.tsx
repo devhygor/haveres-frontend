@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Wallet, TrendingUp, TrendingDown, PieChart, Info } from "lucide-react";
+import * as TooltipPrimitive from "@radix-ui/react-tooltip";
 import { portfolioApi } from "@/api/portfolio";
 import { PatrimonyEvolutionChart } from "@/components/charts/PatrimonyEvolutionChart";
 import { AllocationChart } from "@/components/charts/AllocationChart";
@@ -9,7 +10,6 @@ import { CryptoWidget } from "@/components/cards/CryptoWidget";
 import { LoadingState, SkeletonCard } from "@/components/common/LoadingState";
 import { ErrorState } from "@/components/common/ErrorState";
 import { ReferenceTimeHint } from "@/components/common/ReferenceTimeHint";
-import { Tooltip } from "@/components/common/Tooltip";
 import { cn } from "@/utils/cn";
 import { formatCurrency, formatPercent, plClass } from "@/utils/format";
 import { TermTooltip } from "@/components/common/TermTooltip";
@@ -107,20 +107,36 @@ export function DashboardPage() {
             <div>
               <div className="flex items-center gap-1">
                 <p className="text-xs text-muted-foreground">Proventos recebidos</p>
-                <Tooltip
-                  content={
-                    <div className="text-xs space-y-1">
-                      <p className="font-semibold">Composição dos Proventos:</p>
-                      <p>Bruto: {formatCurrency(dividendsTotalGross)}</p>
-                      <p className="text-red-400">IR retido: -{formatCurrency(dividendsTotalIr)}</p>
-                      <p className="border-t border-muted-foreground/30 pt-1 font-semibold text-green-400">
-                        Líquido: {formatCurrency(dividendsTotal)}
-                      </p>
-                    </div>
-                  }
-                >
-                  <Info className="w-3 h-3 text-muted-foreground cursor-help" />
-                </Tooltip>
+                <TooltipPrimitive.Root delayDuration={150}>
+                  <TooltipPrimitive.Trigger asChild>
+                    <span className="cursor-help inline-flex items-center">
+                      <Info size={10} className="text-muted-foreground/50" />
+                    </span>
+                  </TooltipPrimitive.Trigger>
+                  <TooltipPrimitive.Portal>
+                    <TooltipPrimitive.Content
+                      sideOffset={5}
+                      className="z-50 max-w-[240px] rounded-lg bg-haveres-card border border-haveres-border px-3 py-2 text-xs text-muted-foreground shadow-xl leading-relaxed"
+                    >
+                      <p className="font-semibold text-white mb-1.5">Composição dos Proventos</p>
+                      <div className="space-y-1">
+                        <div className="flex justify-between gap-4">
+                          <span>Bruto</span>
+                          <span className="text-white font-numeric">{formatCurrency(dividendsTotalGross)}</span>
+                        </div>
+                        <div className="flex justify-between gap-4">
+                          <span>IR retido</span>
+                          <span className="text-red-400 font-numeric">-{formatCurrency(dividendsTotalIr)}</span>
+                        </div>
+                        <div className="flex justify-between gap-4 pt-1 border-t border-haveres-border mt-1">
+                          <span className="text-white">Líquido</span>
+                          <span className="text-gain font-semibold font-numeric">{formatCurrency(dividendsTotal)}</span>
+                        </div>
+                      </div>
+                      <TooltipPrimitive.Arrow className="fill-haveres-border" />
+                    </TooltipPrimitive.Content>
+                  </TooltipPrimitive.Portal>
+                </TooltipPrimitive.Root>
               </div>
               <p className="text-base font-semibold text-gain font-numeric">{formatCurrency(dividendsTotal)}</p>
             </div>
