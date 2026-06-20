@@ -13,7 +13,7 @@ import { TermTooltip } from "@/components/common/TermTooltip";
 import { formatCurrency, formatPercent, plClass } from "@/utils/format";
 import { cn } from "@/utils/cn";
 import { ASSET_TYPE_LABELS } from "@/types/asset";
-import type { RebalancePlanTarget, RebalanceSimulationResult, SaveRebalancePlanItem } from "@/types/portfolio";
+import type { Position, RebalancePlanTarget, RebalanceSimulationResult, SaveRebalancePlanItem } from "@/types/portfolio";
 
 interface DraftRow {
   asset_id: string;
@@ -104,6 +104,25 @@ function formatPvpInput(value: number | null): string {
   return String(value).replace(".", ",");
 }
 
+function rowFromPosition(pos: Position): DraftRow {
+  const pvp = pos.fii_detail?.pvp ?? pos.price_to_book ?? null;
+  return {
+    asset_id: pos.asset_id,
+    ticker: pos.ticker,
+    name: pos.name,
+    asset_type: pos.asset_type,
+    logo_url: pos.logo_url ?? "",
+    current_price: pos.current_price,
+    current_value: pos.current_value,
+    current_allocation: pos.allocation,
+    pvp: pvp != null ? Number(pvp) : null,
+    target_input: "",
+    max_buy_input: formatMoneyInput(pos.max_buy_price ?? null),
+    max_buy_pvp_input: formatPvpInput(pos.max_buy_pvp ?? null),
+    include_in_sell_plan: false,
+  };
+}
+
 function rowFromTarget(target: RebalancePlanTarget): DraftRow {
   return {
     asset_id: target.asset_id,
@@ -154,6 +173,25 @@ export function RebalancingPage() {
   const [externalInput, setExternalInput] = useState("");
   const [simError, setSimError] = useState("");
   const [simResult, setSimResult] = useState<RebalanceSimulationResult | null>(null);
+  const [importingPortfolio, setImportingPortfolio] = useState(false);
+
+  const importFromPortfolio = async () => {
+    setImportingPortfolio(true);
+    try {
+      const res = await portfolioApi.getSummary();
+      const positions = res.data.positions;
+      setRows((prev) => {
+        const existingIds = new Set(prev.map((r) => r.asset_id));
+        const newRows = positions
+          .filter((p) => !existingIds.has(p.asset_id))
+          .map(rowFromPosition);
+        return [...prev, ...newRows];
+      });
+    } finally {
+      setImportingPortfolio(false);
+    }
+  };
+
   const [prefill, setPrefill] = useState<{
     asset_id: string; quantity: string; price: string; transaction_type: string;
   } | null>(null);
@@ -386,6 +424,15 @@ export function RebalancingPage() {
         <div className="card-haveres">
           <div className="flex flex-wrap items-center gap-2 p-4 sm:p-5 border-b border-haveres-border">
             <h2 className="text-sm font-semibold text-white">Plano de alocação ({configuredCount})</h2>
+            <button
+              type="button"
+              onClick={importFromPortfolio}
+              disabled={importingPortfolio}
+              className="ml-auto sm:ml-0 flex items-center gap-1.5 rounded px-3 py-1.5 text-xs font-medium bg-secondary border border-haveres-border text-muted-foreground hover:text-white hover:border-haveres-blue transition-colors disabled:opacity-50"
+            >
+              <Plus size={12} />
+              {importingPortfolio ? "Importando..." : "Importar da carteira"}
+            </button>
             <div className="relative w-full sm:w-auto sm:ml-auto">
               <Search size={14} className="absolute left-2.5 top-2.5 text-muted-foreground pointer-events-none" />
               <input
