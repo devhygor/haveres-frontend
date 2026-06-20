@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Wallet, TrendingUp, TrendingDown, PieChart } from "lucide-react";
+import { Wallet, TrendingUp, TrendingDown, PieChart, Info } from "lucide-react";
 import { portfolioApi } from "@/api/portfolio";
 import { PatrimonyEvolutionChart } from "@/components/charts/PatrimonyEvolutionChart";
 import { AllocationChart } from "@/components/charts/AllocationChart";
@@ -9,6 +9,7 @@ import { CryptoWidget } from "@/components/cards/CryptoWidget";
 import { LoadingState, SkeletonCard } from "@/components/common/LoadingState";
 import { ErrorState } from "@/components/common/ErrorState";
 import { ReferenceTimeHint } from "@/components/common/ReferenceTimeHint";
+import { Tooltip } from "@/components/common/Tooltip";
 import { cn } from "@/utils/cn";
 import { formatCurrency, formatPercent, plClass } from "@/utils/format";
 import { TermTooltip } from "@/components/common/TermTooltip";
@@ -54,6 +55,8 @@ export function DashboardPage() {
   const totalInvested = toFinite(data.total_invested);
   const plAbsolute = toFinite(data.pl_absolute);
   const dividendsTotal = toFinite(data.dividends_total);
+  const dividendsTotalGross = toFinite(data.dividends_total_gross);
+  const dividendsTotalIr = toFinite(data.dividends_total_ir);
   const plTotal = toFinite(data.pl_total);
   const plTotalPercent = toFinite(data.pl_total_percent);
   const ResultTrendIcon = plAbsolute >= 0 ? TrendingUp : TrendingDown;
@@ -102,7 +105,23 @@ export function DashboardPage() {
 
           <div className="mt-3 pt-3 border-t border-haveres-border/70 grid grid-cols-2 gap-3">
             <div>
-              <p className="text-xs text-muted-foreground">Proventos recebidos</p>
+              <div className="flex items-center gap-1">
+                <p className="text-xs text-muted-foreground">Proventos recebidos</p>
+                <Tooltip
+                  content={
+                    <div className="text-xs space-y-1">
+                      <p className="font-semibold">Composição dos Proventos:</p>
+                      <p>Bruto: {formatCurrency(dividendsTotalGross)}</p>
+                      <p className="text-red-400">IR retido: -{formatCurrency(dividendsTotalIr)}</p>
+                      <p className="border-t border-muted-foreground/30 pt-1 font-semibold text-green-400">
+                        Líquido: {formatCurrency(dividendsTotal)}
+                      </p>
+                    </div>
+                  }
+                >
+                  <Info className="w-3 h-3 text-muted-foreground cursor-help" />
+                </Tooltip>
+              </div>
               <p className="text-base font-semibold text-gain font-numeric">{formatCurrency(dividendsTotal)}</p>
             </div>
             <div>
