@@ -159,6 +159,97 @@ export interface ContributionSimulationResult {
   blocked_assets: ContributionBlockedAsset[];
 }
 
+export interface RebalancePlanTarget {
+  asset_id: string;
+  ticker: string;
+  name: string;
+  asset_type: string;
+  logo_url: string;
+  target_allocation_percent: number;
+  max_buy_price: number | null;
+  max_buy_pvp: number | null;
+  include_in_sell_plan: boolean;
+  current_price: number | null;
+  current_quantity: number | null;
+  current_value: number | null;
+  current_allocation: number | null;
+  pvp: number | null;
+}
+
+export interface RebalancePlanTargetsResponse {
+  total_value: number;
+  target_allocation_sum: number;
+  target_allocation_remaining: number;
+  target_allocation_is_valid: boolean;
+  items: RebalancePlanTarget[];
+}
+
+export interface RebalanceSellRecommendation {
+  asset_id: string;
+  ticker: string;
+  name: string;
+  asset_type: string;
+  logo_url: string;
+  current_price: number;
+  current_quantity: number;
+  quantity_to_sell: number;
+  amount_to_sell: number;
+  target_allocation_percent: number;
+  current_allocation_percent: number;
+  projected_allocation_percent: number;
+}
+
+export interface RebalanceBuyRecommendation {
+  asset_id: string;
+  ticker: string;
+  name: string;
+  asset_type: string;
+  logo_url: string;
+  current_price: number;
+  quantity_to_buy: number;
+  amount_to_buy: number;
+  target_allocation_percent: number;
+  current_allocation_percent: number;
+  projected_allocation_percent: number;
+  target_gap_value_before: number;
+  target_gap_value_after: number;
+  max_buy_price: number | null;
+  has_max_buy_rule: boolean;
+  is_within_max_buy_price: boolean;
+  max_buy_pvp: number | null;
+  has_max_buy_pvp_rule: boolean;
+  is_within_max_buy_pvp: boolean;
+  current_pvp: number | null;
+  is_new_asset: boolean;
+}
+
+export interface RebalanceSimulationResult {
+  external_amount: number;
+  sell_proceeds: number;
+  total_available: number;
+  allocated_amount: number;
+  leftover_amount: number;
+  projected_total_value: number;
+  buy_recommendations: RebalanceBuyRecommendation[];
+  sell_recommendations: RebalanceSellRecommendation[];
+  blocked_assets: ContributionBlockedAsset[];
+}
+
+export interface SaveRebalancePlanItem {
+  asset_id: string;
+  target_allocation_percent: number;
+  max_buy_price: number | null;
+  max_buy_pvp: number | null;
+  include_in_sell_plan: boolean;
+}
+
+export interface SaveRebalancePlanResult {
+  configured_count: number;
+  target_allocation_sum: number;
+  target_allocation_remaining: number;
+  target_allocation_is_valid: boolean;
+}
+
 export interface ProjectedDividend {
   ticker: string;
   name: string;

@@ -5,6 +5,7 @@ import { RegisterPage } from "@/pages/auth/RegisterPage";
 import { LandingPage } from "@/pages/LandingPage";
 import { DashboardPage } from "@/pages/DashboardPage";
 import { PortfolioPage } from "@/pages/PortfolioPage";
+import { RebalancingPage } from "@/pages/RebalancingPage";
 import { TransactionsPage } from "@/pages/TransactionsPage";
 import { DividendsPage } from "@/pages/DividendsPage";
 import { ImportsPage } from "@/pages/ImportsPage";
@@ -46,6 +47,7 @@ export default function App() {
       >
         <Route path="dashboard" element={<DashboardPage />} />
         <Route path="carteira" element={<PortfolioPage />} />
+        <Route path="rebalanceamento" element={<RebalancingPage />} />
         <Route path="movimentacoes" element={<TransactionsPage />} />
         <Route path="proventos" element={<DividendsPage />} />
         <Route path="importacoes" element={<ImportsPage />} />

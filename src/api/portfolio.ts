@@ -11,6 +11,10 @@ import type {
   SaveMaxBuyPriceResult,
   ContributionSimulationPayload,
   ContributionSimulationResult,
+  RebalancePlanTargetsResponse,
+  SaveRebalancePlanItem,
+  SaveRebalancePlanResult,
+  RebalanceSimulationResult,
 } from "@/types/portfolio";
 
 export const portfolioApi = {
@@ -32,4 +36,10 @@ export const portfolioApi = {
     api.put<SaveMaxBuyPriceResult>("/portfolio/max-buy-price", payload),
   simulateContributionPlan: (payload: ContributionSimulationPayload) =>
     api.post<ContributionSimulationResult>("/portfolio/contribution-plan", payload),
+  getRebalanceTargets: () =>
+    api.get<RebalancePlanTargetsResponse>("/portfolio/rebalance/targets"),
+  saveRebalancePlan: (items: SaveRebalancePlanItem[]) =>
+    api.put<SaveRebalancePlanResult>("/portfolio/rebalance/plan", { items }),
+  simulateRebalance: (externalAmount: number) =>
+    api.post<RebalanceSimulationResult>("/portfolio/rebalance/simulate", { external_amount: externalAmount }),
 };
