@@ -56,6 +56,8 @@ export const assetsApi = {
   list: () => api.get<Asset[]>("/assets/"),
   create: (payload: { ticker: string; name: string; asset_type: string; sector?: string; initial_price?: number }) =>
     api.post<Asset>("/assets/", payload),
+  updateQuote: (assetId: string, price: number) =>
+    api.patch<Asset>(`/assets/${assetId}/quote`, { price }),
   syncStatus: () => api.get<AssetSyncStatus>("/assets/sync/status"),
   triggerSync: (force = false) => api.post<{ message: string }>(`/assets/sync?force=${force}`),
   adminList: (params?: { search?: string; asset_type?: string }) =>

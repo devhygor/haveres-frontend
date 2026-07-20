@@ -193,6 +193,9 @@ export function RebalancingPage() {
   const [simError, setSimError] = useState("");
   const [simResult, setSimResult] = useState<RebalanceSimulationResult | null>(null);
   const [importingPortfolio, setImportingPortfolio] = useState(false);
+  const [editingPriceAssetId, setEditingPriceAssetId] = useState<string | null>(null);
+  const [editingPrice, setEditingPrice] = useState("");
+  const [editPriceError, setEditPriceError] = useState("");
 
   const importFromPortfolio = async () => {
     setImportingPortfolio(true);
@@ -237,6 +240,19 @@ export function RebalancingPage() {
       setAssetMenuOpen(false);
     },
     onError: () => setError("Erro ao cadastrar ativo."),
+  });
+
+  const updateQuote = useMutation({
+    mutationFn: ({ assetId, price }: { assetId: string; price: number }) =>
+      assetsApi.updateQuote(assetId, price).then((r) => r.data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["assets"] });
+      queryClient.invalidateQueries({ queryKey: ["portfolio"] });
+      setEditingPriceAssetId(null);
+      setEditingPrice("");
+      setEditPriceError("");
+    },
+    onError: () => setEditPriceError("Erro ao atualizar cotação."),
   });
 
   useEffect(() => {
@@ -463,6 +479,26 @@ export function RebalancingPage() {
       asset_type: newAsset.asset_type,
       initial_price: newAsset.initial_price > 0 ? newAsset.initial_price : undefined,
     });
+  };
+
+  const handleEditPrice = (assetId: string, currentPrice: number | null) => {
+    setEditingPriceAssetId(assetId);
+    setEditingPrice(currentPrice ? currentPrice.toString().replace(".", ",") : "");
+    setEditPriceError("");
+  };
+
+  const handleSavePrice = () => {
+    if (!editingPriceAssetId) return;
+    
+    const priceStr = editingPrice.replace(",", ".");
+    const price = parseFloat(priceStr);
+    
+    if (!price || price <= 0) {
+      setEditPriceError("Preço deve ser maior que zero.");
+      return;
+    }
+    
+    updateQuote.mutate({ assetId: editingPriceAssetId, price });
   };
 
   if (targetsQuery.isLoading) return <LoadingState />;
@@ -746,9 +782,23 @@ export function RebalancingPage() {
                         </td>
                         <td className="px-3 py-2 text-right font-mono text-white">
                           {row.current_price != null && row.current_price > 0 ? (
-                            formatCurrency(row.current_price)
+                            <button
+                              type="button"
+                              onClick={() => isAdmin && handleEditPrice(row.asset_id, row.current_price)}
+                              className={isAdmin ? "cursor-pointer hover:opacity-70 transition-opacity" : ""}
+                              title={isAdmin ? "Clique para editar cotação" : ""}
+                            >
+                              {formatCurrency(row.current_price)}
+                            </button>
                           ) : (
-                            <span className="text-yellow-400 font-medium">Sem cotação</span>
+                            <button
+                              type="button"
+                              onClick={() => isAdmin && handleEditPrice(row.asset_id, null)}
+                              className={isAdmin ? "cursor-pointer" : ""}
+                              title={isAdmin ? "Clique para adicionar cotação" : ""}
+                            >
+                              <span className="text-yellow-400 font-medium">Sem cotação</span>
+                            </button>
                           )}
                         </td>
                         <td className="px-3 py-2 text-right font-mono">
@@ -1067,6 +1117,53 @@ export function RebalancingPage() {
         onClose={() => setPrefill(null)}
         prefill={prefill ?? undefined}
       />
+
+      {editingPriceAssetId !== null && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-secondary border border-haveres-border rounded-lg p-6 w-full max-w-sm mx-4 space-y-4">
+            <h2 className="text-sm font-semibold text-white">Editar cotação</h2>
+            <div>
+              <label className={LABEL}>Preço (R$)</label>
+              <input
+                className={INPUT}
+                placeholder="Ex: 25,50"
+                value={editingPrice}
+                onChange={e => {
+                  const value = e.target.value.replace(",", ".");
+                  const parsed = parseFloat(value);
+                  if (isNaN(parsed) || value === "") {
+                    setEditingPrice(value);
+                  } else {
+                    setEditingPrice(parsed.toString().replace(".", ","));
+                  }
+                }}
+              />
+            </div>
+            {editPriceError && <p className="text-xs text-loss">{editPriceError}</p>}
+            <div className="flex gap-2 justify-end">
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingPriceAssetId(null);
+                  setEditingPrice("");
+                  setEditPriceError("");
+                }}
+                className="text-xs font-medium text-muted-foreground hover:text-white px-3 py-2"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleSavePrice}
+                disabled={updateQuote.isPending}
+                className="text-xs font-medium text-white bg-haveres-blue hover:bg-blue-600 disabled:opacity-50 px-3 py-2 rounded transition-colors"
+              >
+                {updateQuote.isPending ? "Salvando..." : "Salvar"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
