@@ -36,6 +36,7 @@ interface NewAsset {
   ticker: string;
   name: string;
   asset_type: string;
+  initial_price: number;
 }
 
 function toFinite(value: unknown): number {
@@ -169,7 +170,7 @@ function formatSuggestedQuantity(value: unknown): string {
 const PLAIN_MONEY = (value: number) =>
   new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
 
-const DEFAULT_NEW_ASSET: NewAsset = { ticker: "", name: "", asset_type: "STOCK" };
+const DEFAULT_NEW_ASSET: NewAsset = { ticker: "", name: "", asset_type: "STOCK", initial_price: 0 };
 
 const LABEL = "block text-xs text-muted-foreground mb-1";
 const INPUT = "w-full bg-secondary border border-haveres-border rounded-lg px-3 py-2 text-sm text-white placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-haveres-blue";
@@ -348,6 +349,15 @@ export function RebalancingPage() {
     });
   }, [rows, persistedByAssetId, targetsQuery.data]);
 
+  const assetsWithoutPrice = useMemo(() => {
+    return rows.filter(row => 
+      (row.current_price === null || row.current_price === 0) && 
+      parsePercent(row.target_input) > 0
+    );
+  }, [rows]);
+
+  const hasAssetsWithoutData = assetsWithoutPrice.length > 0;
+
   const updateRow = (assetId: string, patch: Partial<DraftRow>) => {
     setPlanSuccess("");
     setPlanError("");
@@ -384,6 +394,15 @@ export function RebalancingPage() {
 
   const handleSimulate = () => {
     setSimError("");
+    
+    if (hasAssetsWithoutData) {
+      setSimError(
+        `Não é possível simular com ativos sem cotação: ${assetsWithoutPrice.map(a => a.ticker).join(", ")}. ` +
+        `Remova a meta deste${assetsWithoutPrice.length === 1 ? " ativo" : "s ativos"} ou aguarde a sincronização das cotações.`
+      );
+      return;
+    }
+    
     const external = parseMoney(externalInput) ?? 0;
     simulate.mutate(external);
   };
@@ -438,7 +457,12 @@ export function RebalancingPage() {
       return;
     }
     setError("");
-    createAsset.mutate({ ticker: newAsset.ticker.toUpperCase(), name: newAsset.name, asset_type: newAsset.asset_type });
+    createAsset.mutate({ 
+      ticker: newAsset.ticker.toUpperCase(), 
+      name: newAsset.name, 
+      asset_type: newAsset.asset_type,
+      initial_price: newAsset.initial_price > 0 ? newAsset.initial_price : undefined,
+    });
   };
 
   if (targetsQuery.isLoading) return <LoadingState />;
@@ -559,6 +583,20 @@ export function RebalancingPage() {
                     onChange={e => setNewAsset(prev => ({ ...prev, name: e.target.value }))}
                   />
                 </div>
+                <div>
+                  <label className={LABEL}>Preço inicial (opcional)</label>
+                  <input
+                    className={INPUT}
+                    placeholder="Ex: 25,50"
+                    value={newAsset.initial_price > 0 ? newAsset.initial_price.toFixed(2).replace(".", ",") : ""}
+                    onChange={e => {
+                      const value = e.target.value.replace(",", ".");
+                      const parsed = value === "" ? 0 : parseFloat(value);
+                      setNewAsset(prev => ({ ...prev, initial_price: isFinite(parsed) ? parsed : 0 }));
+                    }}
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">Se preenchido, o ativo terá uma cotação inicial.</p>
+                </div>
                 {error && <p className="text-xs text-loss">{error}</p>}
                 <div className="flex gap-2">
                   <button
@@ -673,10 +711,19 @@ export function RebalancingPage() {
                   {sortedFilteredRows.map((row) => {
                     const isTreasury = row.asset_type === "TREASURY";
                     const pvp = row.pvp;
+                    const hasNoPrice = (row.current_price === null || row.current_price === 0) && parsePercent(row.target_input) > 0;
                     return (
-                      <tr key={row.asset_id} className="border-b border-haveres-border/50 hover:bg-secondary/20 transition-colors">
+                      <tr key={row.asset_id} className={cn(
+                        "border-b border-haveres-border/50 transition-colors",
+                        hasNoPrice 
+                          ? "bg-yellow-400/5 hover:bg-yellow-400/10" 
+                          : "hover:bg-secondary/20"
+                      )}>
                         <td className="px-3 py-2">
                           <div className="flex items-center gap-2 min-w-0">
+                            {hasNoPrice && (
+                              <div title="Sem cotação" className="w-1 h-1 rounded-full bg-yellow-400 flex-shrink-0" />
+                            )}
                             <AssetLogo logoUrl={row.logo_url} ticker={row.ticker} />
                             <div className="min-w-0">
                               <Link
@@ -698,7 +745,11 @@ export function RebalancingPage() {
                           </span>
                         </td>
                         <td className="px-3 py-2 text-right font-mono text-white">
-                          {row.current_price != null ? formatCurrency(row.current_price) : "—"}
+                          {row.current_price != null && row.current_price > 0 ? (
+                            formatCurrency(row.current_price)
+                          ) : (
+                            <span className="text-yellow-400 font-medium">Sem cotação</span>
+                          )}
                         </td>
                         <td className="px-3 py-2 text-right font-mono">
                           {pvp == null ? (
@@ -778,7 +829,7 @@ export function RebalancingPage() {
           )}
 
           {rows.length > 0 && (
-            <div className="p-4 sm:p-5 border-t border-haveres-border/70 space-y-2">
+            <div className="p-4 sm:p-5 border-t border-haveres-border/70 space-y-3">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-xs text-muted-foreground"><TermTooltip term="Meta de Alocação" /></span>
                 <span className={cn("text-xs px-2 py-0.5 rounded font-numeric", isSumValid ? "bg-gain/15 text-gain" : "bg-loss/15 text-loss")}>
@@ -798,6 +849,18 @@ export function RebalancingPage() {
                   {savePlan.isPending ? "Salvando..." : "Salvar plano"}
                 </button>
               </div>
+              {hasAssetsWithoutData && (
+                <div className="flex items-start gap-2 rounded-lg border border-yellow-400/40 bg-yellow-400/5 px-3 py-2">
+                  <AlertTriangle size={12} className="text-yellow-400 flex-shrink-0 mt-0.5" />
+                  <div className="text-xs text-yellow-400">
+                    <p className="font-medium">Atenção: Ativos sem cotação</p>
+                    <p className="text-yellow-400/80 mt-1">
+                      {assetsWithoutPrice.map(a => a.ticker).join(", ")} {assetsWithoutPrice.length === 1 ? "não tem" : "não têm"} cotação e não será{assetsWithoutPrice.length === 1 ? "" : "ão"} incluído{assetsWithoutPrice.length === 1 ? "" : "s"} na simulação. 
+                      Para simular, remova a meta deste{assetsWithoutPrice.length === 1 ? " ativo" : "s ativos"} ou aguarde a cotação ser sincronizada.
+                    </p>
+                  </div>
+                </div>
+              )}
               {planError && <p className="text-xs text-loss">{planError}</p>}
               {planSuccess && <p className="text-xs text-gain">{planSuccess}</p>}
             </div>
@@ -838,12 +901,22 @@ export function RebalancingPage() {
             <button
               type="button"
               onClick={handleSimulate}
-              disabled={simulate.isPending}
+              disabled={simulate.isPending || hasAssetsWithoutData}
               className="px-3 py-2 rounded text-xs font-medium bg-haveres-blue text-white hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              title={hasAssetsWithoutData ? "Remova metas de ativos sem cotação para simular" : ""}
             >
               {simulate.isPending ? "Simulando..." : "Simular rebalanceamento"}
             </button>
           </div>
+
+          {hasAssetsWithoutData && (
+            <div className="flex items-start gap-2 rounded-lg border border-yellow-400/40 bg-yellow-400/5 px-3 py-2">
+              <AlertTriangle size={12} className="text-yellow-400 flex-shrink-0 mt-0.5" />
+              <p className="text-xs text-yellow-400">
+                Remova a meta de ativos sem cotação ({assetsWithoutPrice.map(a => a.ticker).join(", ")}) para realizar a simulação.
+              </p>
+            </div>
+          )}
 
           {simError && <p className="text-xs text-loss">{simError}</p>}
 
