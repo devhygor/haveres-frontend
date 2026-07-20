@@ -24,6 +24,7 @@ export const ASSET_TYPES = [
   { value: "TREASURY", label: "Tesouro Direto" },
   { value: "CASH", label: "Caixa" },
   { value: "CRYPTO", label: "Criptomoeda" },
+  { value: "FI", label: "Fundo de Investimento" },
 ];
 
 export const SECTOR_TYPES = [
