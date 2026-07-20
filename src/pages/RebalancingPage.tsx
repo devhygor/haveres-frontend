@@ -3,7 +3,8 @@ import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Scale, Calculator, Search, Plus, AlertTriangle, ChevronUp, ChevronDown } from "lucide-react";
 import { portfolioApi } from "@/api/portfolio";
-import { assetsApi } from "@/api/assets";
+import { assetsApi, ASSET_TYPES } from "@/api/assets";
+import { useAuthStore } from "@/stores/authStore";
 import { TransactionFormModal } from "@/components/forms/TransactionFormModal";
 import { AssetLogo } from "@/components/common/AssetLogo";
 import { LoadingState } from "@/components/common/LoadingState";
@@ -29,6 +30,12 @@ interface DraftRow {
   max_buy_input: string;
   max_buy_pvp_input: string;
   include_in_sell_plan: boolean;
+}
+
+interface NewAsset {
+  ticker: string;
+  name: string;
+  asset_type: string;
 }
 
 function toFinite(value: unknown): number {
@@ -162,14 +169,25 @@ function formatSuggestedQuantity(value: unknown): string {
 const PLAIN_MONEY = (value: number) =>
   new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
 
+const DEFAULT_NEW_ASSET: NewAsset = { ticker: "", name: "", asset_type: "STOCK" };
+
+const LABEL = "block text-xs text-muted-foreground mb-1";
+const INPUT = "w-full bg-secondary border border-haveres-border rounded-lg px-3 py-2 text-sm text-white placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-haveres-blue";
+
 export function RebalancingPage() {
   const queryClient = useQueryClient();
+  const user = useAuthStore((s) => s.user);
+  const isAdmin = Boolean(user?.is_staff || user?.is_superuser);
+  
   const [rows, setRows] = useState<DraftRow[]>([]);
   const [typeFilter, setTypeFilter] = useState<string>("ALL");
   const [planError, setPlanError] = useState("");
   const [planSuccess, setPlanSuccess] = useState("");
   const [assetSearch, setAssetSearch] = useState("");
   const [assetMenuOpen, setAssetMenuOpen] = useState(false);
+  const [showNewAsset, setShowNewAsset] = useState(false);
+  const [newAsset, setNewAsset] = useState<NewAsset>(DEFAULT_NEW_ASSET);
+  const [error, setError] = useState("");
   const [externalInput, setExternalInput] = useState("");
   const [simError, setSimError] = useState("");
   const [simResult, setSimResult] = useState<RebalanceSimulationResult | null>(null);
@@ -204,6 +222,20 @@ export function RebalancingPage() {
   const assetsQuery = useQuery({
     queryKey: ["assets"],
     queryFn: () => assetsApi.list().then((r) => r.data),
+  });
+
+  const createAsset = useMutation({
+    mutationFn: assetsApi.create,
+    onSuccess: (r) => {
+      queryClient.invalidateQueries({ queryKey: ["assets"] });
+      handleAddAsset(r.data.id, r.data.ticker, r.data.name, r.data.asset_type, r.data.logo_url);
+      setShowNewAsset(false);
+      setNewAsset(DEFAULT_NEW_ASSET);
+      setError("");
+      setAssetSearch("");
+      setAssetMenuOpen(false);
+    },
+    onError: () => setError("Erro ao cadastrar ativo."),
   });
 
   useEffect(() => {
@@ -396,6 +428,19 @@ export function RebalancingPage() {
     });
   };
 
+  const handleAddNewAsset = () => {
+    if (!isAdmin) {
+      setError("Apenas administradores podem cadastrar novos ativos.");
+      return;
+    }
+    if (!newAsset.ticker.trim() || !newAsset.name.trim()) {
+      setError("Preencha ticker e nome do ativo.");
+      return;
+    }
+    setError("");
+    createAsset.mutate({ ticker: newAsset.ticker.toUpperCase(), name: newAsset.name, asset_type: newAsset.asset_type });
+  };
+
   if (targetsQuery.isLoading) return <LoadingState />;
   if (targetsQuery.isError) return <ErrorState onRetry={() => targetsQuery.refetch()} />;
 
@@ -444,7 +489,7 @@ export function RebalancingPage() {
                 className="w-full sm:w-[260px] bg-secondary border border-haveres-border rounded pl-8 pr-3 py-1.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-haveres-blue"
                 placeholder="Buscar ativo para adicionar"
               />
-              {assetMenuOpen && filteredAssets.length > 0 && (
+              {assetMenuOpen && (filteredAssets.length > 0 || (assetSearch.trim() && isAdmin)) && (
                 <div className="absolute z-30 mt-1 w-full sm:w-[260px] rounded-lg border border-haveres-border bg-haveres-card shadow-xl max-h-56 overflow-y-auto">
                   {filteredAssets.map((asset) => (
                     <button
@@ -459,9 +504,85 @@ export function RebalancingPage() {
                       <span className="text-muted-foreground truncate">{asset.name}</span>
                     </button>
                   ))}
+
+                  {!filteredAssets.length && (
+                    <p className="px-3 py-2 text-xs text-muted-foreground">Nenhum ativo encontrado.</p>
+                  )}
+
+                  {isAdmin && (
+                    <button
+                      type="button"
+                      className="w-full text-left px-3 py-2 text-xs text-haveres-blue border-t border-haveres-border hover:bg-secondary/70 transition-colors"
+                      onMouseDown={(event) => event.preventDefault()}
+                      onClick={() => {
+                        setShowNewAsset(true);
+                        setAssetMenuOpen(false);
+                      }}
+                    >
+                      + Cadastrar novo ativo
+                    </button>
+                  )}
                 </div>
               )}
             </div>
+
+            {isAdmin && showNewAsset && (
+              <div className="bg-secondary/40 border border-haveres-border rounded-lg p-4 space-y-3 mb-4">
+                <p className="text-xs font-semibold text-haveres-blue">Cadastrar ativo</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className={LABEL}>Código *</label>
+                    <input
+                      className={INPUT}
+                      placeholder="Ex: PETR4"
+                      value={newAsset.ticker}
+                      onChange={e => setNewAsset(prev => ({ ...prev, ticker: e.target.value.toUpperCase() }))}
+                    />
+                  </div>
+                  <div>
+                    <label className={LABEL}>Tipo *</label>
+                    <select 
+                      className={INPUT} 
+                      value={newAsset.asset_type} 
+                      onChange={e => setNewAsset(prev => ({ ...prev, asset_type: e.target.value }))}
+                    >
+                      {ASSET_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <label className={LABEL}>Nome completo *</label>
+                  <input
+                    className={INPUT}
+                    placeholder="Ex: Petrobras PN"
+                    value={newAsset.name}
+                    onChange={e => setNewAsset(prev => ({ ...prev, name: e.target.value }))}
+                  />
+                </div>
+                {error && <p className="text-xs text-loss">{error}</p>}
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={handleAddNewAsset}
+                    disabled={createAsset.isPending}
+                    className="text-xs font-medium text-haveres-blue hover:underline disabled:opacity-50"
+                  >
+                    {createAsset.isPending ? "Salvando..." : "Salvar ativo"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowNewAsset(false);
+                      setNewAsset(DEFAULT_NEW_ASSET);
+                      setError("");
+                    }}
+                    className="text-xs font-medium text-muted-foreground hover:text-white"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {rows.length > 0 && availableTypes.length > 1 && (
